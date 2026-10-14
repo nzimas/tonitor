@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 890 200" role="img" aria-label="Tonitor">
+<title>Tonitor</title>
+<g transform="translate(0 0) scale(1.0)">
+  <defs>
+    <clipPath id="inside"><circle cx="100" cy="100" r="80"/></clipPath>
+    <clipPath id="beyond"><rect x="92" y="0" width="200" height="200"/></clipPath>
+  </defs>
+  <g clip-path="url(#inside)">
+    <g clip-path="url(#beyond)"><circle cx="54" cy="100" r="50" fill="none" stroke="#C9A400" stroke-width="7"/><circle cx="54" cy="100" r="64" fill="none" stroke="#0098B8" stroke-width="7"/><circle cx="54" cy="100" r="78" fill="none" stroke="#D6309F" stroke-width="7"/><circle cx="54" cy="100" r="92" fill="none" stroke="#1FA82E" stroke-width="7"/><circle cx="54" cy="100" r="106" fill="none" stroke="#D96F00" stroke-width="7"/><circle cx="54" cy="100" r="120" fill="none" stroke="#7E5BD6" stroke-width="7"/></g>
+    <circle cx="54" cy="100" r="11" fill="#B9B4AD"/>
+    <rect x="80" y="10" width="12" height="180" fill="#141313"/>
+  </g>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#141313" stroke-width="8"/>
+</g>
+<g fill="#141313">
+  <rect x="250" y="50" width="70" height="16"/><rect x="277" y="50" width="16" height="100"/>
+  <circle cx="388" cy="100" r="42" fill="none" stroke="#141313" stroke-width="16"/>
+  <rect x="456" y="50" width="16" height="100"/><rect x="520" y="50" width="16" height="100"/>
+  <polygon points="456,50 474,50 536,150 518,150"/>
+  <rect x="554" y="50" width="16" height="100"/>
+  <rect x="588" y="50" width="70" height="16"/><rect x="615" y="50" width="16" height="100"/>
+  <circle cx="726" cy="100" r="42" fill="none" stroke="#141313" stroke-width="16"/>
+  <rect x="794" y="50" width="16" height="100"/>
+  <path d="M802,58 H832 A21,21 0 0 1 832,100 H802" fill="none" stroke="#141313" stroke-width="16"/>
+  <polygon points="818,100 837,100 868,150 849,150"/>
+</g>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Tonitor">
+<title>Tonitor</title>
+<rect width="200" height="200" rx="36" fill="#0E0D0D"/>
+<g transform="translate(10 10) scale(0.9)">
+  <defs>
+    <clipPath id="inside"><circle cx="100" cy="100" r="80"/></clipPath>
+    <clipPath id="beyond"><rect x="92" y="0" width="200" height="200"/></clipPath>
+  </defs>
+  <g clip-path="url(#inside)">
+    <g clip-path="url(#beyond)"><circle cx="54" cy="100" r="50" fill="none" stroke="#FFD600" stroke-width="7"/><circle cx="54" cy="100" r="64" fill="none" stroke="#00D6FF" stroke-width="7"/><circle cx="54" cy="100" r="78" fill="none" stroke="#FF5CD2" stroke-width="7"/><circle cx="54" cy="100" r="92" fill="none" stroke="#60FF60" stroke-width="7"/><circle cx="54" cy="100" r="106" fill="none" stroke="#FF8C00" stroke-width="7"/><circle cx="54" cy="100" r="120" fill="none" stroke="#BEA0FF" stroke-width="7"/></g>
+    <circle cx="54" cy="100" r="11" fill="#4A4744"/>
+    <rect x="80" y="10" width="12" height="180" fill="#EDEAE4"/>
+  </g>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#EDEAE4" stroke-width="8"/>
+</g>
+</svg>

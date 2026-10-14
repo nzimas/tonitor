@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -- Tonitor website -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install Tonitor</title>
+<meta name="description" content="Install Tonitor on an M-VAVE FM-1 from your browser, over USB MIDI.">
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script type="module" src="js/install.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/mark.svg" alt="">TONITOR</a>
+    <nav>
+      <a href="./">Home</a>
+      <a href="install.html" aria-current="page">Install</a>
+      <a href="manual.html">Manual</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="https://github.com/nzimas/tonitor">GitHub</a>
+    </nav>
+  </div>
+</header>
+<div class="layers" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+<main class="wrap doc">
+  <h1>Install Tonitor</h1>
+  <p>This page installs Tonitor on an M-VAVE FM-1 connected to this computer, over USB MIDI. It works in a
+    desktop <b>Chrome, Edge or Opera</b>. It talks to the FM-1 directly: nothing is uploaded anywhere.</p>
+
+  <div class="warn">
+    <h3>Read this first</h3>
+    <p>Tonitor is an unofficial firmware, not made, endorsed or supported by M-VAVE. Installing it replaces
+      the FM-1's firmware and <b>may void any warranty that applies to your device</b>. An interrupted
+      update can leave the FM-1 unable to start until it is recovered. Saving Tonitor sessions overwrites any
+      SLOOP projects on the device. The software comes with no warranty of any kind; you install it entirely
+      at your own risk. <a href="https://github.com/nzimas/tonitor#disclaimer">Full disclaimer</a>.</p>
+  </div>
+
+  <div class="panel" aria-live="polite">
+    <p class="status" id="status">Loading the firmware…</p>
+    <p class="detail" id="detail"></p>
+    <dl class="dev" id="facts" hidden>
+      <dt>Firmware</dt><dd id="f-fw"></dd>
+      <dt>Your FM-1</dt><dd id="f-dev">not connected</dd>
+    </dl>
+    <div class="bar" id="bar" hidden><div></div></div>
+
+    <label class="check"><input type="checkbox" id="agree">
+      <span>I have read the warning and the disclaimer. I understand that installing Tonitor may void my FM-1's
+        warranty and that I install it at my own risk.</span></label>
+
+    <div class="cta" style="justify-content:flex-start">
+      <button class="btn" id="connect" disabled>Find my FM-1</button>
+      <button class="btn primary" id="install" disabled>Install Tonitor</button>
+    </div>
+  </div>
+
+  <h2>Before you start</h2>
+  <ol class="steps">
+    <li>Use a USB cable that carries <b>data</b> (some carry power only), plugged straight into the computer.</li>
+    <li>Switch the FM-1 on, and close any other program using MIDI (a DAW, M-VAVE's app).</li>
+    <li>When the browser asks to let this page control MIDI devices, allow it: the update is sent as MIDI
+      system-exclusive messages.</li>
+  </ol>
+
+  <h2>If something goes wrong</h2>
+  <p>Stopped part-way? Reload this page and install again: an FM-1 left in update mode is found and the write
+    is finished. If the FM-1 does not start, hold <b>OCT−</b> while switching it on: the screen says
+    <b>RESCUE</b>, and the install can be run again. Two failed starts in a row also enter rescue mode. If it
+    no longer starts at all, recovery needs
+    <a href="https://github.com/kurogedelic/FM-1-transporter">FM-1-transporter</a>.</p>
+  <p>Prefer the command line? <a href="https://github.com/nzimas/tonitor#building-from-source">Build and
+    install from source</a>.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>The installer (<code>js/fm1ota.js</code>) is a port of Felucca and SLOOP's installer, GPL-3.0; the
+      firmware it installs is GPL-3.0, its source <a href="https://github.com/nzimas/tonitor">on GitHub</a>.</p>
+  </div>
+</footer>
+</body>
+</html>
