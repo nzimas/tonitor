@@ -101,6 +101,7 @@ sessions overwrites SLOOP projects** stored there.
 | **KNOB 3** | the chosen layer's **crush**: the middle is off (as it starts). **Left** takes the bit depth down from 16 to 1.5 bits (the sound coarsens, then breaks up, quiet tails gating out); **right** takes the sample rate down from 44.1 kHz to ~300 Hz (metallic aliasing, then a stepped buzz). Both along curves that keep the first half of the way playable; the rate glides, it does not jump. While you turn it, the **whole screen is its dial** (BITS 6.5, RATE 2.6K). After the granulator, before the layer's limiter. Saved with the session. |
 | **KNOB 4** | the chosen layer's **reverb send**, 0–100 (40 at the start). While you turn it, the **whole screen is its dial** (SEND 40), as for the filter and the granulator. |
 | **SAVE** | the **SESSIONS page**: **PRESETS** turns through the **64 slots** (the number shown very large: **red** when the slot holds a session, faint **grey** with EMPTY under it when it does not; the session loaded says LOADED). **SAVE** on a saved slot **loads** it; on an empty slot it **chooses** it (the sound stays as it is) so the next save goes there. Either way back to playing. A layer button goes back without either. |
+| **SHIFT + SAVE** | the chosen layer's engine's **PRESETS page** (see [Presets](#presets)); SHIFT + SAVE again, or a layer button, goes back. |
 | **SAVE held** (0.8 s) | **save** into the session loaded or chosen, at once; the whole screen flashes SAVED and the number. With none loaded or chosen yet (just after switching on), the first empty slot is offered: **PRESETS** chooses **NO** / **YES**, **SAVE** answers. **On the SESSIONS page**, SAVE held saves into the slot shown, whatever is loaded: an empty one asks SAVE NEW; one holding a session asks **OVERWRITE?** in red, on **NO** until PRESETS turns it to YES; SAVE answers. |
 | **SEQ** | the **REVERB page** (SEQ lit). There **KNOB 1–4** are **SIZE**, **DECAY**, **DAMP**, **MIX**. SEQ again, or a layer button, goes back. |
 | **ALGORITHM** knob | the chosen layer's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Layers start spread out: 1 and 2 half left and right, 3 and 4 a quarter, 5 and 6 near the middle. |
@@ -114,8 +115,8 @@ playing: it shapes the next sounds drawn on that layer. The path's key is lit wh
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS) and bells, never BRUIT, IMPACT or FRICTION; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN and VOYAGE, never GRIT, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE and VEIL most, CARRION, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand |
-| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, impacts and iterations, brighter, mutated more often (sometimes twice), never SPECTRE. ANIMA draws mostly GRIT and SWARM, never HAZE, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws THORN, HIVE and RUST most, never VEIL; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand |
+| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR and BOWL, never GRIT, SHARDS or MACHINE, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand |
+| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts and iterations, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS and MACHINE, never HAZE, TIDE or CHOIR, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand |
 | **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every layer starts here |
 
 Sessions keep each layer's path, and the path each of its sounds was drawn on.
@@ -178,6 +179,22 @@ from there across the 16 white keys, so a pentatonic scale spans more than three
 
 USB MIDI notes are not quantised.
 
+### Presets
+
+Each engine has **64 presets**, P1 to P64, for the sounds you want to keep and bring back on any layer.
+Hold **SHIFT** and press **SAVE**: the PRESETS page of the chosen layer's engine opens, four slots a page.
+**PRESETS** turns through them; a slot holding a sound shows its number in red and the sound's name, an
+empty one EMPTY in grey.
+
+- **SAVE held** saves the layer's sound into the slot chosen. Over a sound already there it asks
+  **OVERWRITE?** first, on **NO** until PRESETS turns it to YES; SAVE answers.
+- **SAVE** loads the slot chosen into the layer (which crossfades to it, as to a new sound) and goes back to
+  playing.
+
+A preset keeps what draws the sound again, exactly — its seed, its path and the generation of the
+generators that drew it — and its level: all 192 take one sector of flash, beside the sessions. Saving
+erases flash, which silences the audio for a moment, as a session save does.
+
 ### Sessions
 
 The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–64.
@@ -189,8 +206,10 @@ reverb send, filter, granulator, crush and loops (playing or stopped); the scale
 the layer chosen. They are kept in the
 FM-1's flash, in the area SLOOP uses for its projects (**saving overwrites any SLOOP projects, presets and
 samples left on the device**): dozens of typical sessions, at least ten even with six full loops.
-A session also keeps the seeds its sounds were made from, so it still loads (with the same sounds) after
-a firmware update changes how sounds are stored. Erasing flash silences the audio for a moment: a save
+A session also keeps the seeds its sounds were made from, with the path and the *generation* of the
+generators that drew them: every generation is kept exactly as it was (a test checks thousands of sounds of
+each), so sessions and presets saved under an older Tonitor load with the same sounds after an update that
+brings new generators. Erasing flash silences the audio for a moment: a save
 uses blank flash when there is some, and the FM-1 blanks free flash by itself while nothing sounds.
 
 ### The granulator
@@ -222,7 +241,7 @@ Layer colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 ### FM — six operators, DX7 style
 
 The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
-fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of nine families of
+fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of seventeen families of
 sound objects:
 
 | Family | After |
@@ -236,9 +255,23 @@ sound objects:
 | **SPECTRE** | a spectral arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
 | **ABYSS** | sub-bass rumble folded by feedback, breathing slowly |
 | **FRICTION** | creaking: sub-audio fixed-frequency modulators and random pitch |
+| **CHOIR** | vowels: carriers on the harmonics nearest two formants, a late vibrato |
+| **BOWED** | a bowed string: a saw from feedback, the bow's pressure rising with the swell |
+| **HOLLOW** | odd harmonics only: a dark pipe |
+| **BLOOM** | a tone that opens over seconds and half closes again |
+| **TIDE** | three stacks crossfading, one fading as the next swells, under a slow tide of level |
+| **SHARDS** | a tone broken by random steps of pitch and chopped by a square |
+| **STATIC** | ring-modulated bands from modulators nailed to audio frequencies |
+| **WIND** | breath and gusts over a soft drone |
 
-About one patch in three is then mutated once more (a partial nailed to a fixed frequency, an envelope
-turned over, the feedback pushed, the LFO taken too far, an octave away, another family's algorithm).
+Each patch is then shaped with care: modulators on high ratios turned down (their sidebands alias and
+scream), the brightness scaled down the keyboard so high notes are not shrill nor low ones muddy, rate
+scaling on the carriers. HOME draws several patches, measures each, and keeps one whose brightness suits
+the layer's path (darker on AMBIENT, brighter on EXPERIMENTAL) and that is not of the family the layer had.
+
+About half the patches are then bent once more, gently (an operator detuned to beat, an envelope turned
+over to grow as it holds, the LFO waiting and then moving the timbre, an octave down, more feedback, a
+modulator's ratio moved to a neighbour, a partial nailed to a frequency).
 Every patch is rendered offline as it is made and given the gain that brings it to one loudness.
 
 ### ANIMA — a synthesizer played by a simulated hand
@@ -254,8 +287,13 @@ grain cloud, a filtered noise, a resonant filter, a wavetable tremolo; then the 
 downsampler, a waveshaper, a phaser, a second filter and a comb resonator tuned to the note. Each new
 sound is a *design*: which of these are in, on which waveforms, and for every parameter which gesture
 moves it, over what range, along what curve, plus a mod matrix of three to seven routes and Anima's
-eight sliders, drawn — often far from their middle. Eight kinds: **HAZE**, **VOYAGE**, **GLASS**,
-**BELLS**, **GOLDEN** (Anima's own) and **BREATH**, **GRIT**, **SWARM** (made for this firmware).
+eight sliders, drawn — often far from their middle. Fourteen kinds: **HAZE**, **VOYAGE**, **GLASS**,
+**BELLS**, **GOLDEN** (Anima's own) and **BREATH**, **GRIT**, **SWARM**, **TIDE** (waves of noise over a low
+drone), **CHOIR** (vowels, a formant the hand moves), **SHARDS** (glass grains scattered and crushed),
+**BOWL** (a beating inharmonic hum in a ringing comb), **DUST** (sparse crackle over a dark drone),
+**MACHINE** (a pulsing, folded mechanism). The filter follows the keyboard, so low notes are not muffled
+nor high ones shrill; the second oscillator's interval suits the path (consonant on AMBIENT, anything on
+EXPERIMENTAL); and an AMBIENT sound nearly always has a resonant space to ring in.
 
 In Vascular a design plays up to six fingers, each a voice; here a layer has one voice, so the hand has
 one finger on the sound.
@@ -284,7 +322,13 @@ quick taps against long holds. The first finger stays down until the key is let 
 drops out under a held key. Around the hand the organism has a life of its own: the modulation depths
 and the sharpness wander, oscillators fire in **bursts** at irregular times, and now and then the
 feedback and the drive **surge** for a moment. A pair's envelope may be slow: a swell of seconds, a release of up to
-nine seconds after the key is let go. **HOME** draws a new organism from six species:
+nine seconds after the key is let go.
+
+The hand often has a **phrase**: two to four plates it keeps coming back to, varied now and then, often on
+a pulse of its own (long, short, short, longer) — so it plays like someone rather than like chance. A pair
+the hyper LFO's gates never close stays under it all. **HOME** draws a new organism from ten species, tuned
+on one of ten sets of intervals (pillars of octaves and fifths, semitone clusters, the depths, the
+harmonics, unisons, tritones, fourths, a minor seventh, open fifths, a quarter-tone cluster):
 
 | Species | |
 | --- | --- |
@@ -294,6 +338,10 @@ nine seconds after the key is let go. **HOME** draws a new organism from six spe
 | **CARRION** | the depths, heavy total feedback, the delay warped by the voices, surges |
 | **VEIL** | mostly triangles, light modulation: the calmest |
 | **RUST** | driven, cross-modulated, surging, sometimes rhythmic |
+| **LITANY** | a slow choir: unisons and octaves beating, nothing sharp, a hand that stays |
+| **UNDERTOW** | deep: heavy feedback and a warped delay pulling it under, slow surges |
+| **WIRE** | high and sharp, clusters and quarter tones, a quick hand tapping, bursts |
+| **MOTH** | soft triangles fluttering through the gates, on a pulse |
 
 
 # Building from source

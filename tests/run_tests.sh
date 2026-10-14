@@ -14,8 +14,12 @@ tests/check_target_ir.sh
 clang -O2 -std=gnu99 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-unused-function -Werror \
     -Ifirmware/src -Ibuild/gen tests/host/host.c -o build/host
 build/host check
+clang -O2 -std=gnu99 -w -Ifirmware/src -Ibuild/gen tests/golden/golden.c -o build/golden
+build/golden | diff -q - tests/golden/gen0.txt >/dev/null || { echo "FAIL golden: generation 0 no longer draws its sounds again"; exit 1; }
+echo "golden: generation 0 as it was"
 build/host flows
 build/host latch
+build/host presets build/screens
 build/host paths build/sounds
 build/host reverb build/sounds
 build/host sessions build/screens

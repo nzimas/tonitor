@@ -90,6 +90,11 @@ static struct {
     uint8_t ses_yes;             /* the question's answer */
     uint16_t ses_new;            /* the number it asks about */
     uint8_t ses_over;            /* .. and it holds a session: the question is OVERWRITE */
+    uint8_t pre_page;            /* 0 none, SP_LIST the presets of pre_eng, SP_ASK the question before saving over one */
+    uint8_t pre_eng;             /* the engine whose presets they are (the layer's, as SHIFT and SAVE opened them) */
+    uint8_t pre_ix;              /* the slot chosen, 1 .. 64 */
+    uint8_t pre_yes;
+    int16_t shown_pre;           /* (what the page shows: slot, question and answer) */
     uint32_t save_t0;            /* SAVE pressed at: held 0.8 s is a save, shorter a press */
     uint8_t save_down, save_long;
     int8_t shown_ses;            /* (the page as last drawn) */
@@ -214,6 +219,10 @@ static int ses_has(uint32_t num);
 static int ses_current(void);
 static void ses_choose(uint32_t num);
 static int ses_load_slot(uint32_t num);
+static int pre_kind(uint32_t e, uint32_t slot);   /* the kind of sound in engine e's slot, -1 if none */
+static int pre_save(uint32_t l, uint32_t e, uint32_t slot);
+static int pre_load(uint32_t l, uint32_t e, uint32_t slot);
+#define PRE_SLOTS 64u
 #define SES_SLOTS 64u
 enum { SES_OK, SES_NOFLASH, SES_FULL, SES_FAIL };
 
@@ -227,9 +236,54 @@ static void ses_done(int rc, const char *what, uint32_t num)
         flash(rc == SES_FULL ? "FULL" : rc == SES_NOFLASH ? "NO FLASH" : "FAILED", "", C_BAD);
     ui.force = 1;
 }
+/* the presets page: SAVE held saves the layer's sound into the slot chosen (asked first over a full one) */
+static void pre_done(int rc, const char *what)
+{
+    ses_done(rc, what, ui.pre_ix);               /* the whole screen: SAVED / LOADED and the slot, very large */
+}
+static void pre_long(void)
+{
+    if (ui.pre_page == SP_ASK)
+        return;
+    if (pre_kind(ui.pre_eng, ui.pre_ix) >= 0) {
+        ui.pre_page = SP_ASK;
+        ui.pre_yes = 0;                          /* (over a sound: NO until turned to YES) */
+        ui.force = 1;
+        return;
+    }
+    pre_done(pre_save(ui.sel, ui.pre_eng, ui.pre_ix), "SAVED");
+}
+/* .. SAVE pressed: the slot chosen loaded into the layer (and back to playing), or the question answered */
+static void pre_short(void)
+{
+    if (ui.pre_page == SP_ASK) {
+        ui.pre_page = SP_LIST;
+        ui.force = 1;
+        if (ui.pre_yes)
+            pre_done(pre_save(ui.sel, ui.pre_eng, ui.pre_ix), "SAVED");
+        else
+            say("NOT SAVED", 1200);
+        return;
+    }
+    if (pre_kind(ui.pre_eng, ui.pre_ix) < 0) {
+        say("EMPTY", 900);
+        return;
+    }
+    if (ui.engine[ui.sel] != ui.pre_eng) {       /* (the layer's engine moved on: to the presets' again) */
+        ui.engine[ui.sel] = ui.pre_eng;
+        ev_post(EV_ENGINE, ui.sel, 0, ui.pre_eng);
+    }
+    ui.pre_page = 0;
+    pre_done(pre_load(ui.sel, ui.pre_eng, ui.pre_ix) == SES_OK ? SES_OK : SES_FAIL, "LOADED");
+}
+
 /* SAVE held */
 static void save_long(void)
 {
+    if (ui.pre_page) {
+        pre_long();
+        return;
+    }
     if (ui.ses_page == SP_ASK)
         return;
     ui.rv_page = 0;
@@ -261,6 +315,10 @@ static void save_long(void)
 /* SAVE pressed (let go before it was held) */
 static void save_short(void)
 {
+    if (ui.pre_page) {
+        pre_short();
+        return;
+    }
     if (ui.ses_page == SP_ASK) {
         uint32_t num = ui.ses_new;
         ui.ses_page = 0;
@@ -350,16 +408,18 @@ static void ui_input(void)
     for (l = 0; l < NLAYER; l++)
         if (btn_bit(press, LAYER_BTN[l])) {
             ui.sel = (uint8_t)l;
-            if (ui.rv_page || ui.ses_page || ui.sc_page) {   /* a layer chosen: back to it */
+            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page) {   /* a layer chosen: back to it */
                 ui.rv_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
+                ui.pre_page = 0;
                 ui.force = 1;
             }
         }
     if (btn_bit(press, B_SEQ)) {
         ui.rv_page = (uint8_t)!ui.rv_page;
         ui.ses_page = 0;
+        ui.pre_page = 0;
         ui.sc_page = 0;
         ui.force = 1;
     }
@@ -367,9 +427,21 @@ static void ui_input(void)
         ui.sc_page = (uint8_t)!ui.sc_page;
         ui.rv_page = 0;
         ui.ses_page = 0;
+        ui.pre_page = 0;
         ui.force = 1;
     }
-    if (btn_bit(press, B_SAVE)) {
+    if (btn_bit(press, B_SAVE) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and SAVE: the presets, or back */
+        if (ui.pre_page)
+            ui.pre_page = 0;
+        else {
+            ui.pre_page = SP_LIST;
+            ui.pre_eng = ui.engine[ui.sel];
+            if (!ui.pre_ix)
+                ui.pre_ix = 1;
+            ui.rv_page = ui.ses_page = ui.sc_page = 0;
+        }
+        ui.force = 1;
+    } else if (btn_bit(press, B_SAVE)) {
         ui.save_t0 = fm1_ms;
         ui.save_down = 1;
         ui.save_long = 0;
@@ -516,7 +588,13 @@ static void ui_input(void)
         say(m, 1200);
     }
     s = enc_take(EN_PRESET);
-    if (s && ui.ses_page == SP_LIST) {           /* PRESETS: through the sessions */
+    if (s && ui.pre_page == SP_LIST) {           /* PRESETS: through the presets */
+        ui.pre_ix = (uint8_t)clampi((int32_t)ui.pre_ix + s, 1, PRE_SLOTS);
+        s = 0;
+    } else if (s && ui.pre_page == SP_ASK) {
+        ui.pre_yes = (uint8_t)(s > 0);
+        s = 0;
+    } else if (s && ui.ses_page == SP_LIST) {    /* PRESETS: through the sessions */
         ui.ses_ix = (uint8_t)clampi((int32_t)ui.ses_ix + s, 1, SES_SLOTS);   /* every detent a slot */
         s = 0;
     } else if (s && ui.ses_page == SP_ASK) {     /* .. NO (left) or YES (right) */
@@ -926,6 +1004,85 @@ static int draw_flash(void)
 }
 
 /* the SESSIONS page: the title, the session chosen (very large), where it is in the list; the question */
+/* the question's answer, in a canvas 76 high: NO | YES, the one chosen in white */
+static void draw_noyes(int yes)
+{
+    cv_frame(6, 10, 108, 60, 3, yes ? C_GREY : C_WHITE);
+    cv_frame(126, 10, 108, 60, 3, yes ? C_WHITE : C_GREY);
+    if (!yes)
+        cv_rect(9, 13, 102, 54, C_WHITE);
+    else
+        cv_rect(129, 13, 102, 54, C_WHITE);
+    cv_bg_set(yes ? C_BLACK : C_WHITE);
+    cv_text(60 - text_w(&FONT_M, "NO") / 2, 22, &FONT_M, "NO", yes ? C_GREY : C_BLACK);
+    cv_bg_set(yes ? C_WHITE : C_BLACK);
+    cv_text(180 - text_w(&FONT_M, "YES") / 2, 22, &FONT_M, "YES", yes ? C_BLACK : C_GREY);
+    cv_bg_set(C_BLACK);
+}
+/* text left-aligned at x (x < 0: centred in the canvas), a size smaller or squeezed a little to fit w */
+static void cv_text_in(int32_t x, int32_t w, int32_t band_h, const char *t, uint16_t c)
+{
+    const font_t *f = &FONT_M;
+    int32_t n = (int32_t)str_len(t), sq = 0;
+    if (text_w(f, t) - 2 * (n - 1) > w)          /* (a size smaller rather than letters crushed together) */
+        f = &FONT_S;
+    if (text_w(f, t) > w && n > 1)
+        sq = clampi((text_w(f, t) - w + n - 2) / (n - 1), 0, 4);
+    if (x < 0)
+        x = ((int32_t)cv_w - (text_w(f, t) - sq * (n - 1))) / 2;
+    for (; *t; t++) {
+        char one[2] = {*t, 0};
+        x = cv_text(x, (band_h - f->h) / 2, f, one, c) - sq;
+    }
+}
+static const char *kind_name(uint32_t e, int32_t k)
+{
+    return e == ENG_FM ? FF_NAME[k % FF_N] : e == ENG_ANIMA ? AK_NAME[k % AK_N] : CS_NAME[k % CS_N];
+}
+/* the PRESETS page: the engine's name over four slots (the page of the one chosen), the chosen one in white; a
+ * full slot's number in red with its sound's name, an empty one grey. Or, asked: OVERWRITE?, the slot, NO | YES */
+static void draw_pre_page(void)
+{
+    char t[20], n[8];
+    uint32_t j, first = (ui.pre_ix - 1u) / 4u * 4u + 1u;
+    int16_t key = (int16_t)(ui.pre_ix * 4 + (ui.pre_page == SP_ASK ? 2 + ui.pre_yes : 0));
+    if (!ui.force && ui.shown_pre == key)
+        return;
+    ui.shown_pre = key;
+    if (ui.pre_page == SP_ASK) {
+        const font_t *f = band_font("OVERWRITE?");
+        cv_begin(240, 52, C_BLACK);
+        cv_text_fit((52 - f->h) / 2, f, "OVERWRITE?", C_FULL);
+        cv_blit(0, 0);
+        cv_begin(240, 112, C_BLACK);
+        n[0] = 'P';
+        fmt_int(n + 1, ui.pre_ix);
+        cv_text_c(8, &FONT_XL, n + 1, C_FULL);
+        cv_blit(0, 52);
+        cv_begin(240, 76, C_BLACK);
+        draw_noyes(ui.pre_yes);
+        cv_blit(0, 164);
+        return;
+    }
+    str_cpy(t, ENG_NAME[ui.pre_eng], sizeof t);
+    str_cpy(t + str_len(t), " PRESETS", 9);
+    cv_begin(240, 52, C_BLACK);
+    cv_text_in(-1, 228, 52, t, C_SES);
+    cv_blit(0, 0);
+    for (j = 0; j < 4u; j++) {
+        uint32_t slot = first + j;
+        int sel = slot == ui.pre_ix;
+        int32_t k = pre_kind(ui.pre_eng, slot);
+        uint16_t bg = sel ? C_WHITE : C_BLACK;
+        cv_begin(240, 47, bg);                   /* (47: the rows meet, nothing of the screen before between) */
+        n[0] = 'P';
+        fmt_int(n + 1, (int32_t)slot);
+        cv_text_in(6, 84, 47, n, k >= 0 ? C_FULL : sel ? C_BLACK : C_GREY);
+        cv_text_in(92, 142, 47, k >= 0 ? kind_name(ui.pre_eng, k) : "EMPTY", sel ? C_BLACK : k >= 0 ? C_WHITE : C_GREY);
+        cv_blit(0, 52 + 47 * j);
+    }
+}
+
 static void draw_ses_page(void)
 {
     char n[8];
@@ -949,19 +1106,9 @@ static void draw_ses_page(void)
     }
     cv_blit(0, 52);
     cv_begin(240, 76, C_BLACK);
-    if (ui.ses_page == SP_ASK) {                 /* NO | YES, the answer in white */
-        cv_frame(6, 10, 108, 60, 3, ui.ses_yes ? C_GREY : C_WHITE);
-        cv_frame(126, 10, 108, 60, 3, ui.ses_yes ? C_WHITE : C_GREY);
-        if (!ui.ses_yes)
-            cv_rect(9, 13, 102, 54, C_WHITE);
-        else
-            cv_rect(129, 13, 102, 54, C_WHITE);
-        cv_bg_set(ui.ses_yes ? C_BLACK : C_WHITE);
-        cv_text(60 - text_w(&FONT_M, "NO") / 2, 22, &FONT_M, "NO", ui.ses_yes ? C_GREY : C_BLACK);
-        cv_bg_set(ui.ses_yes ? C_WHITE : C_BLACK);
-        cv_text(180 - text_w(&FONT_M, "YES") / 2, 22, &FONT_M, "YES", ui.ses_yes ? C_BLACK : C_GREY);
-        cv_bg_set(C_BLACK);
-    } else if (ui.ses_ix == ses_current())
+    if (ui.ses_page == SP_ASK)
+        draw_noyes(ui.ses_yes);
+    else if (ui.ses_ix == ses_current())
         cv_text_c(20, &FONT_M, has ? "LOADED" : "CHOSEN", C_OK);
     else if (!has)
         cv_text_c(20, &FONT_M, "EMPTY", C_GREY); /* (a full one: its red number says it) */
@@ -980,12 +1127,20 @@ static void ui_draw(void)
     int32_t px;
     if (draw_flash())
         return;
-    if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page) {   /* the dial */
+    if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page && !ui.pre_page) {   /* the dial */
         if (ui.shown_page != 4 ||
             (ui.shown_dial != (int16_t)(dial_value() + ui.dial * 256) && (uint32_t)(fm1_ms - ui.dial_drawn_at) >= 40u))
             draw_dial();
         ui.shown_page = 4;
         ui.shown_ses = 0;
+        return;
+    }
+    if (ui.pre_page) {
+        if (ui.shown_page != 5)
+            ui.force = 1;
+        draw_pre_page();
+        ui.shown_page = 5;
+        ui.force = 0;
         return;
     }
     if (ui.ses_page) {
@@ -1071,11 +1226,11 @@ static void sounds_init(void)
     uint32_t l;
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed();
-        fm_generate(&fm_buf[l][0], -1, s, PATH_OPEN);
+        fm_generate(&fm_buf[l][0], -1, s, PATH_OPEN, GEN_NOW);
         fm_measure(&fm_buf[l][0]);
-        an_design(&an_buf[l][0], -1, s * 7u + 3u, PATH_OPEN);
+        an_design(&an_buf[l][0], -1, s * 7u + 3u, PATH_OPEN, GEN_NOW);
         an_measure(&an_buf[l][0]);
-        cal_design(&cal_buf[l][0], -1, s * 13u + 5u, PATH_OPEN);
+        cal_design(&cal_buf[l][0], -1, s * 13u + 5u, PATH_OPEN, GEN_NOW);
         cal_measure(&cal_buf[l][0]);
         fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
         cal_pub[l] = cal_use[l] = 0;

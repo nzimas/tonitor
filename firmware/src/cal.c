@@ -23,6 +23,12 @@
  * the depths and the sharpness wander, quick taps come in BURSTS at irregular times, and now and then the
  * feedback and the drive SURGE for a moment. Every design is drawn by cal_design from one of six species.
  *
+ * Generation 1 (0.21) adds four species -- LITANY (a slow choir of unisons beating), UNDERTOW (deep feedback and a
+ * warped delay pulling it under), WIRE (high, sharp, a quick hand tapping), MOTH (soft triangles fluttering through
+ * the gates) -- and four tunings (fourths, a minor seventh, open fifths, a quarter-tone cluster); and it gives
+ * the hand a phrase: two to four plates it comes back to, varied now and then, often on a pulse of its own, so it
+ * plays like someone rather than like chance. A pair the gates never close stays under it all.
+ *
  * A layer's path leans the draw (PATH_OPEN: every species and tuning alike):
  *   AMBIENT       SPORE and VEIL most, CARRION, now and then RUST; tuned on pillars, depths and unisons; slow
  *                 swells, softer edges and drive, fewer bursts and surges, a slower hand that stays longer
@@ -31,13 +37,16 @@
 
 #define CAL_DLN 768u             /* each delay line: samples at FS / 2 (~35 ms), mu-law */
 
-enum { CS_SPORE, CS_THORN, CS_HIVE, CS_CARRION, CS_VEIL, CS_RUST, CS_N };
-static const char *const CS_NAME[CS_N] = {"SPORE", "THORN", "HIVE", "CARRION", "VEIL", "RUST"};
+enum { CS_SPORE, CS_THORN, CS_HIVE, CS_CARRION, CS_VEIL, CS_RUST,
+       CS_N0,                    /* (generation 0 draws these six only) */
+       CS_LITANY = CS_N0, CS_UNDERTOW, CS_WIRE, CS_MOTH, CS_N };
+static const char *const CS_NAME[CS_N] = {"SPORE", "THORN", "HIVE", "CARRION", "VEIL", "RUST", "LITANY", "UNDERTOW",
+                                          "WIRE", "MOTH"};
 enum { CSRC_PARTNER, CSRC_SIDE, CSRC_CROSS, CSRC_TOTAL };
 enum { CLNK_A, CLNK_AND, CLNK_OR, CLNK_XOR };
 
 typedef struct {
-    uint32_t seed;               /* what made it: cal_design(-1, seed, path) + cal_measure give it again */
+    uint32_t seed;               /* what made it: cal_design(-1, seed, path, gen) + cal_measure give it again */
     uint8_t kind;
     uint8_t src[4];              /* each pair's FM source */
     uint8_t link, lfo_sq, gate_pairs, del_src;   /* hyper LFO; its shape; the pairs it gates; the delay's mod */
@@ -65,6 +74,13 @@ typedef struct {
     uint8_t home;                /* the plates it favours, a bit each */
     uint8_t first;               /* plates it lands on at once, 1 .. 3 */
     uint8_t path;                /* PATH_*: what it was drawn on */
+    /* (generation 1 on: fields after here, so generation 0's stay where they were) */
+    uint8_t gen;                 /* the generators' generation that drew it */
+    uint8_t motif[4];            /* the hand's phrase: the plates it comes back to (generation 1) */
+    uint8_t mlen;                /* .. how many (0: no phrase, every plate by chance) */
+    uint8_t mfollow;             /* .. how often it follows it, Q8 */
+    uint8_t rhythm;              /* .. its touches on a pulse (the phrase's own) rather than at random */
+    uint8_t rsv1;
 } cal_design_t;
 
 typedef struct {
@@ -91,6 +107,7 @@ typedef struct {
     int32_t dhalf[2], dlast[2];
     uint8_t odd, live;
     uint8_t hush;                /* overload (layers.c): its tail, no key on it, let go in ~30 ms */
+    uint8_t mstep;               /* where the hand is in its phrase */
     rnd_t r;
 } cal_t;
 
@@ -139,10 +156,18 @@ static void cal_land(cal_t *c, const cal_design_t *d, uint32_t k, int for_good)
     } else
         c->ftime[k] = (uint16_t)clampi(rnd_in(&c->r, d->hold_lo, d->hold_hi) * 1378 / 1000, 30, 0xFFFE);
 }
-/* a plate for the next finger: one it favours more often than not, not one already down */
+/* a plate for the next finger: the next of its phrase, if it has one, more often than not (now and then a
+ * neighbour instead: a variation); else one it favours more often than not; never one already down */
 static int32_t cal_pick(cal_t *c, const cal_design_t *d)
 {
     uint32_t tries, k;
+    if (d->mlen && (rnd_next(&c->r) & 255u) < d->mfollow) {
+        k = d->motif[c->mstep++ % d->mlen] & 7u;
+        if (rnd_chance(&c->r, 12))
+            k ^= 1u;                                  /* (the plate beside it) */
+        if (!c->gate[k])
+            return (int32_t)k;
+    }
     for (tries = 0; tries < 12u; tries++) {
         k = (uint32_t)rnd_below(&c->r, 8);
         if (c->gate[k])
@@ -157,6 +182,11 @@ static int32_t cal_pick(cal_t *c, const cal_design_t *d)
 static uint32_t cal_wait(cal_t *c, const cal_design_t *d)
 {
     int32_t mean = (int32_t)(1378u * 256u / (uint32_t)clampi(d->touch, 16, 256 * 40));   /* blocks */
+    if (d->rhythm && d->mlen) {                       /* on the phrase's pulse: long, short, ... a little loose */
+        static const uint8_t PULSE[4] = {2, 1, 1, 4};   /* x mean / 2 */
+        int32_t w = mean * PULSE[c->mstep % d->mlen] / 2;
+        return (uint32_t)clampi(w + mulq15(w, rnd_bi(&c->r) / 6), 8, 1378 * 20);
+    }
     int32_t ln = (int32_t)(((int64_t)(R16(15.0) - log2_q16((uint32_t)rnd_in(&c->r, 64, Q15))) * 45426) >> 16);
     return (uint32_t)clampi(mulq16(mean, ln), 8, 1378 * 20);
 }
@@ -455,41 +485,156 @@ static int cal_render(cal_t *c, const cal_design_t *d, int32_t *out)
 
 /* ------------------------------------------------------------- designs --- */
 /* the intervals a species tunes its eight oscillators to, from the root, semitones */
-static const int8_t CAL_SETS[6][8] = {
+#define CSET_N1 10u              /* the tunings of generation 1 (generation 0: the first six) */
+static const int8_t CAL_SETS[CSET_N1][8] = {
     {0, 0, 12, 12, 7, 7, 19, 24},        /* pillars: root, octave, fifth */
     {0, 1, 12, 13, -12, -11, 7, 8},      /* clusters: each a semitone off itself */
     {-12, -12, 0, 0, -24, -24, 7, 12},   /* the depths */
     {0, 0, 7, 7, 12, 19, 24, 31},        /* the spectrum: harmonics, roughly */
     {0, 0, 0, 12, 12, 12, -12, 7},       /* unisons, beating */
     {0, 6, 12, 18, -12, -6, 7, 13},      /* tritones */
+    /* (generation 1) */
+    {0, 0, 5, 5, 12, 12, 17, 24},        /* fourths */
+    {0, 0, 3, 3, 7, 7, 10, 12},          /* a minor seventh: melancholy */
+    {-12, -12, 0, 0, 7, 7, 14, 19},      /* open fifths, stacked */
+    {0, 0, 0, 0, 12, 12, -12, 7},        /* a quarter-tone cluster (the odd ones a quarter tone up) */
 };
 
 /* the species' and the tunings' weights on each path (the open path: all alike) */
-static const uint8_t CS_W[3][CS_N] = {{1, 1, 1, 1, 1, 1}, {4, 0, 0, 2, 4, 1}, {1, 3, 3, 2, 0, 3}};
+static const uint8_t CS_W[3][CS_N0] = {{1, 1, 1, 1, 1, 1}, {4, 0, 0, 2, 4, 1}, {1, 3, 3, 2, 0, 3}};
 static const uint8_t CSET_W[3][6] = {{1, 1, 1, 1, 1, 1}, {3, 1, 3, 2, 3, 0}, {1, 3, 1, 1, 1, 3}};
+/* generation 1: ten species, ten tunings */
+static const uint8_t CS_W1[3][CS_N] = {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, {4, 0, 0, 2, 4, 1, 4, 3, 0, 2},
+                                       {1, 3, 3, 2, 0, 3, 0, 1, 4, 2}};
+static const uint8_t CSET_W1[3][CSET_N1] = {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, {3, 1, 3, 2, 3, 0, 2, 3, 3, 1},
+                                            {1, 3, 1, 1, 1, 3, 1, 0, 1, 3}};
 
-static void cal_design(cal_design_t *d, int32_t kind, uint32_t seed, uint32_t path)
+/* generation 1: the four new species made what they are; a phrase for the hand; a bed that never goes; no harsh
+ * pair on AMBIENT */
+static void cal_care1(cal_design_t *d, uint32_t kind, uint32_t path, rnd_t *r)
+{
+    uint32_t k;
+    switch (kind) {
+    case CS_LITANY:                                   /* a slow choir: unisons beating, nothing sharp */
+        for (k = 0; k < 4u; k++) {
+            d->att[k] = rnd_in(r, 800, 3000);
+            d->rel[k] = rnd_in(r, 4000, 9000);
+            d->sharp[k] = rnd_in(r, 0, LV(0.2));
+            d->mod[k] = rnd_in(r, 0, LV(0.25));
+        }
+        d->hold[0] = rnd_in(r, LV(0.3), LV(0.6));
+        d->hold[1] = rnd_in(r, LV(0.3), LV(0.6));
+        d->gate_pairs = 0;
+        d->lfo_a = rnd_in(r, H16(0.05), H16(0.4));
+        d->burst = rnd_in(r, 0, 128);
+        d->surge = rnd_in(r, 0, 256);
+        d->drive = rnd_in(r, IX(1.0), IX(1.5));
+        d->total_fb = rnd_in(r, LV(0.05), LV(0.25));
+        d->del_mix = rnd_in(r, LV(0.2), LV(0.4));
+        d->touch = rnd_in(r, 40, 110);
+        d->hold_lo = 3000, d->hold_hi = 9000, d->tap = 0, d->fingers = (uint8_t)rnd_in(r, 3, 4);
+        break;
+    case CS_UNDERTOW:                                 /* deep, slow, the feedback and the delay pulling it under */
+        for (k = 0; k < 4u; k++) {
+            d->att[k] = rnd_in(r, 400, 2500);
+            d->rel[k] = rnd_in(r, 3000, 9000);
+            d->sharp[k] = rnd_in(r, LV(0.2), LV(0.5));
+        }
+        d->total_fb = rnd_in(r, LV(0.4), LV(0.75));
+        d->del_src = 1;
+        d->del_mod = rnd_in(r, LV(0.15), LV(0.4));
+        d->del_fb = rnd_in(r, LV(0.5), LV(0.75));
+        d->drive = rnd_in(r, IX(1.5), IX(3.0));
+        d->surge = rnd_in(r, 256 * 2, 256 * 5);
+        d->burst = rnd_in(r, 0, 128);
+        d->touch = rnd_in(r, 50, 120);
+        d->hold_lo = 2000, d->hold_hi = 8000, d->tap = LV(0.05), d->fingers = (uint8_t)rnd_in(r, 2, 3);
+        break;
+    case CS_WIRE:                                     /* high, sharp, a quick hand tapping */
+        for (k = 0; k < 4u; k++) {
+            d->att[k] = rnd_in(r, 5, 60);
+            d->rel[k] = rnd_in(r, 80, 600);
+            d->sharp[k] = rnd_in(r, LV(0.7), Q15);
+            d->mod[k] = rnd_in(r, LV(0.6), Q15);
+        }
+        d->lfo_a = rnd_in(r, H16(3.0), H16(11.0));
+        d->lfo_sq = 1;
+        d->gate_pairs = (uint8_t)(1 + rnd_below(r, 14));
+        d->gate_depth = rnd_in(r, LV(0.6), Q15);
+        d->burst = rnd_in(r, 256 * 3, 256 * 8);
+        d->touch = rnd_in(r, 1000, 2500);
+        d->hold_lo = 40, d->hold_hi = 300, d->tap = LV(0.8), d->fingers = (uint8_t)rnd_in(r, 4, 6);
+        break;
+    case CS_MOTH:                                     /* soft wings: triangles fluttering through the gates */
+        for (k = 0; k < 4u; k++) {
+            d->sharp[k] = rnd_in(r, 0, LV(0.3));
+            d->mod[k] = rnd_in(r, LV(0.2), LV(0.5));
+        }
+        d->lfo_a = rnd_in(r, H16(1.5), H16(6.0));
+        d->lfo_sq = 1;
+        d->gate_pairs = (uint8_t)(3 + rnd_below(r, 12));
+        d->gate_depth = rnd_in(r, LV(0.5), LV(0.9));
+        d->burst = rnd_in(r, 128, 512);
+        d->touch = rnd_in(r, 200, 500);
+        d->hold_lo = 300, d->hold_hi = 1500, d->tap = LV(0.3), d->fingers = 3;
+        break;
+    default:
+        break;
+    }
+    if (kind >= CS_N0)
+        d->lfo_b = mulq16(d->lfo_a, rnd_in(r, R16(0.37), R16(2.71)));
+    /* a phrase: two to four plates it comes back to, sometimes on a pulse (always for the new species but WIRE) */
+    if ((kind >= CS_N0 && kind != CS_WIRE) || rnd_chance(r, 50)) {
+        d->mlen = (uint8_t)rnd_in(r, 2, 4);
+        for (k = 0; k < 4u; k++)
+            d->motif[k] = (uint8_t)rnd_below(r, 8);
+        d->mfollow = (uint8_t)rnd_in(r, 150, 230);
+        d->rhythm = (uint8_t)(kind == CS_MOTH || rnd_chance(r, 45));
+    }
+    if ((d->gate_pairs & 15u) == 15u)                /* a pair the gates never close on: the bed */
+        d->gate_pairs = (uint8_t)(15u & ~(1u << rnd_below(r, 4)));
+    if (path == PATH_AMBIENT)                         /* sharp and deeply modulated together grates */
+        for (k = 0; k < 4u; k++)
+            if (d->sharp[k] > LV(0.5) && d->mod[k] > LV(0.5))
+                d->mod[k] = LV(0.5);
+}
+
+static void cal_design(cal_design_t *d, int32_t kind, uint32_t seed, uint32_t path, uint32_t gen)
 {
     rnd_t rr, *r = &rr;
     uint32_t k, set;
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed ^ 0xCA11u);
-    if (kind < 0 || kind >= CS_N)
-        kind = path == PATH_OPEN ? rnd_below(r, CS_N) : (int32_t)rnd_weighted(r, CS_W[path], CS_N);
+    if (gen == 0u && (kind < 0 || kind >= CS_N0))
+        kind = path == PATH_OPEN ? rnd_below(r, CS_N0) : (int32_t)rnd_weighted(r, CS_W[path], CS_N0);
+    else if (kind < 0 || kind >= CS_N)
+        kind = (int32_t)rnd_weighted(r, CS_W1[path], CS_N);
     memset(d, 0, sizeof *d);
     d->seed = seed;
     d->kind = (uint8_t)kind;
     d->path = (uint8_t)path;
+    d->gen = (uint8_t)gen;
     /* the tuning: a set of intervals from the root, each pair detuned against itself (it beats) */
-    set = path == PATH_OPEN ? (uint32_t)rnd_below(r, 6) : rnd_weighted(r, CSET_W[path], 6);
+    if (gen == 0u)
+        set = path == PATH_OPEN ? (uint32_t)rnd_below(r, 6) : rnd_weighted(r, CSET_W[path], 6);
+    else if (kind == CS_LITANY)
+        set = rnd_chance(r, 50) ? 4u : rnd_chance(r, 50) ? 0u : 7u;   /* unisons, pillars, the minor seventh */
+    else if (kind == CS_UNDERTOW)
+        set = rnd_chance(r, 50) ? 2u : 8u;                            /* the depths, open fifths */
+    else if (kind == CS_WIRE)
+        set = rnd_chance(r, 40) ? 1u : rnd_chance(r, 50) ? 5u : 9u;   /* clusters, tritones, quarter tones */
+    else
+        set = rnd_weighted(r, CSET_W1[path], CSET_N1);
     for (k = 0; k < 8u; k++) {
         int32_t semis = CAL_SETS[set][k], cents;
-        if (kind == CS_CARRION || kind == CS_SPORE)
+        if (kind == CS_CARRION || kind == CS_SPORE || kind == CS_UNDERTOW)
             semis -= 12;
+        if (kind == CS_WIRE)
+            semis += 12;
         cents = (k & 1u) ? rnd_in(r, 3, kind == CS_THORN || kind == CS_RUST ? 40 : 18) : rnd_in(r, -4, 4);
         if (rnd_chance(r, 50))
             cents = -cents;
-        d->tune[k] = (int16_t)(semis * 16 + cents * 16 / 100);
+        d->tune[k] = (int16_t)(semis * 16 + cents * 16 / 100 + (set == 9u && (k & 1u) ? 8 : 0));
     }
     for (k = 0; k < 4u; k++) {
         int slow = rnd_chance(r, kind == CS_HIVE || kind == CS_THORN ? 30 : 75);
@@ -562,6 +707,8 @@ static void cal_design(cal_design_t *d, int32_t kind, uint32_t seed, uint32_t pa
     for (k = rnd_in(r, 1, 3); k; k--)
         d->home |= (uint8_t)(1u << rnd_below(r, 8));
     d->first = (uint8_t)rnd_in(r, 1, 3);
+    if (gen >= 1u)
+        cal_care1(d, (uint32_t)kind, path, r);
     if (path == PATH_AMBIENT) {
         for (k = 0; k < 4u; k++) {
             if (d->att[k] < 200 && rnd_chance(r, 60)) {   /* most pairs swell */

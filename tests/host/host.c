@@ -206,11 +206,11 @@ static stats_t render_sound(int engine, int which, uint32_t seed, int note, doub
     memset(&st, 0, sizeof st);
     memset(&fv, 0, sizeof fv);
     if (engine == ENG_FM) {
-        fm_generate(&pt, which, seed, host_path);
+        fm_generate(&pt, which, seed, host_path, GEN_NOW);
         fm_measure(&pt);
         fm_note_on(&fv, &pt, note, 1);
     } else {
-        an_design(&d, which, seed, host_path);
+        an_design(&d, which, seed, host_path, GEN_NOW);
         an_measure(&d);
         an_init(&av, seed);
         an_note_on(&av, &d, pitch_inc(note * 16), 1);
@@ -535,7 +535,7 @@ static int cmd_flows(void)
     press_key(12, 0);
     run_blocks(44100u * 40u / CTL, 0);
     /* a release not cut: a DRONE (long release) on layer 4, a note, let go, the next note 100 ms later */
-    fm_generate(&fm_buf[3][fm_use[3] ^ 1u], FF_DRONE, 4242u, PATH_OPEN);
+    fm_generate(&fm_buf[3][fm_use[3] ^ 1u], FF_DRONE, 4242u, PATH_OPEN, GEN_NOW);
     fm_measure(&fm_buf[3][fm_use[3] ^ 1u]);
     fm_pub[3] = fm_use[3] ^ 1u;
     press_btn(B_LFO);
@@ -956,9 +956,9 @@ static int cmd_sessions(const char *dir)
     for (l = 0; l < NLAYER; l++) {
         static fm_patch_t f2;
         static an_design_t a2;
-        fm_generate(&f2, -1, fp[l].seed, fp[l].path);
+        fm_generate(&f2, -1, fp[l].seed, fp[l].path, fp[l].gen);
         fm_measure(&f2);
-        an_design(&a2, -1, ad[l].seed, ad[l].path);
+        an_design(&a2, -1, ad[l].seed, ad[l].path, ad[l].gen);
         an_measure(&a2);
         if (memcmp(&f2, &fp[l], sizeof f2) || memcmp(&a2, &ad[l], sizeof a2)) {
             printf("FAIL sessions: layer %u's sounds are not made again from their seeds\n", l + 1);
@@ -1485,7 +1485,7 @@ static int cmd_caligula(const char *dir)
                 ui_input();
             }
             run_blocks(40, 0);
-            cal_design(&cal_buf[0][cal_use[0] ^ 1u], (int32_t)sp, 1000u + n * 7919u + sp * 31u, PATH_OPEN);
+            cal_design(&cal_buf[0][cal_use[0] ^ 1u], (int32_t)sp, 1000u + n * 7919u + sp * 31u, PATH_OPEN, GEN_NOW);
             cal_measure(&cal_buf[0][cal_use[0] ^ 1u]);
             cal_pub[0] = cal_use[0] ^ 1u;
             run_blocks(40, 0);
@@ -1541,7 +1541,7 @@ static int cmd_caligula(const char *dir)
         for (sp = 0; sp < CS_N; sp++) {
             int32_t out[CTL];
             int32_t worst = 0;
-            cal_design(&cal_buf[0][0], (int32_t)sp, 77u + sp, PATH_OPEN);
+            cal_design(&cal_buf[0][0], (int32_t)sp, 77u + sp, PATH_OPEN, GEN_NOW);
             cal_buf[0][0].surge = 256 * 20;
             cal_buf[0][0].burst = 256 * 6;
             cal_init(&cal_rt[0], 5);
@@ -1569,7 +1569,7 @@ static int cmd_caligula(const char *dir)
         }
         run_blocks(40, 0);
         for (l = 0; l < NLAYER; l++) {
-            cal_design(&cal_buf[l][cal_use[l]], CS_HIVE, 50u + l, PATH_OPEN);
+            cal_design(&cal_buf[l][cal_use[l]], CS_HIVE, 50u + l, PATH_OPEN, GEN_NOW);
             cal_buf[l][cal_use[l]].fingers = 8;
             cal_note_on(&cal_rt[l], &cal_buf[l][cal_use[l]], 48, 1u);
             cal_note_on(&cal_rt[l], &cal_buf[l][cal_use[l]], 55, 1u);
@@ -1904,9 +1904,9 @@ static int cmd_paths(const char *dir)
     for (pa = 0; pa < PATH_N; pa++) {
         uint32_t nf[FF_N] = {0}, na[AK_N] = {0}, nc[CS_N] = {0};
         for (i = 0; i < 900u; i++) {
-            fm_generate(&fp, -1, 77u + i * 7919u, pa);
-            an_design(&ad, -1, 77u + i * 7919u, pa);
-            cal_design(&cd, -1, 77u + i * 7919u, pa);
+            fm_generate(&fp, -1, 77u + i * 7919u, pa, GEN_NOW);
+            an_design(&ad, -1, 77u + i * 7919u, pa, GEN_NOW);
+            cal_design(&cd, -1, 77u + i * 7919u, pa, GEN_NOW);
             nf[fp.family]++, na[ad.kind]++, nc[cd.kind]++;
             if (fp.path != pa || ad.path != pa || cd.path != pa)
                 printf("FAIL paths: a sound does not keep its path\n"), fail++, i = 900u;
@@ -1945,7 +1945,7 @@ static int cmd_paths(const char *dir)
                     static cal_t c;
                     int32_t out[CTL];
                     uint32_t b, k;
-                    cal_design(&cd, -1, seed, pa);
+                    cal_design(&cd, -1, seed, pa, GEN_NOW);
                     cal_measure(&cd);
                     cal_init(&c, seed);
                     cal_note_on(&c, &cd, 48, 1u);
@@ -2044,6 +2044,126 @@ static int cmd_paths(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* presets: SHIFT and SAVE opens the layer's engine's; SAVE held saves into the slot chosen (asked over a full one,
+ * NO first), SAVE loads; each engine its own 64; they outlive a restart and leave the sessions be; the sound loaded is
+ * the sound saved, bit for bit */
+static void shift_save(void)
+{
+    press_phys(KEY_SHIFT, 1);
+    host_press |= 1u << PANEL_BTN[B_SAVE];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_SAVE];
+    ui_input();
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_SAVE]);
+    ui_input();
+    press_phys(KEY_SHIFT, 0);
+}
+static int cmd_presets(const char *dir)
+{
+    uint32_t fail = 0;
+    char path[512];
+    fm_patch_t keep;
+    cal_design_t keep_c;
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    run_blocks(40, 0);
+    press_btn(B_FX);
+    press_btn(B_HOME);
+    run_blocks(40, 0);
+    keep = fm_buf[0][fm_pub[0]];
+    shift_save();
+    if (ui.pre_page != SP_LIST || ui.pre_eng != ENG_FM || ui.pre_ix != 1u)
+        printf("FAIL presets: SHIFT and SAVE do not open FM's presets on P1\n"), fail++;
+    save_btn(900);                                /* P1 empty: saved at once */
+    if (pre_kind(ENG_FM, 1) != keep.family || ui.pre_page != SP_LIST)
+        printf("FAIL presets: SAVE held did not save into P1 (%d)\n", pre_kind(ENG_FM, 1)), fail++;
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;           /* P2, beside the full P1 */
+    ui_input();
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-31-presets-full.ppm", dir);
+    ppm(path);
+    host_enc[PANEL_ENC[EN_PRESET]] = 4;           /* P6: page 2 */
+    ui_input();
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-29-presets.ppm", dir);
+    ppm(path);
+    host_enc[PANEL_ENC[EN_PRESET]] = -9;          /* back to P1 */
+    ui_input();
+    shift_save();                                 /* closed; a new sound; opened again on P1 */
+    if (ui.pre_page)
+        printf("FAIL presets: SHIFT and SAVE do not close the page\n"), fail++;
+    press_btn(B_HOME);
+    run_blocks(40, 0);
+    shift_save();
+    save_btn(900);                                /* P1 full: asked, NO */
+    if (ui.pre_page != SP_ASK || ui.pre_yes)
+        printf("FAIL presets: no OVERWRITE question (NO first) over a full slot\n"), fail++;
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-30-preset-overwrite.ppm", dir);
+    ppm(path);
+    save_btn(0);
+    {
+        static fm_patch_t now;
+        now = fm_buf[0][fm_pub[0]];
+        save_btn(0);                              /* P1 loaded: the first sound back, bit for bit */
+        run_blocks(100, 0);
+        if (ui.pre_page || memcmp(fm_buf[0][fm_pub[0]].p, keep.p, sizeof keep.p) || fm_buf[0][fm_pub[0]].gain != keep.gain ||
+            fm_buf[0][fm_pub[0]].seed != keep.seed || lay[0].engine != ENG_FM)
+            printf("FAIL presets: P1 does not load the sound saved into it\n"), fail++;
+        if (!memcmp(now.p, keep.p, sizeof keep.p))
+            printf("FAIL presets: (the test's second sound is the first)\n"), fail++;
+    }
+    /* CALIGULA's own presets: layer 2, P5; loaded into layer 4 */
+    press_btn(B_SEL);
+    while (ui.engine[1] != ENG_CAL) {
+        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        ui_input();
+    }
+    run_blocks(40, 0);
+    press_btn(B_HOME);
+    run_blocks(40, 0);
+    keep_c = cal_buf[1][cal_pub[1]];
+    shift_save();
+    host_enc[PANEL_ENC[EN_PRESET]] = 4;
+    ui_input();
+    save_btn(900);
+    if (ui.pre_eng != ENG_CAL || pre_kind(ENG_CAL, 5) != keep_c.kind || pre_kind(ENG_CAL, 1) >= 0 || pre_kind(ENG_ANIMA, 5) >= 0)
+        printf("FAIL presets: CALIGULA's P5 not saved, or not its own\n"), fail++;
+    shift_save();
+    ses_scan(1);                                  /* a restart */
+    if (pre_kind(ENG_CAL, 5) != keep_c.kind || pre_kind(ENG_FM, 1) != keep.family)
+        printf("FAIL presets: they do not outlive a restart\n"), fail++;
+    press_btn(B_LFO);
+    while (ui.engine[3] != ENG_CAL) {
+        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        ui_input();
+    }
+    run_blocks(40, 0);
+    shift_save();
+    if (ui.pre_ix != 5u)
+        printf("FAIL presets: the page does not come back on the slot last chosen\n"), fail++;
+    host_enc[PANEL_ENC[EN_PRESET]] = -64;         /* to P1, then P5 */
+    ui_input();
+    host_enc[PANEL_ENC[EN_PRESET]] = 4;
+    ui_input();
+    save_btn(0);
+    run_blocks(100, 0);
+    if (memcmp(&cal_buf[3][cal_pub[3]], &keep_c, sizeof keep_c))
+        printf("FAIL presets: CALIGULA's P5 does not load into layer 4 as saved (seed %u/%u kind %u/%u out %d/%d path %u/%u gen %u/%u)\n",
+               cal_buf[3][cal_pub[3]].seed, keep_c.seed, cal_buf[3][cal_pub[3]].kind, keep_c.kind, cal_buf[3][cal_pub[3]].out,
+               keep_c.out, cal_buf[3][cal_pub[3]].path, keep_c.path, cal_buf[3][cal_pub[3]].gen, keep_c.gen), fail++;
+    /* the sessions: untouched, still saved and loaded */
+    if (ses_next_number() != 1u || ses_has(1))
+        printf("FAIL presets: the presets show as a session\n"), fail++;
+    if (ses_save(1) != SES_OK || ses_load_slot(1) != SES_OK || pre_kind(ENG_FM, 1) != keep.family)
+        printf("FAIL presets: sessions and presets get in each other's way\n"), fail++;
+    printf("presets: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -2060,6 +2180,8 @@ int main(int argc, char **argv)
         return cmd_reverb(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "paths"))
         return cmd_paths(argv[2]);
+    if (argc >= 3 && !strcmp(argv[1], "presets"))
+        return cmd_presets(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "latch"))
         return cmd_latch();
     if (argc >= 2 && !strcmp(argv[1], "flows"))
@@ -2070,7 +2192,7 @@ int main(int argc, char **argv)
         int32_t out[CTL];
         uint32_t b, i, seed = (uint32_t)atoi(argv[3]);
         double mx = 0;
-        an_design(&d, atoi(argv[2]), seed, PATH_OPEN);
+        an_design(&d, atoi(argv[2]), seed, PATH_OPEN, GEN_NOW);
         an_measure(&d);
         printf("out %d filter %d cut %d..%d src %d q %d..%d amp %d..%d src %d env att %d dec %d sus %d\n", d.out, d.filter,
                d.cutoff.lo, d.cutoff.hi, d.cutoff.src, d.q.lo, d.q.hi, d.amp.lo, d.amp.hi, d.amp.src, d.att, d.dec, d.sus);

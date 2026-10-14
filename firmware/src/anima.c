@@ -21,6 +21,13 @@
  * own (HAZE, VOYAGE, GLASS, BELLS, GOLDEN) and three made for this firmware (BREATH, GRIT, SWARM),
  * all bent towards the acousmatic: the sliders of Anima are drawn too, often far from their middle.
  *
+ * Generation 1 (0.21) adds six kinds -- TIDE (waves of noise over a low drone), CHOIR (vowels, a formant the
+ * hand moves), SHARDS (glass grains scattered and crushed), BOWL (a beating inharmonic hum in a ringing comb),
+ * DUST (sparse crackle over a dark drone), MACHINE (a pulsing, folded mechanism) -- and draws with more care: the
+ * filter follows the keyboard (low notes not muffled, high ones not shrill), the second oscillator's interval
+ * suits the path (consonant on AMBIENT, any on EXPERIMENTAL), and AMBIENT always has a space for the sound to
+ * ring in.
+ *
  * A layer's path leans the draw (PATH_OPEN: every kind alike, the sliders as above):
  *   AMBIENT       the hazes, voyages and golden stacks, bells and breaths; the sliders towards a darker tone,
  *                 less texture and FM, more space, a slower hand; long releases, no crusher, a gentle drive
@@ -50,13 +57,16 @@ typedef struct {                 /* a parameter: the controller that moves it, o
     int32_t lo, hi;
 } an_map;
 
-enum { AK_HAZE, AK_VOYAGE, AK_GLASS, AK_BELLS, AK_GOLDEN, AK_BREATH, AK_GRIT, AK_SWARM, AK_N };
-static const char *const AK_NAME[AK_N] = {"HAZE", "VOYAGE", "GLASS", "BELLS", "GOLDEN", "BREATH", "GRIT", "SWARM"};
+enum { AK_HAZE, AK_VOYAGE, AK_GLASS, AK_BELLS, AK_GOLDEN, AK_BREATH, AK_GRIT, AK_SWARM,
+       AK_N0,                    /* (generation 0 draws these eight only) */
+       AK_TIDE = AK_N0, AK_CHOIR, AK_SHARDS, AK_BOWL, AK_DUST, AK_MACHINE, AK_N };
+static const char *const AK_NAME[AK_N] = {"HAZE", "VOYAGE", "GLASS", "BELLS", "GOLDEN", "BREATH", "GRIT", "SWARM",
+                                          "TIDE", "CHOIR", "SHARDS", "BOWL", "DUST", "MACHINE"};
 
 enum { MO_TAPS, MO_DRAGS, MO_ORBITS, MO_SWARM, MO_SWEEPS, MO_HOLDS };
 
 typedef struct {
-    uint32_t seed;               /* what made it: an_design(-1, seed, path) + an_measure gives it again */
+    uint32_t seed;               /* what made it: an_design(-1, seed, path, gen) + an_measure gives it again */
     uint8_t kind;
     uint8_t path;                /* PATH_*: what it was drawn on */
     uint8_t oscA, oscB, fm, multi, gran, ampMod, down, shaper, phaser, resonator, phByHand, golden;
@@ -91,6 +101,9 @@ typedef struct {
     int32_t travel;              /* surface units a second, Q16 */
     int32_t out;                 /* Q12 */
     int32_t motionScale, density;   /* Q16: the hand's pace and how busy it is */
+    /* (generation 1 on: fields after here, so generation 0's stay where they were) */
+    uint8_t gen;                 /* the generators' generation that drew it */
+    uint8_t kt;                  /* how far the filter follows the keyboard, Q8 (256: an octave an octave) */
 } an_design_t;
 
 /* ----------------------------------------------------------- maps --- */
@@ -193,6 +206,7 @@ typedef struct {
     int32_t level;                /* Q28 */
     rnd_t rnd, motion;
     uint8_t live;
+    int32_t ktmul;               /* the filter's keyboard tracking for this note, Q16 */
 } an_voice_t;
 
 /* ------------------------------------------------------ the envelope --- */
@@ -424,6 +438,11 @@ static void an_note_on(an_voice_t *v, const an_design_t *d, uint32_t inc, int fr
         v->grainClock = 0x80000000u;
     }
     v->inc = inc;
+    v->ktmul = Q16;
+    if (d->kt) {                                     /* the filter follows the keyboard, from middle C */
+        int32_t oct = log2_q16(inc) - log2_q16(pitch_inc(60 * 16));
+        v->ktmul = (int32_t)exp2_q16(clampi((int32_t)(((int64_t)oct * d->kt) >> 8), -3 * Q16, 3 * Q16));
+    }
     v->incB = (uint32_t)(((uint64_t)inc * exp2_q16((d->intervalB * 16 + d->detuneB / 100) * 341)) >> 16);
     v->incM = (uint32_t)(((uint64_t)inc * (uint32_t)(d->golden ? R16(1.6180340) : d->fmRatio)) >> 16);
     n = clampi(d->multiCount, 1, 4);
@@ -548,8 +567,12 @@ static void an_control(an_voice_t *v, const an_design_t *d)
     v->ampPrev = v->amp;
     if (f->down)
         v->amp = clampi(an_at(&d->amp, c), 0, Q15);   /* a lifted finger's voice keeps its level as it rings */
-    if (d->filter)
-        svf_coef(&v->filtc, an_at(&d->cutoff, c), clampi(an_at(&d->q, c), IX(0.5), IX(25.0)));
+    if (d->filter) {
+        int32_t cut = an_at(&d->cutoff, c);
+        if (v->ktmul != Q16)
+            cut = clampi((int32_t)(((int64_t)cut * v->ktmul) >> 16), 30, 18000);
+        svf_coef(&v->filtc, cut, clampi(an_at(&d->q, c), IX(0.5), IX(25.0)));
+    }
     if (d->noise > 1)
         svf_coef(&v->nfiltc, an_at(&d->noiseCut, c), IX(1.2));
     {   /* the FM carrier's band-limit level: its frequency with the sidebands, hz (1 + index ratio) */
@@ -1165,10 +1188,15 @@ static int32_t an_draw_slider(rnd_t *r)
 }
 
 /* the kinds' weights on each path */
-static const uint8_t AK_W[3][AK_N] = {
+static const uint8_t AK_W[3][AK_N0] = {
     {1, 1, 1, 1, 1, 1, 1, 1},
     {4, 3, 1, 2, 3, 2, 0, 1},
     {0, 1, 2, 1, 1, 3, 5, 5},
+};
+static const uint8_t AK_W1[3][AK_N] = {             /* generation 1 */
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {4, 3, 1, 2, 3, 2, 0, 1, 4, 4, 0, 3, 2, 0},
+    {0, 1, 2, 1, 1, 3, 5, 5, 0, 0, 5, 2, 3, 5},
 };
 /* the sliders as a path leans them (the open path: as an_draw_slider has them) */
 static void an_path_sliders(int32_t *s, uint32_t path, rnd_t *r)
@@ -1241,18 +1269,40 @@ static void an_path_finish(an_design_t *d, uint32_t path, rnd_t *r)
     }
 }
 
+/* generation 1's care: the filter follows the keyboard; the second oscillator's interval suits the path; AMBIENT
+ * has a space to ring in */
+static void an_care1(an_design_t *d, uint32_t path, rnd_t *r)
+{
+    static const int8_t CONSONANT[6] = {7, 12, -12, 19, 24, 5}, ANY[6] = {6, 1, 11, 13, -1, 18};
+    d->kt = (uint8_t)(d->filter ? rnd_in(r, path == PATH_EXP ? 60 : 110, path == PATH_EXP ? 160 : 220) : 0);
+    if (d->oscB) {
+        if (path == PATH_AMBIENT && (d->intervalB == 6 || d->intervalB == 1 || d->intervalB == 11))
+            d->intervalB = CONSONANT[rnd_below(r, 6)];
+        else if (path == PATH_EXP && rnd_chance(r, 40))
+            d->intervalB = ANY[rnd_below(r, 6)];
+    }
+    if (path == PATH_AMBIENT && !d->resonator && rnd_chance(r, 70)) {
+        d->resonator = 1;
+        d->resMix = AM(an_any_source(r), LV(0.08), rnd_in(r, LV(0.25), LV(0.45)));
+        d->resFeedback = AC(rnd_in(r, LV(0.55), LV(0.8)));
+    }
+}
+
 /* a new design of kind k (AK_N: any), from seed, on a path */
-static void an_design(an_design_t *d, int32_t k, uint32_t seed, uint32_t path)
+static void an_design(an_design_t *d, int32_t k, uint32_t seed, uint32_t path, uint32_t gen)
 {
     rnd_t rr, *r = &rr;
     int32_t s[8];
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed);
-    if (k < 0 || k >= AK_N)
-        k = path == PATH_OPEN ? rnd_below(r, AK_N) : (int32_t)rnd_weighted(r, AK_W[path], AK_N);
+    if (gen == 0u && (k < 0 || k >= AK_N0))
+        k = path == PATH_OPEN ? rnd_below(r, AK_N0) : (int32_t)rnd_weighted(r, AK_W[path], AK_N0);
+    else if (k < 0 || k >= AK_N)
+        k = (int32_t)rnd_weighted(r, AK_W1[path], AK_N);
     memset(d, 0, sizeof *d);
     d->kind = (uint8_t)k;
     d->path = (uint8_t)path;
+    d->gen = (uint8_t)gen;
     d->seed = seed;
     d->oscA = 1;
     d->tableB = 2;
@@ -1480,7 +1530,179 @@ static void an_design(an_design_t *d, int32_t k, uint32_t seed, uint32_t path)
         d->travel = R16(0.25);
         d->out = IX(0.35);
         break;
-    default:           /* AK_SWARM: iterative clouds, a tremolo of grains in a ring */
+    case AK_TIDE:      /* waves of noise breaking over a low drone */
+        d->tableA = rnd_chance(r, 50) ? 0 : 17;
+        d->levelA = AM(AS_DIST, LV(0.35), LV(0.55));
+        d->noise = 2;
+        d->levelNoise = AMS(AS_LFO2, LV(0.02), rnd_in(r, LV(0.3), LV(0.5)), 0.5);
+        d->noiseCut = AMS(AS_LFO2, HZ(250), rnd_in(r, 1800, 4000), 0.4);
+        d->filter = 1;
+        d->cutoff = AM(AS_Y, HZ(400), HZ(2500));
+        d->q = AC(IX(0.9));
+        d->amp = AM(AS_SIZE, LV(0.5), LV(0.9));
+        d->att = rnd_in(r, 1500, 4000);
+        d->dec = 3000;
+        d->sus = LV(0.8);
+        d->rel = rnd_in(r, 4000, 8000);
+        d->phaser = 1;
+        d->phaserRate = AM(AS_LFO2, H16(0.02), H16(0.08));
+        d->phaserDepth = AC(LV(0.5));
+        d->resonator = 1;
+        d->resMix = AM(AS_LFO2, LV(0.1), LV(0.35));
+        d->resFeedback = AC(rnd_in(r, LV(0.6), LV(0.8)));
+        d->motion = MO_HOLDS;
+        d->travel = R16(0.03);
+        d->out = IX(0.8);
+        break;
+    case AK_CHOIR:     /* voices: two vowels and a stack, a formant the hand moves */
+        d->tableA = rnd_chance(r, 50) ? 7 : 20;
+        d->levelA = AC(LV(0.45));
+        d->oscB = 1;
+        d->tableB = d->tableA == 7 ? 20 : 7;
+        d->intervalB = rnd_chance(r, 60) ? 12 : 7;
+        d->detuneB = (int16_t)rnd_in(r, 4 * 16, 14 * 16);
+        d->levelB = AM(AS_Y, LV(0.2), LV(0.45));
+        d->multi = 1;
+        d->tableMulti = d->tableA;
+        d->multiCount = 3;
+        d->multiStep = rnd_chance(r, 50) ? 0 : 12 * 16;
+        d->levelMulti = AM(AS_DIST, LV(0.15), LV(0.35));
+        d->filter = 1;
+        d->cutoff = AM(AS_Y, HZ(1200), HZ(5000));
+        d->q = AC(IX(0.8));
+        d->groupFilter = 1;
+        d->groupCut = AMS(AS_X, HZ(450), HZ(2600), -0.2);
+        d->groupQ = AC(rnd_in(r, IX(1.5), IX(3.5)));
+        d->ampMod = 1;
+        d->tableAM = 0;
+        d->amRate = AM(AS_LFO1, H8(4.0), H8(6.0));
+        d->amDepth = AC(LV(0.08));
+        d->amp = AM(AS_SIZE, LV(0.45), LV(0.9));
+        d->att = rnd_in(r, 600, 2500);
+        d->dec = 2000;
+        d->sus = LV(0.85);
+        d->rel = rnd_in(r, 2500, 5000);
+        d->resonator = (uint8_t)rnd_chance(r, 50);
+        d->resMix = AM(AS_COUNT, LV(0.05), LV(0.25));
+        d->resFeedback = AC(LV(0.6));
+        d->motion = MO_SWEEPS;
+        d->travel = R16(0.06);
+        d->out = IX(0.6);
+        break;
+    case AK_SHARDS:    /* glass grains scattered off the note, crushed, ringing */
+        d->oscA = 0;
+        d->gran = 1;
+        d->tableGran = rnd_chance(r, 50) ? 6 : 12;
+        d->granSpread = rnd_in(r, LV(0.6), Q15);
+        d->levelGran = AM(AS_SIZE, LV(0.4), LV(0.8));
+        d->granRate = AMS(AS_SPEED, H8(10.0), H8(70.0), -0.3);
+        d->granLen = AM(AS_Y, MS4(4.0), MS4(25.0));
+        d->filter = 3;
+        d->cutoff = AM(AS_X, HZ(300), HZ(2500));
+        d->q = AM(AS_Y, IX(0.8), IX(3.0));
+        d->down = 1;
+        d->downRate = AM(AS_GX, HZ(3000), HZ(20000));
+        d->amp = AM(AS_SIZE, LV(0.45), LV(0.9));
+        d->att = rnd_in(r, 2, 60);
+        d->dec = 800;
+        d->sus = LV(0.7);
+        d->rel = rnd_in(r, 600, 2500);
+        d->resonator = 1;
+        d->resMix = AM(AS_GY, LV(0.15), LV(0.5));
+        d->resFeedback = AC(rnd_in(r, LV(0.7), LV(0.9)));
+        d->motion = MO_TAPS;
+        d->travel = R16(0.2);
+        d->out = IX(0.7);
+        break;
+    case AK_BOWL:      /* a singing bowl: an inharmonic hum, beating, in a ringing comb */
+        d->tableA = 0;
+        d->levelA = AC(LV(0.5));
+        d->fm = 1;
+        d->tableFM = 0;
+        {
+            static const int32_t RATIOS[4] = {R16(2.76), R16(5.40), R16(1.41421), R16(3.17)};
+            d->fmRatio = RATIOS[rnd_below(r, 4)];
+        }
+        d->levelFM = AC(LV(0.45));
+        d->fmIndex = AMS(AS_SIZE, IX(0.2), IX(1.2), 0.3);
+        d->filter = 1;
+        d->cutoff = AM(AS_Y, HZ(1500), HZ(7000));
+        d->q = AC(IX(0.8));
+        d->ampMod = 1;
+        d->tableAM = 0;
+        d->amRate = AM(AS_LFO2, H8(0.3), H8(1.6));
+        d->amDepth = AC(rnd_in(r, LV(0.2), LV(0.4)));
+        d->amp = AM(AS_SIZE, LV(0.5), LV(0.9));
+        d->att = rnd_in(r, 30, 400);
+        d->dec = rnd_in(r, 3000, 7000);
+        d->sus = LV(0.55);
+        d->rel = rnd_in(r, 4000, 8000);
+        d->resonator = 1;
+        d->resMix = AM(AS_COUNT, LV(0.2), LV(0.45));
+        d->resFeedback = AC(rnd_in(r, LV(0.75), LV(0.9)));
+        d->motion = MO_ORBITS;
+        d->travel = R16(0.04);
+        d->out = IX(0.6);
+        break;
+    case AK_DUST:      /* sparse crackle over a dark, hollow drone */
+        d->tableA = rnd_chance(r, 50) ? 14 : 1;
+        d->levelA = AM(AS_DIST, LV(0.3), LV(0.5));
+        d->gran = 1;
+        d->tableGran = 11;
+        d->granSpread = rnd_in(r, LV(0.7), Q15);
+        d->levelGran = AM(AS_SPEED, LV(0.2), LV(0.5));
+        d->granRate = AM(AS_X, H8(1.5), H8(9.0));
+        d->granLen = AM(AS_Y, MS4(3.0), MS4(14.0));
+        d->filter = 1;
+        d->cutoff = AM(AS_Y, HZ(350), HZ(1600));
+        d->q = AC(IX(1.1));
+        d->down = (uint8_t)rnd_chance(r, 40);
+        d->downRate = AM(AS_LFO1, HZ(6000), HZ(20000));
+        d->amp = AM(AS_SIZE, LV(0.45), LV(0.85));
+        d->att = rnd_in(r, 400, 2500);
+        d->dec = 2500;
+        d->sus = LV(0.75);
+        d->rel = rnd_in(r, 3000, 6000);
+        d->resonator = (uint8_t)rnd_chance(r, 50);
+        d->resMix = AM(AS_LFO2, 0, LV(0.3));
+        d->resFeedback = AC(LV(0.65));
+        d->motion = MO_HOLDS;
+        d->travel = R16(0.05);
+        d->out = IX(0.7);
+        break;
+    default:           /* AK_MACHINE: a pulsing, folded mechanism */
+        d->tableA = rnd_chance(r, 50) ? 23 : 4;
+        d->levelA = AC(LV(0.55));
+        d->oscB = 1;
+        d->tableB = 21;
+        d->intervalB = rnd_chance(r, 50) ? -12 : 7;
+        d->detuneB = (int16_t)rnd_in(r, 0, 20 * 16);
+        d->levelB = AM(AS_Y, LV(0.1), LV(0.4));
+        d->ampMod = 1;
+        d->tableAM = rnd_chance(r, 50) ? 3 : 23;
+        d->amRate = AM(AS_SPEED, rnd_in(r, H8(3.0), H8(8.0)), rnd_in(r, H8(10.0), H8(22.0)));
+        d->amDepth = AC(rnd_in(r, LV(0.7), LV(1.0)));
+        d->shaper = 1;
+        d->shaperCurve = 1;
+        d->shaperDrive = AM(AS_GX, IX(1.5), IX(5.0));
+        d->down = (uint8_t)rnd_chance(r, 60);
+        d->downRate = AM(AS_LFO1, HZ(2500), HZ(16000));
+        d->filter = 1;
+        d->cutoff = AMS(AS_X, HZ(500), HZ(7000), -0.4);
+        d->q = AM(AS_Y, IX(1.0), IX(5.0));
+        d->amp = AM(AS_SIZE, LV(0.45), LV(0.85));
+        d->att = rnd_in(r, 5, 80);
+        d->dec = 900;
+        d->sus = LV(0.7);
+        d->rel = rnd_in(r, 300, 1500);
+        d->resonator = (uint8_t)rnd_chance(r, 50);
+        d->resMix = AM(AS_COUNT, LV(0.1), LV(0.4));
+        d->resFeedback = AC(LV(0.7));
+        d->motion = MO_TAPS;
+        d->travel = R16(0.15);
+        d->out = IX(0.45);
+        break;
+    case AK_SWARM:     /* iterative clouds, a tremolo of grains in a ring */
         d->oscA = 0;
         d->gran = 1;
         d->tableGran = (uint8_t)(rnd_chance(r, 50) ? 12 : 6);
@@ -1522,6 +1744,8 @@ static void an_design(an_design_t *d, int32_t k, uint32_t seed, uint32_t path)
     d->lfo1Shape = (uint8_t)rnd_below(r, 3);
     d->lfo2Shape = 2;
     an_path_finish(d, path, r);
+    if (gen >= 1u)
+        an_care1(d, path, r);
     /* a struck kind held is a struck kind: the drone mode of Anima holds it, a key does not */
     if (d->att < 1)
         d->att = 1;

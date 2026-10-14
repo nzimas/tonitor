@@ -779,20 +779,34 @@ static int sound_slot_free(volatile uint8_t *pub, volatile uint8_t *use)
     return 1;
 }
 
-/* a new FM patch for layer l, not of the family it had (main loop: rendered to be measured, tens of ms) */
+/* a new FM patch for layer l, not of the family it had (main loop: rendered to be measured, tens of ms each).
+ * Generation 1 draws up to four and keeps the first of another family whose brightness suits the path (darker
+ * for AMBIENT, brighter for EXPERIMENTAL), else the nearest */
+static int fm_misfit(int32_t hz, uint32_t path, int same)
+{
+    static const int32_t LO[PATH_N] = {150, 120, 1300}, HI[PATH_N] = {6000, 1100, 7000};
+    int32_t m = hz < LO[path] ? LO[path] - hz : hz > HI[path] ? hz - HI[path] : 0;
+    return (hz <= 0 ? 1000000 : m) + (same ? 4000 : 0);
+}
 static int new_fm(uint32_t l, uint32_t seed, uint32_t path)
 {
+    static fm_patch_t cand;
     uint32_t k, tries;
-    int32_t was = fm_buf[l][fm_use[l]].family;
+    int32_t was = fm_buf[l][fm_use[l]].family, best = 0x7FFFFFFF;
     if (!sound_slot_free(&fm_pub[l], &fm_use[l]))
         return 0;
     k = fm_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
-        fm_generate(&fm_buf[l][k], -1, seed + tries * 7919u, path);
-        if (fm_buf[l][k].family != was)
+        int32_t m;
+        fm_generate(&cand, -1, seed + tries * 7919u, path, GEN_NOW);
+        m = fm_misfit(fm_measure(&cand), path, cand.family == was);
+        if (m < best) {
+            best = m;
+            fm_buf[l][k] = cand;
+        }
+        if (!m)
             break;
     }
-    fm_measure(&fm_buf[l][k]);
     RING_PUBLISH();
     fm_pub[l] = (uint8_t)k;
     return 1;
@@ -805,7 +819,7 @@ static int new_anima(uint32_t l, uint32_t seed, uint32_t path)
         return 0;
     k = an_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
-        an_design(&an_buf[l][k], -1, seed + tries * 7919u, path);
+        an_design(&an_buf[l][k], -1, seed + tries * 7919u, path, GEN_NOW);
         if (an_buf[l][k].kind != was)
             break;
     }
@@ -822,13 +836,45 @@ static int new_cal(uint32_t l, uint32_t seed, uint32_t path)
         return 0;
     k = cal_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
-        cal_design(&cal_buf[l][k], -1, seed + tries * 7919u, path);
+        cal_design(&cal_buf[l][k], -1, seed + tries * 7919u, path, GEN_NOW);
         if (cal_buf[l][k].kind != was)
             break;
     }
     cal_measure(&cal_buf[l][k]);
     RING_PUBLISH();
     cal_pub[l] = (uint8_t)k;
+    return 1;
+}
+/* layer l's sound on engine e drawn again from what made it (a preset): its seed, path and generation, and the
+ * level it was measured at; published as a new sound is. 0: the ISR still holds the other buffer */
+static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path, uint32_t gen, int32_t level)
+{
+    uint32_t k;
+    if (e == ENG_FM) {
+        if (!sound_slot_free(&fm_pub[l], &fm_use[l]))
+            return 0;
+        k = fm_use[l] ^ 1u;
+        fm_generate(&fm_buf[l][k], -1, seed, path, gen);
+        fm_buf[l][k].gain = level;
+        RING_PUBLISH();
+        fm_pub[l] = (uint8_t)k;
+    } else if (e == ENG_ANIMA) {
+        if (!sound_slot_free(&an_pub[l], &an_use[l]))
+            return 0;
+        k = an_use[l] ^ 1u;
+        an_design(&an_buf[l][k], -1, seed, path, gen);
+        an_buf[l][k].out = level;
+        RING_PUBLISH();
+        an_pub[l] = (uint8_t)k;
+    } else {
+        if (!sound_slot_free(&cal_pub[l], &cal_use[l]))
+            return 0;
+        k = cal_use[l] ^ 1u;
+        cal_design(&cal_buf[l][k], -1, seed, path, gen);
+        cal_buf[l][k].out = level;
+        RING_PUBLISH();
+        cal_pub[l] = (uint8_t)k;
+    }
     return 1;
 }
 /* the name of what layer l plays on engine e */

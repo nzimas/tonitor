@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.21
+
+- **Presets**: SHIFT + SAVE opens the chosen layer's engine's presets, 64 an engine (P1–P64), four a page.
+  SAVE held saves the layer's sound into the slot chosen (asking OVERWRITE? over a full one), SAVE loads it.
+- **Richer, smarter generators** (generation 1):
+  - FM: eight new families — CHOIR, BOWED, HOLLOW, BLOOM, TIDE, SHARDS, STATIC, WIND; every patch shaped
+    with care (no screaming sidebands, brightness scaled down the keyboard), gentler mutations, and several
+    patches drawn and measured, keeping one whose brightness suits the path.
+  - ANIMA: six new kinds — TIDE, CHOIR, SHARDS, BOWL, DUST, MACHINE; the filter follows the keyboard; the
+    second oscillator's interval suits the path; AMBIENT sounds get a space to ring in.
+  - CALIGULA: four new species — LITANY, UNDERTOW, WIRE, MOTH; four new tunings (fourths, a minor seventh,
+    open fifths, a quarter-tone cluster); the hand plays phrases, often on a pulse; a bed that the gates
+    never close.
+- Sounds saved before (in sessions) come back exactly as they were: the older generators are kept as they
+  were, and a test checks it.
+
 ## 0.20 — Tonitor
 
 - The firmware is now called **Tonitor** (it was developed as ACOUSMA). The FM-1 shows the new name at
