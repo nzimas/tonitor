@@ -35,6 +35,7 @@
 <nav class="toc" aria-label="Contents">
 <a href="#playing-it">Playing it</a>
 <a href="#generative-paths" class="sub">Generative paths</a>
+<a href="#macros" class="sub">Macros</a>
 <a href="#latched-keys" class="sub">Latched keys</a>
 <a href="#the-loopers" class="sub">The loopers</a>
 <a href="#the-screen" class="sub">The screen</a>
@@ -58,6 +59,7 @@
 <tr><td>the white keys</td><td>play the chosen layer <b>in the scale chosen</b> (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. Two voices per layer: <b>a new note never cuts the release of the one before it</b> — a third note takes the voice that has rung longest. A key lifted ends its note on the layer it was played on, so <b>a held note keeps sounding while you choose and play another layer</b>. The keys you hold on the chosen layer light up.</td></tr>
 <tr><td>the rightmost black key</td><td><b>SHIFT</b> (lit while held; each press shows the audio's load in % of the time it has, now / at most since the last press, e.g. <code>LOAD 62/91</code>). Hold white keys and press SHIFT: they <b>latch</b> — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it.</td></tr>
 <tr><td>the two leftmost black keys</td><td>the chosen layer's <b>generative path</b>: the first <b>AMBIENT</b>, the second <b>EXPERIMENTAL</b> (lit while chosen; the screen says which). Pressing the lit one again goes back to <b>OPEN</b>. See below.</td></tr>
+<tr><td>the black key before SHIFT</td><td><b>EDIT</b>, on and off (lit while on): KNOB 1–4 become four <b>macros</b> that shape the chosen layer's sound. See <a href="#macros">Macros</a>.</td></tr>
 <tr><td>the other black keys</td><td>play no notes (kept for other functions to come).</td></tr>
 <tr><td><b>ARP</b></td><td>the <b>SCALE page</b> (ARP lit): <b>SELECT</b> chooses the root (C to B), <b>ALGORITHM</b> the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a layer button, goes back.</td></tr>
 <tr><td><b>REC</b></td><td>the chosen layer's looper. Press to <b>arm</b> a new loop (REC flashes, the band shows ARMED and its number); the <b>first note</b> you play starts it (REC lights; REC and the number). Press REC again to <b>end</b> it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. <b>Press REC again while it plays to overdub</b>: the same again, a new loop over the others — up to <b>10 loops a layer</b>.</td></tr>
@@ -85,6 +87,16 @@
 <tr><td><b>OPEN</b></td><td>neither lit</td><td>every family, kind and species alike, as before the paths. Every layer starts here</td></tr>
 </table>
 <p>Sessions keep each layer's path, and the path each of its sounds was drawn on.</p>
+<h3 id="macros">Macros</h3>
+<p>Press <b>EDIT</b> (the black key just left of SHIFT; lit while on) and the four knobs across the top stop being the filter, the granulator, the crush and the send: they become <b>four macros</b> that reshape the chosen layer's sound, while it plays, under a held note. Each is turned from the middle, which is the sound as HOME drew it; either way transforms it. While a knob turns, the whole screen is its dial, with the macro's name for this sound and how far it is turned (+40 %, -25 %, AS DRAWN). Press EDIT again to give the knobs back.</p>
+<p>The macros are chosen for each engine, and for some by the kind of sound:</p>
+<table>
+<tr><th></th><th>KNOB 1</th><th>KNOB 2</th><th>KNOB 3</th><th>KNOB 4</th></tr>
+<tr><td><b>FM</b></td><td><b>BRIGHT</b>: the modulation index, and the carriers tilted (the higher partials up)</td><td><b>DETUNE</b> (the carriers pulled apart: beating, chorus) — or <b>SKEW</b> for metallic and noisy families (every partial off its ratio: clangour)</td><td><b>GRIT</b>: feedback and saturation turning up; a low-pass, smoother, turning down</td><td><b>MOTION</b>: the LFO's depths; turning up, a tremolo, quicker and deeper</td></tr>
+<tr><td><b>ANIMA</b></td><td><b>TONE</b>: every filter up or down</td><td>what the kind is about: <b>GRAINS</b>, <b>AIR</b> (the noise), <b>FM</b> (the index), <b>VOWEL</b> (the formant) or <b>DRIVE</b></td><td><b>SPACE</b>: the resonator wetter and ringing longer (brought in if the sound had none), or drier</td><td><b>MOTION</b>: the hand's pace, its LFOs and the tremolo</td></tr>
+<tr><td><b>CALIGULA</b></td><td><b>EDGE</b>: triangles to squares</td><td><b>DEPTH</b>: how deeply the pairs modulate each other</td><td><b>CHAOS</b> (total feedback and drive) — or <b>ECHO</b> (the delay) for SPORE, VEIL, LITANY and MOTH</td><td><b>HAND</b>: how busy the hand is, its touches and bursts — or <b>PULSE</b> (the gates' speed) for HIVE, MOTH and WIRE</td></tr>
+</table>
+<p>Each layer keeps the macros of each of its three sounds. <b>HOME</b> draws a new sound as it comes (its macros in the middle). Sessions and presets keep the macros with the sound.</p>
 <h3 id="latched-keys">Latched keys</h3>
 <p>Hold one or more white keys and press <b>SHIFT</b> (the rightmost black key): they latch, sounding on after you let go, and they stay lit. A key pressed while SHIFT is already held plays as usual (unless it is lit). Latches belong to the layer they were made on: the keys are lit while that layer is chosen, and on another layer the same keys play as usual, so a drone can be left on one layer while you play another. Pressing a latched key without SHIFT does nothing (it sounds already); <b>SHIFT and the lit key</b> lets go of it, and its note ends as a lifted key's would. Loading a session lets go of every latch. A layer has two voices, so a third note takes one of them, even a latched one's.</p>
 <h3 id="the-loopers">The loopers</h3>
@@ -132,7 +144,7 @@
 <p>Layer colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.</p>
 <h2 id="the-engines">The engines</h2>
 <h3 id="fm-six-operators-dx7-style">FM — six operators, DX7 style</h3>
-<p>The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of seventeen families of sound objects:</p>
+<p>The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of seventeen families of sound objects (since 0.22 with their operators on the ratios they were designed with — before, a slip in the generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds saved then come back as they were):</p>
 <table>
 <tr><th>Family</th><th>After</th></tr>
 <tr><td><b>METAL</b></td><td>bells and gongs: many carriers on inharmonic ratios, the high partials dying first</td></tr>

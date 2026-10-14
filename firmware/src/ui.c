@@ -54,6 +54,7 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define KEY_NONE 0xFFu
 #define KEY_AMB 1u               /* the leftmost black key: the AMBIENT path (again: back to the open path) */
 #define KEY_EXP 3u               /* the second: the EXPERIMENTAL path */
+#define KEY_EDIT 22u             /* the black key before SHIFT: EDIT, on and off (KNOB 1 .. 4: the sound's macros) */
 #define KEY_NOTE0 53             /* the lowest key, F3 */
 
 static const uint16_t LAYER_COL[NLAYER] = {RGB(255, 214, 0), RGB(0, 214, 255), RGB(255, 92, 210),
@@ -65,6 +66,8 @@ static struct {
     int8_t oct[NLAYER];
     uint8_t key_layer[NKEY], key_note[NKEY];   /* what a key down holds (KEY_NONE: nothing, it latched or let go) */
     uint8_t path[NLAYER];        /* each layer's generative path (PATH_*): HOME draws on it */
+    uint8_t edit;                /* EDIT on: KNOB 1 .. 4 turn the chosen layer's sound's macros */
+    int8_t mac[NLAYER][NENG][NMAC];   /* the macros on each layer's sound of each engine (0: as drawn) */
     uint32_t latch[NLAYER];      /* the keys latched on each layer (lit while it is chosen) */
     uint8_t latch_note[NLAYER][NKEY];
     uint8_t midi_layer[128];
@@ -138,7 +141,7 @@ static void say(const char *s, uint32_t ms)
 #define PAN_MAX 20
 static const int8_t PAN_DEF[NLAYER] = {-10, 10, -5, 5, -2, 2};
 #define SEND_DEF 40
-enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR };   /* the knobs whose dial covers the screen */
+enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
 
 /* the scales: the white keys play their degrees, from the root, up */
 #define NSCALE 9
@@ -219,6 +222,7 @@ static int ses_has(uint32_t num);
 static int ses_current(void);
 static void ses_choose(uint32_t num);
 static int ses_load_slot(uint32_t num);
+static void mac_apply(uint32_t l);
 static int pre_kind(uint32_t e, uint32_t slot);   /* the kind of sound in engine e's slot, -1 if none */
 static int pre_save(uint32_t l, uint32_t e, uint32_t slot);
 static int pre_load(uint32_t l, uint32_t e, uint32_t slot);
@@ -272,6 +276,7 @@ static void pre_short(void)
     if (ui.engine[ui.sel] != ui.pre_eng) {       /* (the layer's engine moved on: to the presets' again) */
         ui.engine[ui.sel] = ui.pre_eng;
         ev_post(EV_ENGINE, ui.sel, 0, ui.pre_eng);
+        mac_apply(ui.sel);
     }
     ui.pre_page = 0;
     pre_done(pre_load(ui.sel, ui.pre_eng, ui.pre_ix) == SES_OK ? SES_OK : SES_FAIL, "LOADED");
@@ -361,6 +366,21 @@ static uint32_t next_seed(void)
     return ui.seed;
 }
 
+/* the macros of layer l's sound on the engine it plays, to the ISR */
+static void mac_apply(uint32_t l)
+{
+    uint32_t j;
+    for (j = 0; j < NMAC; j++)
+        lay_mac[l][j] = ui.mac[l][ui.engine[l]][j];
+}
+/* the name of EDIT's macro j on layer l's sound */
+static const char *mac_name(uint32_t l, uint32_t j)
+{
+    uint32_t e = ui.engine[l];
+    return e == ENG_FM ? fm_mac_name(&fm_buf[l][fm_pub[l]], j) : e == ENG_ANIMA ? an_mac_name(&an_buf[l][an_pub[l]], j)
+                                                                                : cal_mac_name(&cal_buf[l][cal_pub[l]], j);
+}
+
 /* HOME: a new sound for the layer chosen */
 static void new_sound(void)
 {
@@ -374,6 +394,10 @@ static void new_sound(void)
                                      : new_cal(l, next_seed(), ui.path[l]);
     if (!ok)
         say("BUSY", 900);
+    else {                                       /* a new sound: as drawn, no macros */
+        memset(ui.mac[l][ui.engine[l]], 0, NMAC);
+        mac_apply(l);
+    }
 }
 
 /* --------------------------------------------------------------- input --- */
@@ -466,6 +490,19 @@ static void ui_input(void)
                 rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
                 ui.rv_touched = (int8_t)j;
                 ui.rv_touch_until = fm1_ms + 1500u;
+            }
+        }
+    } else if (ui.edit) {                        /* EDIT: KNOB 1 .. 4, the sound's macros; each its dial */
+        static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t j;
+        for (j = 0; j < NMAC; j++) {
+            s = enc_take(K[j]);
+            if (s) {
+                int8_t *m = &ui.mac[ui.sel][ui.engine[ui.sel]][j];
+                *m = (int8_t)clampi(*m + 2 * s, -MAC_MAX, MAC_MAX);
+                mac_apply(ui.sel);
+                ui.dial = (uint8_t)(DIAL_MAC + j);
+                ui.dial_until = fm1_ms + 1000u;
             }
         }
     } else {
@@ -606,10 +643,15 @@ static void ui_input(void)
         if (e != ui.engine[ui.sel]) {
             ui.engine[ui.sel] = (uint8_t)e;
             ev_post(EV_ENGINE, ui.sel, 0, (uint32_t)e);
+            mac_apply(ui.sel);
         }
     }
     keys = fm1_in.notes;
     ch = keys ^ ui.keys;
+    if ((ch & keys) >> KEY_EDIT & 1u) {          /* EDIT on or off */
+        ui.edit = (uint8_t)!ui.edit;
+        say(ui.edit ? "EDIT" : "EDIT OFF", 900);
+    }
     for (k = KEY_AMB; k <= KEY_EXP; k += KEY_EXP - KEY_AMB)
         if ((ch & keys) >> k & 1u) {              /* a path for the layer chosen: its next sounds lean to it */
             uint32_t pa = k == KEY_AMB ? PATH_AMBIENT : PATH_EXP;
@@ -693,6 +735,7 @@ static void ui_leds(void)
     fm1_led_key(14u + KEY_SHIFT, (ui.keys >> KEY_SHIFT) & 1u);
     fm1_led_key(14u + KEY_AMB, ui.path[ui.sel] == PATH_AMBIENT);
     fm1_led_key(14u + KEY_EXP, ui.path[ui.sel] == PATH_EXP);
+    fm1_led_key(14u + KEY_EDIT, ui.edit);
 }
 
 /* -------------------------------------------------------------- screen --- */
@@ -884,6 +927,8 @@ static void flt_label(char *m, int32_t v)
 }
 static int32_t dial_value(void)
 {
+    if (ui.dial >= DIAL_MAC)
+        return ui.mac[ui.sel][ui.engine[ui.sel]][(ui.dial - DIAL_MAC) & 3u];
     return ui.dial == DIAL_FLT ? ui.flt[ui.sel] : ui.dial == DIAL_GR ? ui.gr[ui.sel] : ui.dial == DIAL_CR ? ui.cr[ui.sel]
                                                                                                        : ui.send[ui.sel];
 }
@@ -895,7 +940,11 @@ static void draw_dial(void)
     uint32_t av;
     char t[12], m[16];
     uint16_t col = LAYER_COL[ui.sel];
-    str_cpy(t, NAME[ui.dial], sizeof t);
+    if (ui.dial >= DIAL_MAC) {                   /* EDIT's macro: its name for this sound, and the layer */
+        str_cpy(t, mac_name(ui.sel, (ui.dial - DIAL_MAC) & 3u), sizeof t - 2);
+        str_cpy(t + str_len(t), "  ", 3);
+    } else
+        str_cpy(t, NAME[ui.dial], sizeof t);
     t[str_len(t) - 1] = (char)('1' + ui.sel);
     if (ui.dial == DIAL_SEND) {                  /* 0 .. 100: from 7 o'clock round */
         from = -45;
@@ -909,7 +958,15 @@ static void draw_dial(void)
         av = (uint32_t)((int32_t)(0x60000000u / FLT_MAX) * v);
         if (ui.dial == DIAL_FLT)
             flt_label(m, v);
-        else if (!v)
+        else if (ui.dial >= DIAL_MAC) {          /* +40 %, -25 %, or the sound as it was drawn */
+            if (!v)
+                str_cpy(m, "AS DRAWN", sizeof m);
+            else {
+                m[0] = v > 0 ? '+' : '-';
+                fmt_int(m + 1, (v < 0 ? -v : v) * 100 / MAC_MAX);
+                str_cpy(m + str_len(m), "%", 2);
+            }
+        } else if (!v)
             str_cpy(m, "OFF", sizeof m);
         else if (ui.dial == DIAL_CR) {           /* BITS 6.5, RATE 2.4K, RATE 300 */
             if (v < 0) {

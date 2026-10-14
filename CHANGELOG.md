@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.22
+
+- **Macros**: the black key before SHIFT turns **EDIT** on (lit) and off. While it is on, KNOB 1–4 are four
+  macros that reshape the chosen layer's sound live, chosen for each engine and kind of sound — FM: BRIGHT,
+  DETUNE or SKEW, GRIT, MOTION; ANIMA: TONE, GRAINS / AIR / FM / VOWEL / DRIVE, SPACE, MOTION; CALIGULA: EDGE,
+  DEPTH, CHAOS or ECHO, HAND or PULSE. The middle is the sound as drawn. Sessions and presets keep them; HOME
+  starts a new sound in the middle.
+- **FM in tune**: a slip in the FM generator put nearly every operator ratio near an even multiple, so patches
+  played about two octaves above the key and lost most of their designed ratios (bells, near-harmonic beating).
+  New sounds now have the ratios they were designed with, at the key's pitch. Sounds saved before (sessions,
+  presets) come back exactly as they were.
+
 ## 0.21
 
 - **Presets**: SHIFT + SAVE opens the chosen layer's engine's presets, 64 an engine (P1–P64), four a page.

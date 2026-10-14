@@ -79,6 +79,8 @@ typedef struct {
     fm6_note_t n;
     fm6_lfo_t lfo;
     int32_t note;                /* MIDI note, transposed */
+    int32_t lp;                  /* GRIT below the middle: its low-pass */
+    uint32_t tph;                /* MOTION above the middle: its tremolo's phase */
     uint8_t live;
 } fm_voice_t;
 
@@ -126,13 +128,73 @@ static void fm_note_off(fm_voice_t *v, const fm_patch_t *pt)
         fm6_note_key(&v->n, pt->p, 0);
 }
 
-/* one block (CTL samples), Q15 into out; 0 when the voice is silent for good */
-static int fm_render(fm_voice_t *v, const fm_patch_t *pt, int32_t *out)
+static uint32_t fm_carriers_of(const uint8_t *p);
+/* EDIT's macros on FM, live under a held note: BRIGHT (the modulators' level -- the index -- and the carriers
+ * tilted, the higher ones up: so a patch of carriers only brightens too), DETUNE (the carriers but the lowest
+ * pulled apart, one way and the other: beating, chorus; the modulators a little: the timbre shimmers) or SKEW for
+ * the metallic and noisy
+ * families (every operator but the lowest carrier off its ratio: clangour), GRIT (the feedback, and above the
+ * middle a saturation; below it, a low-pass: smoother), MOTION (the LFO's depths, and above the middle a tremolo
+ * of its own, quicker and deeper as it turns). 0 everywhere: the patch as drawn, bit for bit */
+static int fm_skews(uint32_t f)
+{
+    return f == FF_METAL || f == FF_BRUIT || f == FF_IMPACT || f == FF_ITERATIF || f == FF_GLISSE || f == FF_FRICTION ||
+           f == FF_SHARDS || f == FF_STATIC || f == FF_WIND;
+}
+static const char *fm_mac_name(const fm_patch_t *pt, uint32_t j)
+{
+    static const char *const N[4] = {"BRIGHT", "DETUNE", "GRIT", "MOTION"};
+    return j == 1u && fm_skews(pt->family) ? "SKEW" : N[j & 3u];
+}
+/* an operator's frequency against the note's, x 100 (fixed ones: against middle C) */
+static int32_t fm_op_ratio100(const uint8_t *op)
+{
+    if (!op[FP_MODE])
+        return op[FP_FC] ? op[FP_FC] * (100 + op[FP_FF]) : (100 + op[FP_FF]) / 2;
+    return (int32_t)((uint32_t)(exp2_q16((op[FP_FC] & 3) * 217706 + (int32_t)(op[FP_FF] % 100u) * 2177) >> 16) *
+                     100u / 262u);                       /* 10^x = 2^(3.3219 x), Q16 */
+}
+/* the macros as the core takes them: a pitch and a level offset an operator, the feedback, the LFO's depths */
+static void fm_macros(const fm_patch_t *pt, const int8_t *mac, int32_t *dt, int32_t *lvl, int32_t *fb, uint32_t *lfoq8)
 {
     const uint8_t *p = pt->p;
-    int32_t bus[FM6_N], lv, ld, lf;
-    static const int32_t ZERO[6] = {0, 0, 0, 0, 0, 0};
-    uint32_t i;
+    uint32_t car = fm_carriers_of(p), k, lo = 6, ci = 0, mi = 0;
+    int32_t r[6], rmin = 0x7FFFFFFF, rmax = 0;
+    for (k = 0; k < 6u; k++) {                           /* (k: the sixth operator first, as the patch lays them) */
+        r[k] = fm_op_ratio100(p + k * FP_OP);
+        if ((car >> k) & 1u) {
+            if (r[k] < rmin)
+                rmin = r[k], lo = k;
+            if (r[k] > rmax)
+                rmax = r[k];
+        }
+    }
+    for (k = 0; k < 6u; k++) {
+        int carrier = (int)((car >> k) & 1u);
+        /* BRIGHT: +-26 output-level steps (about +-19 dB) on the modulators; the carriers tilted by +-16 */
+        if (!carrier)
+            lvl[k] = mac[0] * 851968;
+        else if (rmax > rmin)
+            lvl[k] = mac[0] * ((r[k] - rmin) * 128 / (rmax - rmin) - 64) * 8192;
+        if (fm_skews(pt->family)) {                      /* SKEW: up to 1 .. 2 semitones off, the lowest carrier kept */
+            if (k != lo)
+                dt[k] = mac[1] * 21845 * (int32_t)(1u + (k & 1u));
+        } else if (carrier && k != lo)                   /* DETUNE: the carriers +-30 cents, one way and the other */
+            dt[k] = mac[1] * 6554 * ((ci++ & 1u) ? -1 : 1);
+        else if (!carrier)                               /* .. their modulators +-12 cents: the timbre shimmers */
+            dt[k] = mac[1] * 2621 * ((mi++ & 1u) ? -1 : 1);
+    }
+    *fb = clampi(*fb + (mac[2] * 8 + (mac[2] < 0 ? -32 : 32)) / 64, 0, 7);
+    *lfoq8 = (uint32_t)clampi(256 + mac[3] * 4, 0, 512);
+}
+
+/* one block (CTL samples), Q15 into out; 0 when the voice is silent for good. mac: EDIT's macros (0: none) */
+static int fm_render(fm_voice_t *v, const fm_patch_t *pt, int32_t *out, const int8_t *mac)
+{
+    const uint8_t *p = pt->p;
+    int32_t bus[FM6_N], lv, ld, lf, dt[6] = {0, 0, 0, 0, 0, 0}, lvl[6] = {0, 0, 0, 0, 0, 0}, fb = p[FP_FB] & 7u;
+    int32_t trem = Q15, grit = 0;
+    uint32_t i, lfoq8 = 256;
     if (!v->live)
         return 0;
     if (!v->n.down && fm6_note_done(&v->n, p, p[FP_ALG] & 31u)) {
@@ -142,7 +204,15 @@ static int fm_render(fm_voice_t *v, const fm_patch_t *pt, int32_t *out)
     lv = fm6_lfo_sample(&v->lfo);
     ld = fm6_lfo_delay(&v->lfo);
     lf = fm6_note_logfreq(v->note * 16, 0);
-    if (!fm6_note_compute(&v->n, p, bus, lv, ld, lf, p[FP_ALG] & 31u, p[FP_FB] & 7u, ZERO, 0)) {
+    if (mac && (mac[0] | mac[1] | mac[2] | mac[3])) {
+        fm_macros(pt, mac, dt, lvl, &fb, &lfoq8);
+        if (mac[3] > 0) {                                /* a tremolo of its own, 1.5 .. 6 Hz, deeper as it turns */
+            v->tph += 4380000u + (uint32_t)mac[3] * 205000u;   /* (a block's step: Hz x 2^32 x 32 / FS) */
+            trem = Q15 - mulq15(mac[3] * (Q15 * 7 / 10 / MAC_MAX), (sin_ph(v->tph) + Q15) >> 1);
+        }
+        grit = mac[2];
+    }
+    if (!fm6_note_compute(&v->n, p, bus, lv, ld, lf, p[FP_ALG] & 31u, fb, dt, lvl, lfoq8)) {
         for (i = 0; i < FM6_N; i++)
             out[i] = 0;
         return 1;                                   /* below the threshold now, but not done */
@@ -151,6 +221,15 @@ static int fm_render(fm_voice_t *v, const fm_patch_t *pt, int32_t *out)
         int32_t x = bus[i] - v->n.dc;              /* Q24 */
         v->n.dc += x >> 10;                        /* a one-pole high-pass, ~7 Hz: FM puts sidebands at 0 Hz */
         out[i] = (int32_t)(((int64_t)x * pt->gain) >> 21);   /* Q24 x Q12 -> Q15 */
+        if (grit > 0)                              /* GRIT: saturated, about as loud */
+            out[i] = mulq15(tanh_q15(out[i] + mulq15(out[i], grit * (6 * Q15 / MAC_MAX))),
+                            Q15 - grit * (Q15 / 2 / MAC_MAX));
+        else if (grit < 0) {                       /* .. or smoothed: a low-pass from ~8 kHz down to ~300 Hz */
+            v->lp += mulq15(out[i] - v->lp, Q15 + grit * (Q15 * 96 / 100 / MAC_MAX));
+            out[i] = v->lp;
+        }
+        if (trem != Q15)
+            out[i] = mulq15(out[i], trem);
     }
     return 1;
 }
@@ -170,10 +249,14 @@ static void fm_env(uint8_t *op, int r1, int r2, int r3, int r4, int l1, int l2, 
     op[FP_L1 + 2] = (uint8_t)clampi(l3, 0, 99);
     op[FP_L1 + 3] = (uint8_t)clampi(l4, 0, 99);
 }
-/* a ratio as the DX7 has it: coarse (0 = 0.5, 1..31) x (1 + fine / 100); x in hundredths */
+/* a ratio as the DX7 has it: coarse (0 = 0.5, 1..31) x (1 + fine / 100); x in hundredths. Generations 0 and 1
+ * worked the fine out 100 times too large, so nearly every ratio became (its coarse + 1) x 1.99 -- 1.00 and 1.41
+ * both 3.98: the patches two octaves up and most of their ratios lost. Kept so for them (their sounds are drawn
+ * again exactly); generation 2 has the ratios as they were meant */
+static uint32_t fm_gen_cur;      /* the generation fm_generate draws on now */
 static void fm_ratio(uint8_t *op, int32_t x100)
 {
-    int32_t c, f;
+    int32_t c, f, k = fm_gen_cur >= 2u ? 1 : 100;
     op[FP_MODE] = 0;
     if (x100 < 100) {
         op[FP_FC] = 0;
@@ -181,10 +264,10 @@ static void fm_ratio(uint8_t *op, int32_t x100)
         return;
     }
     c = clampi(x100 / 100, 1, 31);
-    f = (x100 * 100 / c) - 100;                     /* the fine that makes c x (1 + f / 100) = x */
+    f = (x100 * k / c) - 100;                       /* the fine that makes c x (1 + f / 100) = x */
     if (f > 99) {
         c = clampi(c + 1, 1, 31);
-        f = (x100 * 100 / c) - 100;
+        f = (x100 * k / c) - 100;
     }
     op[FP_FC] = (uint8_t)c;
     op[FP_FF] = (uint8_t)clampi(f, 0, 99);
@@ -855,6 +938,7 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     rnd_t rr, *r = &rr;
     uint8_t *p = pt->p;
     path = path < PATH_N ? path : PATH_OPEN;
+    fm_gen_cur = gen;
     rnd_seed(r, seed ^ 0xF00Du);
     if (gen == 0u && (f < 0 || f >= FF_N0))
         f = path == PATH_OPEN ? rnd_below(r, FF_N0) : (int32_t)rnd_weighted(r, FF_W[path], FF_N0);
@@ -943,7 +1027,7 @@ static int32_t fm_measure(fm_patch_t *pt)
     memset(&v, 0, sizeof v);
     fm_note_on(&v, pt, 60, 1);
     for (b = 0; b < 3445u; b++) {          /* 2.5 s of blocks */
-        if (!fm_render(&v, pt, out))
+        if (!fm_render(&v, pt, out, 0))
             break;
         for (i = 0; i < FM6_N; i++) {
             int32_t dx = out[i] - prev;

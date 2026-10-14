@@ -13,6 +13,7 @@
 #define HOST 1
 #include <stdint.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -224,7 +225,7 @@ static stats_t render_sound(int engine, int which, uint32_t seed, int note, doub
             else
                 an_note_off(&av);
         }
-        alive = engine == ENG_FM ? fm_render(&fv, &pt, out) : an_render(&av, &d, out, CTL);
+        alive = engine == ENG_FM ? fm_render(&fv, &pt, out, 0) : an_render(&av, &d, out, CTL);
         if (!alive)
             memset(out, 0, sizeof out);
         for (i = 0; i < CTL; i++)
@@ -2164,6 +2165,270 @@ static int cmd_presets(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* EDIT's macros: none is the sound as drawn, bit for bit (FM); each macro of each engine moves the sound, the
+ * brightening ones up and down as they turn, never to silence nor past the ceiling; the EDIT key, its light, the
+ * dial's names; HOME clears them; each engine keeps its own; sessions and presets keep them (and 0.21's presets,
+ * without them, still load) */
+typedef struct { double rms, bright, peak, am; } mfeel_t;
+static mfeel_t mfeel(const int32_t *x, uint32_t n)
+{
+    mfeel_t f;
+    double e = 0, d = 0, w[256];
+    uint32_t i, nw = 0;
+    memset(&f, 0, sizeof f);
+    for (i = 1; i < n; i++) {
+        double a = x[i], b = x[i] - x[i - 1];
+        e += a * a, d += b * b;
+        if (fabs(a) > f.peak)
+            f.peak = fabs(a);
+    }
+    for (i = 0; i + 1024u <= n && nw < 256u; i += 1024u, nw++) {
+        uint32_t k;
+        double a = 0;
+        for (k = 0; k < 1024u; k++)
+            a += (double)x[i + k] * x[i + k];
+        w[nw] = sqrt(a / 1024);
+    }
+    {   /* the level's movement: the mean step between 23 ms windows over the mean level */
+        double m = 0, st = 0;
+        for (i = 0; i < nw; i++)
+            m += w[i] / nw;
+        for (i = 1; i < nw; i++)
+            st += fabs(w[i] - w[i - 1]) / (nw - 1);
+        f.am = m > 0 ? st / m : 0;
+    }
+    f.rms = sqrt(e / n);
+    f.bright = e > 0 ? 7019.0 * sqrt(d / e) : 0;
+    return f;
+}
+#define MAC_N (44100u * 3u)
+static int32_t mac_buf[MAC_N];
+/* the spectrogram (dB, 2048-point frames every 4096 samples, 50 Hz .. 12 kHz) of mac_buf, and the distance between
+ * two, frame by frame: the mean |dB| over the bins either sounds in -- what changes over time (beating, a tremolo)
+ * counts as well as the spectrum */
+#define MSP_F 32u
+#define MSP_B 560u
+#define MSP_N (MSP_F * MSP_B)
+static void mspec(double *sp)
+{
+    static double re[2048], im[2048];
+    uint32_t f, k, lo = 2048u * 50u / 44100u;
+    for (f = 0; f < MSP_F; f++) {
+        uint32_t at = f * 4096u;
+        for (k = 0; k < 2048u; k++) {
+            re[k] = at + k < MAC_N ? mac_buf[at + k] * (0.5 - 0.5 * cos(6.283185307179586 * k / 2048)) : 0;
+            im[k] = 0;
+        }
+        fft(re, im, 2048u);
+        for (k = 0; k < MSP_B; k++)
+            sp[f * MSP_B + k] = 10 * log10(re[lo + k] * re[lo + k] + im[lo + k] * im[lo + k] + 1e5);
+    }
+}
+static double mspec_dist(const double *a, const double *b)
+{
+    uint32_t k, n = 0;
+    double d = 0;
+    for (k = 0; k < MSP_N; k++)
+        if ((a[k] > b[k] ? a[k] : b[k]) > 70.0) {      /* (bins with sound in them: 20 dB over the floor) */
+            d += fabs(a[k] - b[k]);
+            n++;
+        }
+    return n ? d / n : 0;
+}
+/* engine e's sound (seed, kind) held, its first 3 s, with the macros m: into mac_buf */
+static void mac_render(uint32_t e, int32_t kind, uint32_t seed, const int8_t *m)
+{
+    static fm_patch_t fp;
+    static an_design_t ad;
+    static an_voice_t av;
+    static cal_design_t cd;
+    static cal_t c;
+    fm_voice_t fv;
+    int32_t out[CTL];
+    uint32_t b, i, n = 0;
+    if (e == ENG_FM) {
+        fm_generate(&fp, kind, seed, PATH_OPEN, GEN_NOW);
+        fm_measure(&fp);
+        memset(&fv, 0, sizeof fv);
+        fm_note_on(&fv, &fp, 57, 1);
+    } else if (e == ENG_ANIMA) {
+        an_design(&ad, kind, seed, PATH_OPEN, GEN_NOW);
+        an_measure(&ad);
+        an_init(&av, seed);
+        memcpy(av.mac, m, NMAC);
+        an_note_on(&av, &ad, pitch_inc(57 * 16), 1);
+    } else {
+        cal_design(&cd, kind, seed, PATH_OPEN, GEN_NOW);
+        cal_measure(&cd);
+        cal_init(&c, seed);
+        memcpy(c.mac, m, NMAC);
+        cal_note_on(&c, &cd, 57, 1u);
+    }
+    for (b = 0; b < 1378u * 7u / 2u; b++) {
+        int alive = e == ENG_FM ? fm_render(&fv, &fp, out, m) : e == ENG_ANIMA ? an_render(&av, &ad, out, CTL)
+                                                                             : cal_render(&c, &cd, out);
+        if (!alive)
+            memset(out, 0, sizeof out);
+        for (i = 0; i < CTL && n < MAC_N; i++)     /* (the attack too: a macro is heard as notes are played) */
+            mac_buf[n++] = out[i];
+    }
+}
+static int cmd_macros(const char *dir)
+{
+    static const uint32_t NK[3] = {FF_N, AK_N, CS_N};
+    static const char *const EN[3] = {"FM", "ANIMA", "CALIGULA"};
+    uint32_t fail = 0, e, j, kind, s;
+    char path[512];
+    /* none: bit for bit */
+    for (kind = 0; kind < FF_N; kind++) {
+        static fm_patch_t fp;
+        fm_voice_t a, b2;
+        int32_t oa[CTL], ob[CTL];
+        static const int8_t Z[NMAC] = {0, 0, 0, 0};
+        uint32_t blk;
+        fm_generate(&fp, (int32_t)kind, 300u + kind, PATH_OPEN, GEN_NOW);
+        fm_measure(&fp);
+        memset(&a, 0, sizeof a);
+        memset(&b2, 0, sizeof b2);
+        fm_note_on(&a, &fp, 57, 1);
+        fm_note_on(&b2, &fp, 57, 1);
+        for (blk = 0; blk < 2000u; blk++) {
+            int ra = fm_render(&a, &fp, oa, 0), rb = fm_render(&b2, &fp, ob, Z);
+            if (ra != rb || (ra && memcmp(oa, ob, sizeof oa))) {
+                printf("FAIL macros: FM %s with its macros at 0 is not as drawn\n", FF_NAME[kind]), fail++;
+                break;
+            }
+        }
+    }
+    /* each macro moves each engine's sounds; the brightening ones brighten; none silences or blows up */
+    for (e = 0; e < 3u; e++)
+        for (j = 0; j < NMAC; j++) {
+            uint32_t moved = 0, tried = 0, wrong = 0, bad = 0;
+            for (kind = 0; kind < NK[e]; kind++)
+                for (s = 0; s < 2u; s++) {
+                    int8_t m[NMAC] = {0, 0, 0, 0};
+                    mfeel_t f0, fl, fh;
+                    double ch;
+                    static double s0[MSP_N], sl[MSP_N], sh[MSP_N];
+                    mac_render(e, (int32_t)kind, 4000u + kind * 31u + s * 7919u, m);
+                    f0 = mfeel(mac_buf, MAC_N);
+                    mspec(s0);
+                    if (f0.rms < 30)
+                        continue;                         /* (a sound that is not sounding yet: nothing to move) */
+                    m[j] = -MAC_MAX;
+                    mac_render(e, (int32_t)kind, 4000u + kind * 31u + s * 7919u, m);
+                    fl = mfeel(mac_buf, MAC_N);
+                    mspec(sl);
+                    m[j] = MAC_MAX;
+                    mac_render(e, (int32_t)kind, 4000u + kind * 31u + s * 7919u, m);
+                    fh = mfeel(mac_buf, MAC_N);
+                    mspec(sh);
+                    tried++;
+                    ch = mspec_dist(sl, s0) + mspec_dist(sh, s0);   /* dB: how far each end takes the spectrum */
+                    if (ch > 3.0 || fabs(fh.am - fl.am) > 0.05)
+                        moved++;
+                    else if (getenv("MACDBG"))
+                        printf("  still: %s %s seed %u: %.1f dB, am %.3f/%.3f\n", EN[e],
+                               e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : CS_NAME[kind],
+                               4000u + kind * 31u + s * 7919u, ch, fl.am, fh.am);
+                    if (j == 0u && fh.bright <= fl.bright && getenv("MACDBG"))
+                        printf("  darker: %s %s: %.0f / %.0f / %.0f Hz\n", EN[e],
+                               e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : CS_NAME[kind],
+                               fl.bright, f0.bright, fh.bright);
+                    if (j == 0u && fh.bright <= fl.bright)    /* BRIGHT, TONE, EDGE: brighter turned up */
+                        wrong++;
+                    if (fl.peak > 8.0 * 32768 || fh.peak > 8.0 * 32768 || fl.rms < f0.rms * 0.02 || fh.rms < f0.rms * 0.02)
+                        bad++;
+                }
+            printf("macros %-8s %u: moves %u of %u sounds%s%s\n", EN[e], j + 1, moved, tried,
+                   wrong ? " (darker turned up on some)" : "", bad ? " (silent or wild at an end on some)" : "");
+            if (moved * 10u < tried * 8u)
+                printf("FAIL macros: %s macro %u moves too few sounds\n", EN[e], j + 1), fail++;
+            if (wrong * 10u > tried)
+                printf("FAIL macros: %s macro 1 does not brighten\n", EN[e]), fail++;
+            if (bad)
+                printf("FAIL macros: %s macro %u silences or blows up %u sounds\n", EN[e], j + 1, bad), fail++;
+        }
+    /* the panel */
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    run_blocks(40, 0);
+    press_btn(B_FX);
+    press_phys(KEY_EDIT, 1);
+    press_phys(KEY_EDIT, 0);
+    ui_leds();
+    if (!ui.edit || !host_led[14u + KEY_EDIT])
+        printf("FAIL macros: the EDIT key does not turn EDIT on, lit\n"), fail++;
+    host_enc[PANEL_ENC[EN_K1]] = 10;
+    host_enc[PANEL_ENC[EN_K3]] = -5;
+    ui_input();
+    if (ui.mac[0][ui.engine[0]][0] != 20 || ui.mac[0][ui.engine[0]][2] != -10 || lay_mac[0][0] != 20 || ui.flt[0] || ui.cr[0])
+        printf("FAIL macros: KNOB 1 and 3 do not turn the macros under EDIT\n"), fail++;
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-32-macro.ppm", dir);
+    ppm(path);
+    while (ui.engine[0] != ENG_CAL) {                 /* another engine: its own macros, none yet */
+        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        ui_input();
+    }
+    run_blocks(40, 0);
+    if (lay_mac[0][0] || lay_mac[0][2])
+        printf("FAIL macros: another engine's sound takes the macros of the first\n"), fail++;
+    host_enc[PANEL_ENC[EN_K4]] = 7;
+    ui_input();
+    {
+        int8_t keep[NLAYER][NENG][NMAC];
+        memcpy(keep, ui.mac, sizeof keep);
+        ses_save(1);                                  /* a session keeps them */
+        memset(ui.mac, 0, sizeof ui.mac);
+        ses_load_slot(1);
+        if (memcmp(keep, ui.mac, sizeof keep) || lay_mac[0][3] != 14)
+            printf("FAIL macros: a session does not keep them\n"), fail++;
+        pre_save(0, ENG_CAL, 3);                      /* a preset keeps them */
+        memset(ui.mac[0][ENG_CAL], 0, NMAC);
+        pre_load(0, ENG_CAL, 3);
+        run_blocks(40, 0);
+        if (ui.mac[0][ENG_CAL][3] != 14 || lay_mac[0][3] != 14)
+            printf("FAIL macros: a preset does not keep them\n"), fail++;
+    }
+    press_btn(B_HOME);                                /* a new sound: as drawn */
+    run_blocks(40, 0);
+    if (ui.mac[0][ENG_CAL][3] || lay_mac[0][3] || ui.mac[0][ENG_FM][0] != 20)
+        printf("FAIL macros: HOME does not clear the new sound's macros (only)\n"), fail++;
+    press_phys(KEY_EDIT, 1);
+    press_phys(KEY_EDIT, 0);
+    host_enc[PANEL_ENC[EN_K1]] = 3;
+    ui_input();
+    if (ui.edit || ui.flt[0] != 6)
+        printf("FAIL macros: EDIT off does not give KNOB 1 back to the filter\n"), fail++;
+    {   /* 0.21's presets (12 bytes a slot, no macros) still load, and are widened when one is saved */
+        ses_head_t *h = (ses_head_t *)ses_buf;
+        uint32_t len = 32u + NENG * PRE_SLOTS * 12u;
+        pre_rec_t old;
+        memset(ses_buf, 0, len);
+        memset(&old, 0, sizeof old);
+        old.seed = cal_buf[0][cal_pub[0]].seed;
+        old.word = ses_c2_word(cal_buf[0][cal_pub[0]].out, GEN_NOW, PATH_OPEN);
+        old.used = 1;
+        old.kind = cal_buf[0][cal_pub[0]].kind;
+        memcpy(ses_buf + 32u + (ENG_CAL * PRE_SLOTS + 6u) * 12u, &old, 12u);
+        h->magic = SES_MAGIC, h->num = PRE_NUM, h->format = 1, h->len = len, h->seq = ++ses.seq;
+        h->body_crc = ses_crc(ses_buf + 32u, len - 32u, 0);
+        h->head_crc = ses_crc(ses_buf, 30u, 0);
+        ses_write(PRE_NUM, len);
+        if (pre_kind(ENG_CAL, 7) != old.kind || pre_load(0, ENG_CAL, 7) != SES_OK || ui.mac[0][ENG_CAL][0])
+            printf("FAIL macros: 0.21's presets do not load\n"), fail++;
+        ui.mac[0][ENG_CAL][1] = 30;
+        pre_save(0, ENG_CAL, 9);
+        if (pre_kind(ENG_CAL, 7) != old.kind || pre_kind(ENG_CAL, 9) < 0)
+            printf("FAIL macros: a save over 0.21's presets loses them\n"), fail++;
+    }
+    printf("macros: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -2180,6 +2445,8 @@ int main(int argc, char **argv)
         return cmd_reverb(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "paths"))
         return cmd_paths(argv[2]);
+    if (argc >= 3 && !strcmp(argv[1], "macros"))
+        return cmd_macros(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "presets"))
         return cmd_presets(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "latch"))

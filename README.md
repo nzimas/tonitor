@@ -90,6 +90,7 @@ sessions overwrites SLOOP projects** stored there.
 | the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. Two voices per layer: **a new note never cuts the release of the one before it** — a third note takes the voice that has rung longest. A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
 | the rightmost black key | **SHIFT** (lit while held; each press shows the audio's load in % of the time it has, now / at most since the last press, e.g. `LOAD 62/91`). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen layer's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
+| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen layer's sound. See [Macros](#macros). |
 | the other black keys | play no notes (kept for other functions to come). |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a layer button, goes back. |
 | **REC** | the chosen layer's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a layer**. |
@@ -120,6 +121,25 @@ playing: it shapes the next sounds drawn on that layer. The path's key is lit wh
 | **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every layer starts here |
 
 Sessions keep each layer's path, and the path each of its sounds was drawn on.
+
+### Macros
+
+Press **EDIT** (the black key just left of SHIFT; lit while on) and the four knobs across the top stop being
+the filter, the granulator, the crush and the send: they become **four macros** that reshape the chosen
+layer's sound, while it plays, under a held note. Each is turned from the middle, which is the sound as HOME
+drew it; either way transforms it. While a knob turns, the whole screen is its dial, with the macro's name
+for this sound and how far it is turned (+40 %, -25 %, AS DRAWN). Press EDIT again to give the knobs back.
+
+The macros are chosen for each engine, and for some by the kind of sound:
+
+| | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| **FM** | **BRIGHT**: the modulation index, and the carriers tilted (the higher partials up) | **DETUNE** (the carriers pulled apart: beating, chorus) — or **SKEW** for metallic and noisy families (every partial off its ratio: clangour) | **GRIT**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
+| **ANIMA** | **TONE**: every filter up or down | what the kind is about: **GRAINS**, **AIR** (the noise), **FM** (the index), **VOWEL** (the formant) or **DRIVE** | **SPACE**: the resonator wetter and ringing longer (brought in if the sound had none), or drier | **MOTION**: the hand's pace, its LFOs and the tremolo |
+| **CALIGULA** | **EDGE**: triangles to squares | **DEPTH**: how deeply the pairs modulate each other | **CHAOS** (total feedback and drive) — or **ECHO** (the delay) for SPORE, VEIL, LITANY and MOTH | **HAND**: how busy the hand is, its touches and bursts — or **PULSE** (the gates' speed) for HIVE, MOTH and WIRE |
+
+Each layer keeps the macros of each of its three sounds. **HOME** draws a new sound as it comes (its macros
+in the middle). Sessions and presets keep the macros with the sound.
 
 ### Latched keys
 
@@ -242,7 +262,9 @@ Layer colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 
 The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
 fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of seventeen families of
-sound objects:
+sound objects (since 0.22 with their operators on the ratios they were designed with — before, a slip in the
+generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds
+saved then come back as they were):
 
 | Family | After |
 | --- | --- |

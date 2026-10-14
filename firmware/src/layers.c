@@ -106,6 +106,7 @@ static volatile int32_t lay_send[NLAYER];   /* the send to the reverb, after the
  * crossing it never clicks */
 #define FLT_MAX 64
 static volatile int8_t lay_flt[NLAYER];
+static volatile int8_t lay_mac[NLAYER][NMAC];   /* EDIT's macros on the sound the layer plays (ui.c keeps them) */
 static volatile int8_t lay_gr[NLAYER];   /* each layer's granulator (KNOB 2), -FLT_MAX .. FLT_MAX: 0 off (gran.c) */
 /* each layer's crush (KNOB 3), -FLT_MAX .. FLT_MAX, 0 off: left fewer bits (16 down to 1.5), right a lower
  * sample rate (44.1 kHz down to ~300 Hz), both along exponential curves so the first half of the way stays
@@ -562,9 +563,13 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         else
             change_apply(l);
     }
+    int8_t mac[NMAC];
+    for (i = 0; i < NMAC; i++)
+        mac[i] = lay_mac[l][i];
     for (i = 0; i < CTL; i++)
         buf[i] = 0;
     if (y->engine == ENG_CAL) {                   /* the organism: one for the layer */
+        memcpy(cal_rt[l].mac, mac, NMAC);
         if (cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], buf))
             any = 1;
     }
@@ -574,9 +579,11 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         if (!v->sounding)
             continue;
         if (y->engine == ENG_FM)
-            alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb);
-        else
+            alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, mac);
+        else {
+            memcpy(an_voice[l][k].mac, mac, NMAC);
             alive = an_render(&an_voice[l][k], &an_buf[l][an_use[l]], vb, CTL);
+        }
         if (!alive) {
             v->sounding = 0;
             if (v->fade && v->pend) {             /* (it ended in its fade: the new note now) */

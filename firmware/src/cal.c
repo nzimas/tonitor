@@ -108,6 +108,7 @@ typedef struct {
     uint8_t odd, live;
     uint8_t hush;                /* overload (layers.c): its tail, no key on it, let go in ~30 ms */
     uint8_t mstep;               /* where the hand is in its phrase */
+    int8_t mac[NMAC];            /* EDIT's macros (layers.c sets them each block; 0: the design as drawn) */
     rnd_t r;
 } cal_t;
 
@@ -178,10 +179,29 @@ static int32_t cal_pick(cal_t *c, const cal_design_t *d)
     }
     return -1;
 }
+/* EDIT's macros on CALIGULA: EDGE (the oscillators from triangles to squares), DEPTH (how deep the pairs modulate
+ * each other), CHAOS (the total feedback and the drive) or, for the gentler species, ECHO (the delay's mix and
+ * feedback), and HAND (how busy the hand is: its touches and the bursts) or, for the gated ones, PULSE (the hyper
+ * LFO's speed) */
+static int cal_echoes(uint32_t kind)
+{
+    return kind == CS_SPORE || kind == CS_VEIL || kind == CS_LITANY || kind == CS_MOTH;
+}
+static int cal_pulses(uint32_t kind) { return kind == CS_HIVE || kind == CS_MOTH || kind == CS_WIRE; }
+static const char *cal_mac_name(const cal_design_t *d, uint32_t j)
+{
+    return j == 0u ? "EDGE" : j == 1u ? "DEPTH" : j == 2u ? (cal_echoes(d->kind) ? "ECHO" : "CHAOS")
+                                                          : (cal_pulses(d->kind) ? "PULSE" : "HAND");
+}
+/* 2^(m / MAC_MAX x oct), Q16 */
+static int32_t cal_mac_exp(int32_t m, int32_t oct_q16) { return (int32_t)exp2_q16(m * (oct_q16 / MAC_MAX)); }
+
 /* the wait to the next finger: irregular, around 1 / touch (exponential: -ln u / rate) */
 static uint32_t cal_wait(cal_t *c, const cal_design_t *d)
 {
     int32_t mean = (int32_t)(1378u * 256u / (uint32_t)clampi(d->touch, 16, 256 * 40));   /* blocks */
+    if (c->mac[3] && !cal_pulses(d->kind))            /* HAND: busier (shorter waits) or calmer */
+        mean = clampi(mulq16(mean, cal_mac_exp(-c->mac[3], R16(1.5))), 4, 1378 * 20);
     if (d->rhythm && d->mlen) {                       /* on the phrase's pulse: long, short, ... a little loose */
         static const uint8_t PULSE[4] = {2, 1, 1, 4};   /* x mean / 2 */
         int32_t w = mean * PULSE[c->mstep % d->mlen] / 2;
@@ -320,13 +340,27 @@ static int cal_render(cal_t *c, const cal_design_t *d, int32_t *out)
 {
     uint32_t i, k;
     int32_t h, gate, dmod_lfo, sharp_drv[4], depth[4], gp, total_fb = d->total_fb, drive = d->drive;
+    int32_t del_fb = d->del_fb, del_mix = d->del_mix;
     int32_t env_t[8], env_k[8], denv[8], env_e[8], del_tq[2];
     int any = 0;
     if (!c->live)
         return 0;
+    if (c->mac[2]) {                                      /* ECHO: the delay wetter and longer; CHAOS: feedback, drive */
+        if (cal_echoes(d->kind)) {
+            del_mix = clampi(del_mix + c->mac[2] * (LV(0.45) / MAC_MAX), 0, LV(0.9));
+            del_fb = clampi(del_fb + c->mac[2] * (LV(0.3) / MAC_MAX), 0, LV(0.85));
+        } else {
+            total_fb = clampi(total_fb + c->mac[2] * (LV(0.45) / MAC_MAX), 0, LV(0.92));
+            drive = c->mac[2] > 0 ? drive + c->mac[2] * (IX(4.0) / MAC_MAX)
+                                  : IX(1.0) + mulq15(drive - IX(1.0), (MAC_MAX + c->mac[2]) * (Q15 / MAC_MAX));
+        }
+    }
     /* the hyper LFO and what it moves */
-    c->la += (uint32_t)(((uint64_t)(uint32_t)d->lfo_a * 3116605u) >> 16);   /* Hz Q16 -> a block's step */
-    c->lb += (uint32_t)(((uint64_t)(uint32_t)d->lfo_b * 3116605u) >> 16);
+    {
+        int32_t pul = c->mac[3] && cal_pulses(d->kind) ? cal_mac_exp(c->mac[3], R16(1.5)) : Q16;   /* PULSE */
+        c->la += (uint32_t)(((uint64_t)(uint32_t)mulq16(d->lfo_a, pul) * 3116605u) >> 16);   /* Hz Q16 -> a block's step */
+        c->lb += (uint32_t)(((uint64_t)(uint32_t)mulq16(d->lfo_b, pul) * 3116605u) >> 16);
+    }
     h = cal_hyper(c, d);
     gate = d->lfo_sq ? h : (h > Q15 / 2 ? Q15 : 0);
     c->gate_s += (gate - c->gate_s) >> 2;                 /* (a few ms: no clicks) */
@@ -340,7 +374,8 @@ static int cal_render(cal_t *c, const cal_design_t *d, int32_t *out)
                 c->ws_t[k] = mulq15(rnd_bi(&c->r), d->drift);
             }
         }
-        if (rnd_q15(&c->r) < (d->burst * 95) >> 10) {     /* bursts: Q8 a second -> a block's chance, Q15 */
+        if (rnd_q15(&c->r) < (mulq16(d->burst, c->mac[3] && !cal_pulses(d->kind) ? cal_mac_exp(c->mac[3], R16(1.5)) : Q16) * 95) >> 10) {
+            /* (bursts: Q8 a second -> a block's chance, Q15; HAND makes them more or fewer) */
             k = (uint32_t)rnd_below(&c->r, 8);
             c->burst[k] = (uint16_t)rnd_in(&c->r, 20, 520);   /* 15 .. 380 ms */
         }
@@ -350,8 +385,8 @@ static int cal_render(cal_t *c, const cal_design_t *d, int32_t *out)
     for (k = 0; k < 4u; k++) {
         c->wd[k] += (c->wd_t[k] - c->wd[k]) >> 9;
         c->ws[k] += (c->ws_t[k] - c->ws[k]) >> 9;
-        sharp_drv[k] = IX(1.0) + mulq15(clampi(d->sharp[k] + c->ws[k], 0, Q15), IX(7.0));
-        depth[k] = clampi(d->mod[k] + c->wd[k], 0, Q15);
+        sharp_drv[k] = IX(1.0) + mulq15(clampi(d->sharp[k] + c->ws[k] + c->mac[0] * (LV(0.7) / MAC_MAX), 0, Q15), IX(7.0));
+        depth[k] = clampi(d->mod[k] + c->wd[k] + c->mac[1] * (LV(0.6) / MAC_MAX), 0, Q15);
         depth[k] = mulq15(depth[k], Q15 - mulq15(d->lfo_idx[k], Q15 - h));   /* the hyper LFO opens and closes it */
     }
     if (c->surge_left) {                                  /* a surge: feedback and drive up, then back */
@@ -463,15 +498,15 @@ static int cal_render(cal_t *c, const cal_design_t *d, int32_t *out)
             }
             if (c->odd) {
                 for (k = 0; k < 2u; k++)
-                    c->dl[k][c->dw] = cal_enc((c->dhalf[k] + y + mulq15(c->dlast[k ^ 1u], d->del_fb)) >> 1);
+                    c->dl[k][c->dw] = cal_enc((c->dhalf[k] + y + mulq15(c->dlast[k ^ 1u], del_fb)) >> 1);
                 if (++c->dw >= CAL_DLN)
                     c->dw = 0;
             } else
                 for (k = 0; k < 2u; k++)
-                    c->dhalf[k] = y + mulq15(c->dlast[k ^ 1u], d->del_fb);
+                    c->dhalf[k] = y + mulq15(c->dlast[k ^ 1u], del_fb);
             c->odd ^= 1u;
             dy = (c->dlast[0] + c->dlast[1]) >> 1;
-            y += mulq15(dy - y, d->del_mix);
+            y += mulq15(dy - y, del_mix);
         }
         /* the drive, and the total feedback (the output, saturated, low-passed, back into the modulation) */
         s = tanh_q15(mulq12(y, drive));

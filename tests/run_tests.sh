@@ -15,11 +15,14 @@ clang -O2 -std=gnu99 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-
     -Ifirmware/src -Ibuild/gen tests/host/host.c -o build/host
 build/host check
 clang -O2 -std=gnu99 -w -Ifirmware/src -Ibuild/gen tests/golden/golden.c -o build/golden
-build/golden | diff -q - tests/golden/gen0.txt >/dev/null || { echo "FAIL golden: generation 0 no longer draws its sounds again"; exit 1; }
-echo "golden: generation 0 as it was"
+for g in 0 1 2; do
+    build/golden $g | diff -q - tests/golden/gen$g.txt >/dev/null || { echo "FAIL golden: generation $g no longer draws its sounds again"; exit 1; }
+done
+echo "golden: generations 0, 1 and 2 as they were"
 build/host flows
 build/host latch
 build/host presets build/screens
+build/host macros build/screens
 build/host paths build/sounds
 build/host reverb build/sounds
 build/host sessions build/screens

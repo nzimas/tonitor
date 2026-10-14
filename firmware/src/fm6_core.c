@@ -509,16 +509,16 @@ static int32_t fm6_note_logfreq(int32_t pitch16, int32_t fine)
 }
 
 /* one block (msfa note compute): the LFO's value and delay (Q24), the note's log2 frequency, the patch's
- * algorithm and feedback (already through the macros), dt[k]: a pitch offset per operator (Q24),
- * modlvl: a level offset of the operators that are not carriers (Q24 log2). Writes out (Q24); 0 = silent
+ * algorithm and feedback (already through the macros), dt[k]: a pitch offset per operator (Q24, fixed ones too),
+ * lvl[k]: a level offset per operator (Q24 log2), lfoq8: the LFO's depths scaled (Q8). Writes out (Q24); 0 = silent
  * (out untouched) */
 static int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32_t lfo_val, int32_t lfo_delay,
-                             int32_t logfreq, uint32_t alg, int32_t fb, const int32_t *dt, int32_t modlvl)
+                             int32_t logfreq, uint32_t alg, int32_t fb, const int32_t *dt, const int32_t *lvl, uint32_t lfoq8)
 {
-    uint32_t pmd = (uint32_t)((p[FP_LPMD] % 100u) * 165u >> 6) * (uint32_t)lfo_delay;   /* Q32 */
+    uint32_t pmd = ((uint32_t)((p[FP_LPMD] % 100u) * 165u >> 6) * lfoq8 >> 8) * (uint32_t)lfo_delay;   /* Q32 */
     int32_t senslfo = FM6_PMS[p[FP_LPMS] & 7u] * (lfo_val - (1 << 23));
     int32_t pmod = (int32_t)(((int64_t)pmd * senslfo) >> 39), pitch_mod;
-    uint32_t amd = (uint32_t)((p[FP_LAMD] % 100u) * 165u >> 6), amod, car = fm6_carriers(alg), k;
+    uint32_t amd = (uint32_t)((p[FP_LAMD] % 100u) * 165u >> 6) * lfoq8 >> 8, amod, k;
     pmod = pmod < 0 ? -pmod : pmod;
     pitch_mod = fm6_penv_get(&n->penv, p) + (senslfo < 0 ? -pmod : pmod);
     amod = (uint32_t)(((int64_t)amd * lfo_delay) >> 8);                 /* Q24 */
@@ -527,7 +527,7 @@ static int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32
         const uint8_t *op = p + k * FP_OP;
         int32_t level = fm6_env_get(&n->env[k], op);
         uint32_t ams = FM6_AMSENS[op[FP_AMS] & 3u];
-        n->op[k].freq = fm6_freq((n->fixed >> k) & 1u ? n->base[k] : logfreq + n->base[k] + pitch_mod + dt[k]);
+        n->op[k].freq = fm6_freq((n->fixed >> k) & 1u ? n->base[k] + dt[k] : logfreq + n->base[k] + pitch_mod + dt[k]);
         if (ams) {                                 /* msfa: pt = exp(sensamp / 262144 * 0.07 + 12.2) */
             uint32_t sensamp = (uint32_t)(((uint64_t)amod * ams) >> 24);
             int32_t lg = FM6_AMS_C0 + (int32_t)(((uint64_t)sensamp * FM6_AMS_K) >> 10);
@@ -535,8 +535,7 @@ static int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32
                                                                 * was shifted left, past 32 bits: a random level, noise) */
             level -= (int32_t)(((uint64_t)(uint32_t)level * ((uint64_t)pt << 4)) >> 28);
         }
-        if (!((car >> k) & 1u))
-            level += modlvl;
+        level += lvl[k];
         n->op[k].level_in = level < 0 ? 0 : level > (17 << 24) ? 17 << 24 : level;
     }
     return fm6_core_render(out, n->op, alg, n->fb, fb ? 8 - fb : 16);

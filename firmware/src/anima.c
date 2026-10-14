@@ -207,6 +207,8 @@ typedef struct {
     rnd_t rnd, motion;
     uint8_t live;
     int32_t ktmul;               /* the filter's keyboard tracking for this note, Q16 */
+    int8_t mac[NMAC];            /* EDIT's macros (layers.c sets them each block; 0: the design as drawn) */
+    uint8_t res_on, shp_on;      /* the comb and the shaper, the design's or brought in by a macro */
 } an_voice_t;
 
 /* ------------------------------------------------------ the envelope --- */
@@ -486,11 +488,45 @@ static void an_init(an_voice_t *v, uint32_t seed)
 }
 
 /* ------------------------------------------------- the controllers --- */
+/* EDIT's macros on ANIMA: TONE (every filter up or down), then what the kind is about -- GRAINS (the cloud's
+ * level and rate), AIR (the noise), FM (the index), VOWEL (the formant) or DRIVE (the shaper, brought in if the
+ * design has none) -- SPACE (the comb's mix and ringing, brought in if the design has none) and MOTION (the
+ * hand's pace, its LFOs and the tremolo's depth) */
+enum { AR_GRAINS, AR_AIR, AR_FM, AR_VOWEL, AR_DRIVE };
+static uint32_t an_mac_role(const an_design_t *d)
+{
+    static const uint8_t PREF[AK_N][3] = {
+        {AR_AIR, AR_GRAINS, AR_DRIVE}, {AR_GRAINS, AR_AIR, AR_DRIVE}, {AR_FM, AR_GRAINS, AR_DRIVE},
+        {AR_FM, AR_DRIVE, AR_DRIVE}, {AR_FM, AR_GRAINS, AR_DRIVE}, {AR_AIR, AR_VOWEL, AR_DRIVE},
+        {AR_DRIVE, AR_DRIVE, AR_DRIVE}, {AR_GRAINS, AR_DRIVE, AR_DRIVE}, {AR_AIR, AR_DRIVE, AR_DRIVE},
+        {AR_VOWEL, AR_DRIVE, AR_DRIVE}, {AR_GRAINS, AR_DRIVE, AR_DRIVE}, {AR_FM, AR_DRIVE, AR_DRIVE},
+        {AR_GRAINS, AR_AIR, AR_DRIVE}, {AR_DRIVE, AR_DRIVE, AR_DRIVE}};
+    uint32_t i;
+    for (i = 0; i < 3u; i++) {
+        uint32_t r = PREF[d->kind % AK_N][i];
+        if ((r == AR_GRAINS && d->gran) || (r == AR_AIR && d->noise) || (r == AR_FM && d->fm) ||
+            (r == AR_VOWEL && d->groupFilter) || r == AR_DRIVE)
+            return r;
+    }
+    return AR_DRIVE;
+}
+static const char *an_mac_name(const an_design_t *d, uint32_t j)
+{
+    static const char *const ROLE[5] = {"GRAINS", "AIR", "FM", "VOWEL", "DRIVE"};
+    return j == 0u ? "TONE" : j == 1u ? ROLE[an_mac_role(d)] : j == 2u ? "SPACE" : "MOTION";
+}
+/* 2^(m / MAC_MAX x oct), Q16 (oct in Q16 / MAC_MAX steps: the caller's) */
+static int32_t an_mac_exp(int32_t m, int32_t oct_q16) { return (int32_t)exp2_q16(m * (oct_q16 / MAC_MAX)); }
+
 static void an_control(an_voice_t *v, const an_design_t *d)
 {
     int32_t c[AS_N], gc[AS_N], l1, l2, count, gx, gy, hardest, fastest, dx, dy;
     an_finger *f = &v->f, *g = &v->ghost;
-    v->dt = mulq16(R16(0.00072562), d->motionScale);
+    const int8_t *mac = v->mac;
+    uint32_t role = mac[1] ? an_mac_role(d) : AR_DRIVE;
+    int32_t pace = mac[3] ? mulq16(d->motionScale, an_mac_exp(mac[3], R16(1.5))) : d->motionScale;
+    int32_t tone = mac[0] ? an_mac_exp(mac[0], R16(2.5)) : Q16;
+    v->dt = mulq16(R16(0.00072562), pace);
     if (f->down) {
         /* now and then the hand moves on: the finger lands somewhere else */
         v->handover -= v->dt;
@@ -516,8 +552,8 @@ static void an_control(an_voice_t *v, const an_design_t *d)
     if (g->down)
         an_move(v, d, g, 1);
     /* a block's phase step: Hz x 32 / FS x 2^32 = Hz Q16 x 3116605 / 2^16 */
-    v->lfoP1 += (uint32_t)(((uint64_t)(uint32_t)mulq16(d->lfo1, d->motionScale) * 3116605u) >> 16);
-    v->lfoP2 += (uint32_t)(((uint64_t)(uint32_t)mulq16(d->lfo2, d->motionScale) * 3116605u) >> 16);
+    v->lfoP1 += (uint32_t)(((uint64_t)(uint32_t)mulq16(d->lfo1, pace) * 3116605u) >> 16);
+    v->lfoP2 += (uint32_t)(((uint64_t)(uint32_t)mulq16(d->lfo2, pace) * 3116605u) >> 16);
     l1 = an_lfo(v, d->lfo1Shape, v->lfoP1, 1);
     l2 = an_lfo(v, d->lfo2Shape, v->lfoP2, 2);
     count = (f->down ? 1 : 0) + (g->down ? 1 : 0);
@@ -564,6 +600,17 @@ static void an_control(an_voice_t *v, const an_design_t *d)
     v->gLen4 = clampi(an_at(&d->granLen, c), MS4(4.0), MS4(400.0));
     v->amRate8 = clampi(an_at(&d->amRate, c), H8(0.1), H8(40.0));
     v->amDepth = clampi(an_at(&d->amDepth, c), 0, Q15);
+    if (mac[1]) {                                    /* the kind's own macro */
+        if (role == AR_GRAINS) {
+            v->lGran = clampi(v->lGran + mulq15(v->lGran > LV(0.15) ? v->lGran : LV(0.15), mac[1] * (2 * Q15 / MAC_MAX)), 0, Q15);
+            v->gRate8 = clampi(mulq16(v->gRate8, an_mac_exp(mac[1], R16(1.5))), H8(0.5), H8(200.0));
+        } else if (role == AR_AIR)
+            v->lNoise = clampi(v->lNoise + mulq15(v->lNoise > LV(0.12) ? v->lNoise : LV(0.12), mac[1] * (3 * Q15 / MAC_MAX)), 0, Q15);
+        else if (role == AR_FM)
+            v->index = clampi(mulq16(v->index > IX(0.3) ? v->index : IX(0.3), an_mac_exp(mac[1], R16(2.2))), 0, IX(12.0));
+    }
+    if (mac[3])                                      /* (the tremolo deeper or shallower with the pace) */
+        v->amDepth = clampi(v->amDepth + mulq15(v->amDepth, mac[3] * (Q15 / MAC_MAX)), 0, Q15);
     v->ampPrev = v->amp;
     if (f->down)
         v->amp = clampi(an_at(&d->amp, c), 0, Q15);   /* a lifted finger's voice keeps its level as it rings */
@@ -571,10 +618,13 @@ static void an_control(an_voice_t *v, const an_design_t *d)
         int32_t cut = an_at(&d->cutoff, c);
         if (v->ktmul != Q16)
             cut = clampi((int32_t)(((int64_t)cut * v->ktmul) >> 16), 30, 18000);
+        if (tone != Q16)
+            cut = clampi((int32_t)(((int64_t)cut * tone) >> 16), 30, 18000);
         svf_coef(&v->filtc, cut, clampi(an_at(&d->q, c), IX(0.5), IX(25.0)));
     }
     if (d->noise > 1)
-        svf_coef(&v->nfiltc, an_at(&d->noiseCut, c), IX(1.2));
+        svf_coef(&v->nfiltc, tone == Q16 ? an_at(&d->noiseCut, c)
+                                         : clampi((int32_t)(((int64_t)an_at(&d->noiseCut, c) * tone) >> 16), 30, 18000), IX(1.2));
     {   /* the FM carrier's band-limit level: its frequency with the sidebands, hz (1 + index ratio) */
         int32_t ratio = d->golden ? R16(1.6180340) : d->fmRatio;
         uint64_t k = (uint64_t)Q16 + (uint64_t)(((int64_t)v->index * ratio) >> 12);
@@ -595,8 +645,13 @@ static void an_control(an_voice_t *v, const an_design_t *d)
     gc[AS_LFO2] = l2;
     if (d->down)
         v->downInc = (uint32_t)clampi(an_at(&d->downRate, gc), 200, FS) * 97391u;   /* 2^32 / FS per Hz */
-    if (d->shaper) {
+    v->shp_on = (uint8_t)(d->shaper || (role == AR_DRIVE && mac[1] > 0));
+    if (v->shp_on) {
         v->drive = clampi(an_at(&d->shaperDrive, gc), IX(1.0), IX(12.0));
+        if (role == AR_DRIVE && mac[1])                /* (DRIVE: harder, or back towards clean) */
+            v->drive = clampi(mac[1] > 0 ? v->drive + mac[1] * (IX(5.0) / MAC_MAX)
+                                         : IX(1.0) + mulq15(v->drive - IX(1.0), (MAC_MAX + mac[1]) * (Q15 / MAC_MAX)),
+                              IX(1.0), IX(12.0));
         v->driveNorm = (int32_t)(((uint32_t)Q15 << 12) / (uint32_t)(v->drive * 6 / 10 > 4096 ? v->drive * 6 / 10 : 4096));
     }
     if (d->phaser) {
@@ -614,10 +669,20 @@ static void an_control(an_voice_t *v, const an_design_t *d)
             v->phA = ((1 << 24) - gg) / (((1 << 24) + gg) >> 15);   /* (1 - t) / (1 + t), Q15 */
         }
     }
-    if (d->groupFilter)
-        svf_coef(&v->gfiltc, an_at(&d->groupCut, gc), clampi(an_at(&d->groupQ, gc), IX(0.5), IX(25.0)));
+    if (d->groupFilter) {
+        int32_t gcut = an_at(&d->groupCut, gc);
+        if (tone != Q16 || (role == AR_VOWEL && mac[1]))
+            gcut = clampi((int32_t)(((int64_t)gcut * mulq16(tone, role == AR_VOWEL && mac[1] ? an_mac_exp(mac[1], R16(1.75)) : Q16)) >> 16),
+                          60, 17000);
+        svf_coef(&v->gfiltc, gcut, clampi(an_at(&d->groupQ, gc), IX(0.5), IX(25.0)));
+    }
     v->resFb = clampi(an_at(&d->resFeedback, gc), 0, LV(0.95));
     v->resMix = clampi(an_at(&d->resMix, gc), 0, Q15);
+    v->res_on = (uint8_t)(d->resonator || mac[2] > 0);
+    if (mac[2]) {                                    /* SPACE: the comb wetter and ringing longer, or drier */
+        v->resMix = clampi(v->resMix + mac[2] * (LV(0.45) / MAC_MAX), 0, LV(0.75));
+        v->resFb = clampi(v->resFb + mac[2] * (LV(0.18) / MAC_MAX), 0, LV(0.94));
+    }
 }
 
 /* ------------------------------------------------------- one block --- */
@@ -734,7 +799,7 @@ static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t
                 v->downHeld = s;
             s = v->downHeld;
         }
-        if (d->shaper) {
+        if (v->shp_on) {
             int32_t y = mulq12(s, v->drive);
             if (d->shaperCurve == 1)
                 y = sin_ph((uint32_t)((int64_t)clampi(y, -4 * Q15, 4 * Q15) * 25033));   /* sin(1.2 y) */
@@ -757,7 +822,7 @@ static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t
         }
         if (d->groupFilter)
             s = svf_run(&v->gfilt, &v->gfiltc, s, d->groupFilter);
-        if (d->resonator) {
+        if (v->res_on) {
             uint32_t rp = (v->resPos << 16) - (uint32_t)v->resDelay, i0 = (rp >> 16) & (AN_RES_N - 1u);
             int32_t fr = (int32_t)(rp & 0xFFFFu) >> 1, d0 = v->res[i0] * 4, d1 = v->res[(i0 + 1u) & (AN_RES_N - 1u)] * 4;
             int32_t y = d0 + (int32_t)(((int64_t)(d1 - d0) * fr) >> 15);

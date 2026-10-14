@@ -26,8 +26,11 @@ enum { PATH_OPEN, PATH_AMBIENT, PATH_EXP, PATH_N };
 /* the generators' generation: a sound is drawn again from (seed, path, gen) bit for bit, so a sound saved as its
  * seed (sessions, presets) keeps its generation, and every generation stays as it was (tests/golden: 0 is the
  * generators up to 0.20). New sounds are drawn on GEN_NOW. */
-#define GEN_NOW 1u
-#define GEN_N 2u
+#define GEN_NOW 2u
+#define GEN_N 3u                 /* 0: up to 0.20; 1: 0.21 (more families, kinds, species); 2: FM's ratios as meant */
+/* EDIT's four macros on a sound: -MAC_MAX .. MAC_MAX each, 0 = the sound as it was drawn */
+#define MAC_MAX 64
+#define NMAC 4u
 
 static inline int32_t clampi(int32_t x, int32_t lo, int32_t hi) { return x < lo ? lo : x > hi ? hi : x; }
 static inline int32_t mulq15(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 15); }
