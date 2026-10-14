@@ -85,6 +85,7 @@ typedef struct {
     volatile uint8_t rec;        /* LR_*: the screen's and the LEDs' */
     volatile uint8_t play;       /* the loops go round */
     volatile uint8_t ntrk;       /* loops kept */
+    volatile uint16_t mute;      /* the loops held out (PLAY held, a white key each): a bit each */
     uint8_t nheld;
     uint8_t held[16];            /* notes on in the recording, not yet off */
     uint32_t start;              /* the block the recording began on */
@@ -181,7 +182,7 @@ static void lim_block(int32_t *env, int32_t *g, int32_t *x, uint32_t n)
 }
 
 /* --------------------------------------------------------- events --- */
-enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS };
+enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK };
 typedef struct { uint8_t type, layer, note, val; } ev_t;
 #define EVQ 64u
 static ev_t evq[EVQ];
@@ -405,6 +406,7 @@ static void loop_cmd(uint32_t l, uint32_t type)
             t->pos = t->ix = 0;
             if (!p->play)
                 loop_rewind(p);                   /* stopped: all of them again, with the new one */
+            p->mute &= (uint16_t)~(1u << p->ntrk);   /* (a new one plays) */
             p->ntrk++;
             p->play = 1;
             p->rec = LR_IDLE;
@@ -428,6 +430,7 @@ static void loop_cmd(uint32_t l, uint32_t type)
     case EV_LOOP_CLEAR:
         loop_notes_off(l);
         p->play = 0;
+        p->mute = 0;
         p->ntrk = 0;
         p->nev = 0;
         p->nheld = 0;
@@ -458,6 +461,36 @@ static void loop_hear(uint32_t l, uint32_t on, uint32_t note)
     if (p->rec == LR_REC)
         loop_put(p, on, note);
 }
+/* loop k of layer l in or out (PLAY held, its white key). In while they play: from its start, now. Out: the notes
+ * it holds now let go (found again from its events up to where it is), the others' left be */
+static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
+{
+    looper_t *p = &loop[l];
+    loop_trk_t *t = &p->trk[k];
+    uint32_t bit = 1u << k;
+    if (k >= p->ntrk)
+        return;
+    if (on && (p->mute & bit)) {
+        if (p->play)
+            t->pos = t->ix = 0;
+        p->mute &= (uint16_t)~bit;
+    } else if (!on && !(p->mute & bit)) {
+        if (p->play) {
+            uint32_t held[4] = {0, 0, 0, 0}, i, n;
+            for (i = 0; i < t->ix; i++) {
+                uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
+                if (LE_ON(e))
+                    held[nt >> 5] |= 1u << (nt & 31u);
+                else
+                    held[nt >> 5] &= ~(1u << (nt & 31u));
+            }
+            for (n = 0; n < 128u; n++)
+                if ((held[n >> 5] >> (n & 31u)) & 1u)
+                    note_off(l, n, SRC_LOOP);
+        }
+        p->mute |= (uint16_t)bit;
+    }
+}
 /* one block of every loop that plays */
 static void loops_run(void)
 {
@@ -468,6 +501,8 @@ static void loops_run(void)
             continue;
         for (k = 0; k < p->ntrk; k++) {
             loop_trk_t *t = &p->trk[k];
+            if ((p->mute >> k) & 1u)
+                continue;                         /* (held out: it waits, silent, where it is) */
             while (t->ix < t->n && LE_T(p->ev[t->first + t->ix]) <= t->pos) {
                 uint32_t e = p->ev[t->first + t->ix++];
                 if (LE_ON(e))
@@ -514,6 +549,9 @@ static void events_take(void)        /* audio ISR, at a block start */
             break;
         case EV_LOOP_SET:
             loop_set(e.layer, e.val);
+            break;
+        case EV_LOOP_TRK:                         /* (note: the loop, val: in or out) */
+            loop_trk_set(e.layer, e.note, e.val);
             break;
         case EV_LOOPS:                            /* SHIFT and PLAY: every loop at once, in this block */
             for (k = 0; k < NLAYER; k++) {

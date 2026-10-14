@@ -21,12 +21,12 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 6u            /* 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
+#define SES_FORMAT 7u            /* 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
 #define SES_SLOTS 64u            /* the slots: sessions 1 .. 64 */
 /* the largest session: the head, the globals, six layers with their sounds and full loopers (~54 KiB) */
-#define SES_BUF (32u + 8u + NLAYER * (16u + NENG * NMAC + sizeof(fm_patch_t) + sizeof(an_design_t) + sizeof(cal_design_t) + \
+#define SES_BUF (32u + 8u + NLAYER * (16u + NENG * NMAC + 2u + sizeof(fm_patch_t) + sizeof(an_design_t) + sizeof(cal_design_t) + \
                                       8u * LOOP_TRK + 4u * LOOP_N))
 
 /* the flash, for the target (main.c) or the host test (host.c); offsets from the flash's start */
@@ -287,6 +287,10 @@ static uint32_t ses_pack(uint32_t num)
         }
         p = ses_put(p, &y, sizeof y);
         p = ses_put(p, ui.mac[l], NENG * NMAC);         /* (format 6: EDIT's macros on each of its sounds) */
+        {
+            uint16_t mu = lp->mute;                     /* (format 7: the loops held out) */
+            p = ses_put(p, &mu, 2u);
+        }
         /* the sounds: the engine in use in full; the other two as the seed that made them, their level and
          * (top byte, format 4) their path (drawn again from them: the same sound, at once) -- so a session
          * stays in one sector */
@@ -582,6 +586,13 @@ static int ses_load(uint32_t i)
                 (&ui.mac[l][0][0])[j] = (int8_t)clampi((&ui.mac[l][0][0])[j], -MAC_MAX, MAC_MAX);
         } else
             memset(ui.mac[l], 0, sizeof ui.mac[l]);
+        lp->mute = 0;
+        if (h.format >= 7u) {                           /* (into the emptied looper: the ISR leaves it be) */
+            uint16_t mu;
+            memcpy(&mu, p, 2u);
+            p += 2u;
+            lp->mute = (uint16_t)(mu & 0x3FFu);
+        }
         ui.engine[l] = (uint8_t)(y.engine < NENG ? y.engine : 0);
         ui.oct[l] = (int8_t)clampi(y.oct, -3, 3);
         ui.level[l] = (int8_t)clampi(y.level, 0, LEVEL_MAX);

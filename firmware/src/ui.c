@@ -67,6 +67,9 @@ static struct {
     uint8_t key_layer[NKEY], key_note[NKEY];   /* what a key down holds (KEY_NONE: nothing, it latched or let go) */
     uint8_t path[NLAYER];        /* each layer's generative path (PATH_*): HOME draws on it */
     uint8_t edit;                /* EDIT on: KNOB 1 .. 4 turn the chosen layer's sound's macros */
+    uint8_t play_down, ovd;      /* PLAY down (since play_t0); held: the overdubs on the white keys */
+    uint32_t play_t0;
+    int32_t shown_ovd;
     int8_t mac[NLAYER][NENG][NMAC];   /* the macros on each layer's sound of each engine (0: as drawn) */
     uint32_t latch[NLAYER];      /* the keys latched on each layer (lit while it is chosen) */
     uint8_t latch_note[NLAYER][NKEY];
@@ -569,8 +572,23 @@ static void ui_input(void)
             if (playing || kept)
                 ev_post(EV_LOOPS, 0, 0, (uint32_t)!playing);
             say(playing ? "LOOPS OFF" : kept ? "LOOPS ON" : "NO LOOPS", 1200);
-        } else
-            ev_post(EV_LOOP_PLAY, ui.sel, 0, 0);
+        } else {                                 /* PLAY: let go soon, the loops; held, the overdubs */
+            ui.play_down = 1;
+            ui.play_t0 = fm1_ms;
+        }
+    }
+    if (ui.play_down) {
+        if (!btn_bit(fm1_in.buttons, B_PLAY)) {
+            ui.play_down = 0;
+            if (ui.ovd) {
+                ui.ovd = 0;
+                ui.force = 1;
+            } else
+                ev_post(EV_LOOP_PLAY, ui.sel, 0, 0);
+        } else if (!ui.ovd && (uint32_t)(fm1_ms - ui.play_t0) >= 450u) {
+            ui.ovd = 1;                          /* held: the chosen layer's loops on the white keys */
+            ui.force = 1;
+        }
     }
     if (ui.sc_page) {                            /* the SCALE page: SELECT the root, ALGORITHM the scale */
         s = enc_take(EN_ALGO);
@@ -679,7 +697,14 @@ static void ui_input(void)
             continue;
         if (white_ix(k) < 0)
             continue;                            /* the black keys: no notes */
-        if ((keys >> k) & 1u) {
+        if (((keys >> k) & 1u) && ui.ovd) {      /* PLAY held: white key w, loop w in or out */
+            uint32_t w = (uint32_t)white_ix(k);
+            const looper_t *p = &loop[ui.sel];
+            ui.key_layer[k] = KEY_NONE;
+            if (w < p->ntrk)
+                ev_post(EV_LOOP_TRK, ui.sel, w, (p->mute >> w) & 1u);
+            ui.force = 1;
+        } else if ((keys >> k) & 1u) {
             uint32_t note = scale_note(white_ix(k), ui.oct[ui.sel]), bit = 1u << k;
             ui.key_layer[k] = KEY_NONE;
             if (ui.latch[ui.sel] & bit) {        /* a latched key: SHIFT held lets go of it; alone, nothing */
@@ -729,9 +754,14 @@ static void ui_leds(void)
     fm1_led_key(PANEL_BTN[B_ARP], ui.sc_page);
     fm1_led_key(PANEL_BTN[B_OCTDN], ui.oct[ui.sel] < 0);
     fm1_led_key(PANEL_BTN[B_OCTUP], ui.oct[ui.sel] > 0);
-    for (k = 0; k < NKEY; k++)
-        fm1_led_key(14u + k, white_ix(k) >= 0 && ((((ui.keys >> k) & 1u) && ui.key_layer[k] == ui.sel) ||
-                                                  ((ui.latch[ui.sel] >> k) & 1u)));
+    for (k = 0; k < NKEY; k++) {
+        int32_t w = white_ix(k);
+        if (ui.ovd)                              /* PLAY held: the loops that play, lit */
+            fm1_led_key(14u + k, w >= 0 && (uint32_t)w < loop[ui.sel].ntrk && !((loop[ui.sel].mute >> w) & 1u));
+        else
+            fm1_led_key(14u + k, w >= 0 && ((((ui.keys >> k) & 1u) && ui.key_layer[k] == ui.sel) ||
+                                            ((ui.latch[ui.sel] >> k) & 1u)));
+    }
     fm1_led_key(14u + KEY_SHIFT, (ui.keys >> KEY_SHIFT) & 1u);
     fm1_led_key(14u + KEY_AMB, ui.path[ui.sel] == PATH_AMBIENT);
     fm1_led_key(14u + KEY_EXP, ui.path[ui.sel] == PATH_EXP);
@@ -1140,6 +1170,46 @@ static void draw_pre_page(void)
     }
 }
 
+/* PLAY held: the chosen layer's loops, 1 .. 10 as the white keys have them -- in, the layer's colour; out, a grey
+ * frame; none yet, nothing */
+static void draw_ovd_page(void)
+{
+    const looper_t *p = &loop[ui.sel];
+    int32_t key = p->ntrk | p->mute << 4 | (int32_t)ui.sel << 16;
+    uint32_t r, c;
+    char t[12] = "LOOPS ";
+    if (!ui.force && ui.shown_ovd == key)
+        return;
+    ui.shown_ovd = key;
+    t[6] = (char)('1' + ui.sel);
+    t[7] = 0;
+    cv_begin(240, 52, C_BLACK);
+    cv_text_c((52 - FONT_M.h) / 2, &FONT_M, p->ntrk ? t : "NO LOOPS", LAYER_COL[ui.sel]);
+    cv_blit(0, 0);
+    for (r = 0; r < 2u; r++) {
+        cv_begin(240, 94, C_BLACK);
+        for (c = 0; c < 5u; c++) {
+            uint32_t k = r * 5u + c;
+            int32_t x = 4 + (int32_t)c * 47;
+            char n[4];
+            const font_t *f = k < 9u ? &FONT_M : &FONT_S;
+            if (k >= p->ntrk)
+                continue;
+            fmt_int(n, (int32_t)k + 1);
+            if (!((p->mute >> k) & 1u)) {
+                cv_rect(x, 6, 43, 82, LAYER_COL[ui.sel]);
+                cv_bg_set(LAYER_COL[ui.sel]);
+                cv_text(x + (43 - text_w(f, n)) / 2, 6 + (82 - f->h) / 2, f, n, C_BLACK);
+                cv_bg_set(C_BLACK);
+            } else {
+                cv_frame(x, 6, 43, 82, 3, C_GREY);
+                cv_text(x + (43 - text_w(f, n)) / 2, 6 + (82 - f->h) / 2, f, n, C_GREY);
+            }
+        }
+        cv_blit(0, 52 + 94 * r);
+    }
+}
+
 static void draw_ses_page(void)
 {
     char n[8];
@@ -1184,12 +1254,20 @@ static void ui_draw(void)
     int32_t px;
     if (draw_flash())
         return;
-    if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page && !ui.pre_page) {   /* the dial */
+    if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page && !ui.pre_page && !ui.ovd) {
         if (ui.shown_page != 4 ||
             (ui.shown_dial != (int16_t)(dial_value() + ui.dial * 256) && (uint32_t)(fm1_ms - ui.dial_drawn_at) >= 40u))
             draw_dial();
         ui.shown_page = 4;
         ui.shown_ses = 0;
+        return;
+    }
+    if (ui.ovd) {
+        if (ui.shown_page != 6)
+            ui.force = 1;
+        draw_ovd_page();
+        ui.shown_page = 6;
+        ui.force = 0;
         return;
     }
     if (ui.pre_page) {

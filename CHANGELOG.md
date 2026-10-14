@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.23
+
+- **Overdubs in and out**: hold PLAY and the chosen layer's loops appear on the white keys (the first loop on
+  the leftmost, then each overdub), lit while they play and shown on the screen. A key takes its loop out or
+  brings it back in — while they play, at once and from its start; while stopped, choosing what PLAY will
+  start. PLAY pressed and let go still starts and stops the loops. Sessions keep which loops are out.
+
 ## 0.22
 
 - **Macros**: the black key before SHIFT turns **EDIT** on (lit) and off. While it is on, KNOB 1–4 are four

@@ -95,7 +95,7 @@ sessions overwrites SLOOP projects** stored there.
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a layer button, goes back. |
 | **REC** | the chosen layer's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a layer**. |
 | **REC held** (1 s) | **empty** the chosen layer's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
-| **PLAY** | stop the chosen layer's loops, or play them again, each from its start. PLAY is lit while they play. **SHIFT and PLAY**, from any layer: if any loop plays, every loop on every layer stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen layer's own. |
+| **PLAY** | pressed and let go: stop the chosen layer's loops, or play them again, each from its start. **Held**: the chosen layer's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit while they play. **SHIFT and PLAY**, from any layer: if any loop plays, every loop on every layer stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen layer's own. |
 | **SELECT** knob | the chosen layer's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a layer starts at 87 % (0 dB). |
 | **KNOB 1** | the chosen layer's **DJ filter**: from the middle (off), left is a resonant **low-pass** coming down from 20 kHz to ~35 Hz, right a resonant **high-pass** going up from 16 Hz to ~12 kHz; the further from the middle, the more resonant. While you turn it, and for a second after, the **whole screen is its dial** (in the layer's colour, the mode and cutoff under it: LP 1.2 KHZ). Saved with the session. |
 | **KNOB 2** | the chosen layer's **granulator**: the middle is off (as it starts). **Left** towards dark ambient: long, overlapping, slowly drifting grains, pitched down now and then, darkened, fed back on themselves, sometimes frozen. **Right** towards scattering: short, fast grains, their timing, place, pitch and level jittered more and more, reversed, stuttered, full of holes, decimated at the far end. The further from the middle, the more grains and the less of the layer. While you turn it, the **whole screen is its dial** (DARK 40, SCATTER 25, OFF). Saved with the session. |
@@ -159,6 +159,14 @@ phase. Each plays back exactly what was played, to 0.73 ms. The keys go on playi
 and the loops' notes and the keys' never cut each other's notes off — but all of them share the layer's two
 voices, so many loops at once take voices from each other. A layer's loops hold about 1000 notes between
 them; nothing is lost when the FM-1 is switched off if the session is saved.
+
+**Bringing loops in and out.** Hold **PLAY** (it does not start or stop anything held): the chosen layer's
+loops appear on the white keys, the first loop — the foundation — on the leftmost, each overdub on the next,
+up to ten, lit while they play; the screen shows them too (in the layer's colour: in; a grey frame: out).
+Press a key to take its loop out — its notes stop, the others go on — or to bring it back in: it comes in
+**at once, from its start**. With the loops stopped it chooses which will play: take out all but one, let go
+of PLAY, press PLAY, and only that one starts; then bring the others in, one by one, as the piece unfolds.
+Every loop is in when recorded. Sessions keep which loops are out.
 
 ### The screen
 

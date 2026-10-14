@@ -2429,6 +2429,108 @@ static int cmd_macros(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* PLAY held: the chosen layer's loops on the white keys (lit: playing); a key takes its loop out (its notes let go,
+ * the others on) or brings it back in from its start; stopped, the keys choose what PLAY then starts. PLAY let go
+ * soon still plays and stops. A session keeps which are out */
+static void play_btn(uint32_t held_ms, int key_w)
+{
+    host_press |= 1u << PANEL_BTN[B_PLAY];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_PLAY];
+    ui_input();
+    fm1_ms += held_ms;
+    ui_input();
+    if (key_w >= 0) {
+        press_key((uint32_t)key_w, 1);
+        run_blocks(5, 0);
+        press_key((uint32_t)key_w, 0);
+    }
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_PLAY]);
+    ui_input();
+    run_blocks(5, 0);
+}
+static int loop_note_on(uint32_t l, uint32_t note)   /* a voice of layer l holds note for the loop */
+{
+    uint32_t k;
+    for (k = 0; k < NVOICE; k++)
+        if (lay[l].v[k].gate && lay[l].v[k].src == SRC_LOOP && lay[l].v[k].note == note)
+            return 1;
+    return 0;
+}
+static int cmd_overdubs(const char *dir)
+{
+    uint32_t fail = 0, i, heard;
+    uint32_t n0 = scale_note(0, 0), n2 = scale_note(4, 0);
+    char path[512];
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    run_blocks(40, 0);
+    press_btn(B_FX);
+    for (i = 0; i < 3u; i++) {                       /* three loops: keys 0, 2, 4 held through each */
+        press_btn(B_REC);
+        press_key(i * 2u, 1);
+        run_blocks(400, 0);
+        press_btn(B_REC);
+        press_key(i * 2u, 0);
+        run_blocks(30, 0);
+    }
+    if (loop[0].ntrk != 3u || !loop[0].play || loop[0].mute)
+        printf("FAIL overdubs: three loops not recorded, playing, all in (%u)\n", loop[0].ntrk), fail++;
+    /* held, a moment: the view, the three lit; let go: still playing (no PLAY) */
+    host_press |= 1u << PANEL_BTN[B_PLAY];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_PLAY];
+    ui_input();
+    fm1_ms += 500;
+    ui_input();
+    ui_leds();
+    if (!ui.ovd || !host_led[14u + 0] || !host_led[14u + 2] || !host_led[14u + 4] || host_led[14u + 5])
+        printf("FAIL overdubs: PLAY held does not show the three loops lit on the white keys\n"), fail++;
+    press_key(2, 1);                                  /* loop 3 out (white key 2, the third) */
+    run_blocks(5, 0);
+    press_key(2, 0);
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-33-overdubs.ppm", dir);
+    ppm(path);
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_PLAY]);
+    ui_input();
+    run_blocks(5, 0);
+    if (ui.ovd || !loop[0].play || loop[0].mute != 4u)
+        printf("FAIL overdubs: loop 3 not out, or PLAY held stopped the loops (mute %x play %u)\n", loop[0].mute, loop[0].play), fail++;
+    heard = 0;
+    for (i = 0; i < 900u; i++) {
+        host_pump();
+        heard |= (uint32_t)loop_note_on(0, n2);
+    }
+    if (heard)
+        printf("FAIL overdubs: loop 3, out, still sounds\n"), fail++;
+    play_btn(500, 2);                                 /* back in: from its start, at once */
+    if (loop[0].mute || loop[0].trk[2].pos > 10u)
+        printf("FAIL overdubs: loop 3 does not come back in from its start (pos %u)\n", loop[0].trk[2].pos), fail++;
+    play_btn(50, -1);                                 /* PLAY let go soon: stopped */
+    if (loop[0].play)
+        printf("FAIL overdubs: a short PLAY does not stop the loops\n"), fail++;
+    play_btn(500, 0);                                 /* stopped: only loop 2 chosen */
+    play_btn(500, 2);
+    if (loop[0].play || loop[0].mute != 5u)
+        printf("FAIL overdubs: stopped, the keys do not choose (mute %x play %u)\n", loop[0].mute, loop[0].play), fail++;
+    ses_save(1);
+    play_btn(50, -1);                                 /* PLAY: only loop 2 */
+    heard = 0;
+    for (i = 0; i < 900u; i++) {
+        host_pump();
+        heard |= (uint32_t)loop_note_on(0, n0) << 1 | (uint32_t)loop_note_on(0, scale_note(2, 0));
+    }
+    if (!loop[0].play || heard != 1u)
+        printf("FAIL overdubs: PLAY does not start only the loop chosen (heard %x)\n", heard), fail++;
+    ses_load_slot(1);
+    run_blocks(20, 0);
+    if (loop[0].mute != 5u || loop[0].ntrk != 3u)
+        printf("FAIL overdubs: a session does not keep the loops held out (%x)\n", loop[0].mute), fail++;
+    printf("overdubs: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -2445,6 +2547,8 @@ int main(int argc, char **argv)
         return cmd_reverb(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "paths"))
         return cmd_paths(argv[2]);
+    if (argc >= 3 && !strcmp(argv[1], "overdubs"))
+        return cmd_overdubs(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "macros"))
         return cmd_macros(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "presets"))
