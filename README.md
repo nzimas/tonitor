@@ -24,8 +24,8 @@
 ## What it is
 
 Tonitor turns the FM-1, a small FM groovebox, into an instrument for **acousmatic and electroacoustic
-music** in the line of the GRM and IRCAM — Parmegiani, Henry, Risset, Stockhausen — and for **live
-ambient music**, dark ambient above all.
+music** — sound heard for itself, its texture, its grain and its movement — and for **live ambient music**,
+dark ambient above all.
 
 **It is not a groovebox.** There is no tempo, no step sequencer, no pattern, no drum kit. Instead there
 are six layers of *sound objects*: each layer has its own engine, its own sound, two voices and its own free
@@ -39,8 +39,8 @@ layer in its own colour.
 ### Highlights
 
 - **Three sound engines**, chosen per layer:
-  - **FM** — six-operator, DX7-style FM, generating sound objects after the GRM and IRCAM (bells and
-    gongs, spectral drones, noise, impacts, iterations, glissandi, Risset's arpeggio, sub-bass, creaks).
+  - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
+    noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
     folding, a phaser and a resonator), all moved by the hand's gestures.
   - **CALIGULA** — a restless eight-oscillator organism after the architecture of the LYRA-8, with
@@ -114,7 +114,7 @@ playing: it shapes the next sounds drawn on that layer. The path's key is lit wh
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, Risset's arpeggios (SPECTRE), the depths (ABYSS) and bells, never BRUIT, IMPACT or FRICTION; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN and VOYAGE, never GRIT, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE and VEIL most, CARRION, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand |
+| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS) and bells, never BRUIT, IMPACT or FRICTION; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN and VOYAGE, never GRIT, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE and VEIL most, CARRION, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand |
 | **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, impacts and iterations, brighter, mutated more often (sometimes twice), never SPECTRE. ANIMA draws mostly GRIT and SWARM, never HAZE, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws THORN, HIVE and RUST most, never VEIL; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand |
 | **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every layer starts here |
 
@@ -227,15 +227,15 @@ sound objects:
 
 | Family | After |
 | --- | --- |
-| **METAL** | Risset's bells and gongs: many carriers on inharmonic ratios, the high partials dying first |
+| **METAL** | bells and gongs: many carriers on inharmonic ratios, the high partials dying first |
 | **DRONE** | spectral drones: near-harmonic pairs detuned to beat, an index wandering over minutes |
-| **BRUIT** | Schaeffer's noises: feedback and high ratios scattered by a sample-and-hold LFO |
+| **BRUIT** | noises: feedback and high ratios scattered by a sample-and-hold LFO |
 | **IMPACT** | struck bodies, the pitch falling, the modulators dying before the carriers |
-| **ITERATIF** | Schaeffer's iterative objects: a sound pulsed by its own LFO, square or random |
-| **GLISSE** | Xenakis's and Henry's glissandi: a pitch envelope travelling octaves, slowly |
-| **SPECTRE** | Risset's arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
+| **ITERATIF** | iterative objects: a sound pulsed by its own LFO, square or random |
+| **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly |
+| **SPECTRE** | a spectral arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
 | **ABYSS** | sub-bass rumble folded by feedback, breathing slowly |
-| **FRICTION** | Henry's door: creaks from sub-audio fixed-frequency modulators and random pitch |
+| **FRICTION** | creaking: sub-audio fixed-frequency modulators and random pitch |
 
 About one patch in three is then mutated once more (a partial nailed to a fixed frequency, an envelope
 turned over, the feedback pushed, the LFO taken too far, an octave away, another family's algorithm).
@@ -340,7 +340,7 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). From SLOOP / Felucca, unchanged or nearly: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
-browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` regenerates the manual and changelog pages from this README and `CHANGELOG.md` and publishes `build/tonitor.fwsc` for the installer.
+browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` builds its pages from `site/` (home, install), this README (the manual) and `CHANGELOG.md` and publishes `build/tonitor.fwsc` for the installer.
 
 # Licence
 

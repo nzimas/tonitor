@@ -2,7 +2,7 @@ MIT License
 
 Copyright (c) 2026 Nuno Zimas
 
-Applies to the Tonitor website, logo and documentation: docs/ (except docs/js/fm1ota.js and
+Applies to the Tonitor website, logo and documentation: docs/ and site/ (except docs/js/fm1ota.js and
 docs/firmware/), and the text of README.md and CHANGELOG.md. The firmware is GPL-3.0-only (LICENSE).
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

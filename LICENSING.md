@@ -16,7 +16,7 @@ headers; changes are noted in each file.
 | Tonitor's own code: `firmware/src/{tonitor,anima,fm,gran,reverb,layers,ui,sessions,gfx,main}.c`, `dsp.h`, `tools/{build,gen_tables,gen_font,sdk_from_package}.py`, `tests/`, the scripts | GPL-3.0-only | |
 | The browser installer, a port of `tools/fm1_install.py` (Felucca / SLOOP) to JavaScript | GPL-3.0-only | `docs/js/fm1ota.js` |
 | The firmware package the installer writes, built from this tree (with the JieLi SDK files below) | GPL-3.0-only | `docs/firmware/tonitor.fwsc` |
-| The website, the logo, the documentation's text | MIT | `docs/` (except the two rows above), `README.md`, `CHANGELOG.md`, `LICENSES/MIT.txt` |
+| The website, the logo, the documentation's text | MIT | `docs/` (except the two rows above), `site/`, `README.md`, `CHANGELOG.md`, `LICENSES/MIT.txt` |
 | From Felucca / SLOOP: `firmware/hal/`, `firmware/loader/`, `firmware/crt0.S`, `firmware/app.ld`, `firmware/src/{usb,ota,recovery,lcd,libc}.c`, `bootguard.h`, `tools/{fm1pkg_make,lz4blk,fm1_install}.py`, `tools/get_toolchain.sh`, parts of `tools/build.py` and `tools/gen_tables.py` | GPL-3.0-only | |
 | msfa (Google Inc., Pascal Gauthier), from Dexed, ported to integer C by Leo Kuroshita for Felucca; for TONITOR the modulation buses moved to the stack | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | The ANIMA engine: a fixed-point port of the anima opcode (`AnimaCore.h`, `AnimaDesign.h`) of Vascular, Copyright (C) Nuno Zimas, contributed by its author to this firmware | GPL-3.0-only (in this firmware) | `firmware/src/anima.c`, `tools/gen_tables.py` |
