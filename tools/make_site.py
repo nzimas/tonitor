@@ -180,7 +180,7 @@ def fragments():
     (DOCS / "index.html").write_text(page(
         "Tonitor — a firmware for the M-VAVE FM-1", "Home", (src / "home.html").read_text(),
         "Tonitor: a firmware for the M-VAVE FM-1 for electroacoustic experimentation, live ambient music and sound "
-        "exploration. Not a groovebox."))
+        "exploration."))
     (DOCS / "install.html").write_text(page(
         "Install Tonitor", "Install", (src / "install.html").read_text(),
         "Install Tonitor on an M-VAVE FM-1 from your browser, over USB MIDI.",
@@ -196,6 +196,12 @@ def manual():
     t = "\n".join(f'<a href="#{s}"' + (' class="sub"' if lv == 3 else "") + f">{html.escape(n)}</a>" for lv, s, n in toc)
     intro = ('<h1>Manual</h1>\n<p>Everything the FM-1 does under Tonitor. New here? Start with '
              '<a href="#playing-it">Playing it</a>; to install, see <a href="install.html">Install</a>.</p>\n'
+             '<h2 id="not-a-groovebox">Not a groovebox</h2>\n'
+             '<p class="big">No tempo, no steps, no patterns, no drum kit.</p>\n'
+             '<p>Tonitor is for sound heard for itself: texture, grain, movement and slow transformation. You play '
+             'drones, gestures and textures, layer them, loop them freely out of time with one another, and shape '
+             'them while they play. It suits acousmatic and electroacoustic work as much as live ambient music, '
+             'dark ambient above all.</p>\n'
              f'<nav class="toc" aria-label="Contents">\n{t}\n</nav>')
     (DOCS / "manual.html").write_text(page("Tonitor manual", "Manual", intro + "\n" + body,
                                            "The Tonitor manual: every control of the FM-1 under Tonitor."))
