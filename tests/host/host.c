@@ -1788,12 +1788,29 @@ static int cmd_latch(void)
     run_blocks(100, 0);
     if (!ui.latch[0] || nsounding(0) < 2u || !lgate(0))
         printf("FAIL latch: two keys do not latch\n"), fail++;
-    memset(host_flash, 0xFF, sizeof host_flash);
+    memset(host_flash, 0xFF, sizeof host_flash);    /* a session keeps them (and each layer's grain character) */
     ses_scan(1);
-    ses_save(2);
-    ses_load_slot(2);
-    if (ui.latch[0])
-        printf("FAIL latch: a session load keeps the latches lit\n"), fail++;
+    {
+        uint32_t keep = ui.latch[0], gs = gran[2].seed;
+        ses_save(2);
+        press_phys(KEY_SHIFT, 1);                     /* let go of them, the grains drawn anew, then the session */
+        press_key(1, 1);
+        press_key(1, 0);
+        press_key(3, 1);
+        press_key(3, 0);
+        press_phys(KEY_SHIFT, 0);
+        gran_profile(2, 12345u);
+        run_blocks(100, 0);
+        if (ui.latch[0] || lgate(0))
+            printf("FAIL latch: SHIFT and the lit keys do not let both go\n"), fail++;
+        ses_load_slot(2);
+        run_blocks(100, 0);
+        ui_leds();
+        if (ui.latch[0] != keep || nsounding(0) < 2u || !lgate(0) || !host_led[14u + 2u])
+            printf("FAIL latch: a session does not bring its latched notes back, sounding and lit\n"), fail++;
+        if (gran[2].seed != gs)
+            printf("FAIL latch: a session does not keep the granulator's character\n"), fail++;
+    }
     {   /* SHIFT and PLAY, from a layer with no loop: every loop playing stops (kept); again, they all start together;
          * PLAY alone starts one */
         uint32_t l2;

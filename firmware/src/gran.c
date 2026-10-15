@@ -56,6 +56,7 @@ typedef struct {
     uint8_t stut_left;
     uint32_t drift;              /* the drift's phase */
     uint32_t tail;
+    uint32_t seed;               /* what drew its character (gran_profile): sessions keep it */
     rnd_t r;
 } gran_t;
 
@@ -82,6 +83,7 @@ static void gran_profile(uint32_t l, uint32_t seed)
     static const int8_t BRIGHT[8] = {0, 12, 7, 19, -12, 5, 24, 6};
     gran_t *g = &gran[l];
     uint32_t k;
+    g->seed = seed;
     rnd_seed(&g->r, seed);
     g->pd[0] = 0;
     g->pb[0] = 0;

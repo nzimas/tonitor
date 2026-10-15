@@ -21,12 +21,12 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 7u            /* 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
+#define SES_FORMAT 8u            /* 8: the granulator's character, the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
 #define SES_SLOTS 64u            /* the slots: sessions 1 .. 64 */
 /* the largest session: the head, the globals, six layers with their sounds and full loopers (~54 KiB) */
-#define SES_BUF (32u + 8u + NLAYER * (16u + NENG * NMAC + 2u + sizeof(fm_patch_t) + sizeof(an_design_t) + sizeof(cal_design_t) + \
+#define SES_BUF (32u + 8u + NLAYER * (16u + NENG * NMAC + 2u + 36u + sizeof(fm_patch_t) + sizeof(an_design_t) + sizeof(cal_design_t) + \
                                       8u * LOOP_TRK + 4u * LOOP_N))
 
 /* the flash, for the target (main.c) or the host test (host.c); offsets from the flash's start */
@@ -355,7 +355,13 @@ static void ses_emit(void)
         ses_out(ui.mac[l], NENG * NMAC);         /* (format 6: EDIT's macros on each of its sounds) */
         {
             uint16_t mu = lp->mute;                     /* (format 7: the loops held out) */
+            uint8_t ln[28];
             ses_out(&mu, 2u);
+            ses_out(&gran[l].seed, 4u);                 /* (format 8: the granulator's character, the latches) */
+            ses_out(&ui.latch[l], 4u);
+            memset(ln, 0, sizeof ln);
+            memcpy(ln, ui.latch_note[l], NKEY);
+            ses_out(ln, sizeof ln);
         }
         /* the sounds: the engine in use in full; the other two as the seed that made them, their level and
          * (top byte, format 4) their path (drawn again from them: the same sound, at once) -- so a session
@@ -687,7 +693,7 @@ static int ses_load(uint32_t i)
     for (l = 0; l < NLAYER; l++) {
         ses_layer_t y;
         looper_t *lp = &loop[l];
-        uint32_t fk, ak, ck;
+        uint32_t fk, ak, ck, gseed;
         ses_in(&y, sizeof y);
         if (h.format >= 6u) {
             uint32_t j;
@@ -702,6 +708,16 @@ static int ses_load(uint32_t i)
             ses_in(&mu, 2u);
             lp->mute = (uint16_t)(mu & 0x3FFu);
         }
+        gseed = ui.seed = ui.seed * 1664525u + 1013904223u + fm1_ticks();   /* (before format 8: a new character) */
+        ui.latch[l] = 0;
+        if (h.format >= 8u) {
+            uint8_t ln[28];
+            ses_in(&gseed, 4u);
+            ses_in(&ui.latch[l], 4u);
+            ses_in(ln, sizeof ln);
+            memcpy(ui.latch_note[l], ln, NKEY);
+            ui.latch[l] &= (1u << NKEY) - 1u;
+        }
         ui.engine[l] = (uint8_t)(y.engine < NENG ? y.engine : 0);
         ui.oct[l] = (int8_t)clampi(y.oct, -3, 3);
         ui.level[l] = (int8_t)clampi(y.level, 0, LEVEL_MAX);
@@ -711,7 +727,7 @@ static int ses_load(uint32_t i)
         ui.gr[l] = (int8_t)clampi(y.gr, -FLT_MAX, FLT_MAX);
         ui.cr[l] = 0;                                   /* (read with the loops below, format 2; the path, 4) */
         ui.path[l] = PATH_OPEN;
-        gran_profile(l, ui.seed = ui.seed * 1664525u + 1013904223u + fm1_ticks());   /* a new character, as loaded */
+        gran_profile(l, gseed);
         level_pan_apply(l);
         /* the sounds, into the buffers the ISR is not using, then published. Format 3: the engine in use in
          * full, the others as seed and level; formats 1 and 2: FM and ANIMA in full, no CALIGULA (drawn anew).
@@ -774,6 +790,9 @@ static int ses_load(uint32_t i)
         an_pub[l] = (uint8_t)ak;
         ev_post(EV_ENGINE, l, 0, ui.engine[l]);
         mac_apply(l);
+        for (k = 0; k < NKEY; k++)                      /* the latched notes, sounding again (with the new sound) */
+            if ((ui.latch[l] >> k) & 1u)
+                ev_post(EV_ON, l, ui.latch_note[l][k], 0);
         /* the loops: into the emptied looper (the ISR leaves an empty one alone), then set going */
         {
             uint32_t nt, play, first = 0, n = h.format >= 5u ? y.loop_n & 0xFFFFu : y.loop_n;   /* (format 5: the sound's generation and path above) */
