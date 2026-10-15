@@ -52,7 +52,7 @@ enum { FF_METAL, FF_DRONE, FF_BRUIT, FF_IMPACT, FF_ITERATIF, FF_GLISSE, FF_SPECT
        FF_N0,                    /* (generation 0 draws these nine only) */
        FF_CHOIR = FF_N0, FF_BOWED, FF_HOLLOW, FF_BLOOM, FF_TIDE, FF_SHARDS, FF_STATIC, FF_WIND,
        FF_N1,                    /* (generations 1 and 2 draw these seventeen) */
-       FF_PLUCK = FF_N1, FF_MALLET, FF_KEYS, FF_WARP, FF_GLITCH, FF_RUBBER, FF_N };
+       FF_PLUCK = FF_N1, FF_MALLET, FF_WARP, FF_GLITCH, FF_RUBBER, FF_N };
 /* the families' weights on each path: generation 0 (the open path: rnd_below, all alike), generation 1 */
 static const uint8_t FF_W[3][FF_N0] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1},
@@ -64,15 +64,14 @@ static const uint8_t FF_W1[3][FF_N1] = {
     {3, 4, 0, 0, 1, 1, 4, 3, 0, 4, 4, 4, 3, 4, 0, 0, 2},
     {2, 1, 4, 3, 3, 2, 0, 1, 4, 0, 0, 1, 2, 0, 4, 4, 3},
 };
-static const uint8_t FF_W3[3][FF_N] = {             /* generation 3: plucks, mallets, keys; warps, glitches, rubber */
-    {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 3, 3, 3, 3, 3},
-    {3, 4, 0, 0, 1, 1, 4, 3, 0, 4, 4, 4, 3, 4, 0, 0, 2, 3, 4, 3, 0, 0, 0},
-    {2, 1, 4, 3, 3, 2, 0, 1, 4, 0, 0, 1, 2, 0, 4, 4, 3, 2, 2, 0, 5, 5, 4},
+static const uint8_t FF_W3[3][FF_N] = {             /* generation 3: plucks, mallets; warps, glitches, rubber */
+    {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 3, 3, 3, 3},
+    {3, 4, 0, 0, 1, 1, 4, 3, 0, 4, 4, 4, 3, 4, 0, 0, 2, 3, 4, 0, 0, 0},
+    {2, 1, 4, 3, 3, 2, 0, 1, 4, 0, 0, 1, 2, 0, 4, 4, 3, 2, 2, 5, 5, 4},
 };
 static const char *const FF_NAME[FF_N] = {"METAL", "DRONE", "BRUIT", "IMPACT", "ITERATIF", "GLISSE", "SPECTRE",
                                           "ABYSS", "FRICTION", "CHOIR", "BOWED", "HOLLOW", "BLOOM", "TIDE",
-                                          "SHARDS", "STATIC", "WIND", "PLUCK", "MALLET", "KEYS", "WARP", "GLITCH",
-                                          "RUBBER"};
+                                          "SHARDS", "STATIC", "WIND", "PLUCK", "MALLET", "WARP", "GLITCH", "RUBBER"};
 
 typedef struct {
     uint8_t p[FP_SIZE + 1u];
@@ -904,37 +903,6 @@ static void fm_gen_mallet(uint8_t *p, rnd_t *r)
     p[FP_LAMD] = (uint8_t)rnd_in(r, 0, 30);
     p[FP_LPMD] = 0;
 }
-/* an electric piano: a held body, a bright tine struck over it */
-static void fm_gen_keys(uint8_t *p, rnd_t *r)
-{
-    int n;
-    p[FP_ALG] = (uint8_t)(rnd_chance(r, 60) ? 4 : 5);      /* (three pairs) */
-    p[FP_FB] = (uint8_t)rnd_in(r, 2, 6);
-    for (n = 1; n <= 6; n++) {
-        uint8_t *op = fm_op(p, n);
-        int tine = n >= 3 && n <= 4;
-        if (fm_is_carrier(p, n)) {
-            fm_ratio(op, 100);
-            fm_env(op, 99, rnd_in(r, 20, 40), rnd_in(r, 15, 30), rnd_in(r, 40, 60), 99, rnd_in(r, 70, 90),
-                   rnd_in(r, 0, 40), 0);
-            op[FP_OL] = (uint8_t)(tine ? rnd_in(r, 70, 85) : rnd_in(r, 92, 99));
-            op[FP_DET] = (uint8_t)rnd_in(r, 4, 10);
-        } else {
-            fm_ratio(op, tine ? (rnd_chance(r, 60) ? 1400 : 1100) : 100);
-            fm_env(op, 99, tine ? rnd_in(r, 70, 90) : rnd_in(r, 25, 45), 30, 50, 99, tine ? rnd_in(r, 0, 20) : rnd_in(r, 50, 80),
-                   0, 0);
-            op[FP_OL] = (uint8_t)(tine ? rnd_in(r, 60, 80) : rnd_in(r, 55, 75));
-        }
-        op[FP_RS] = (uint8_t)rnd_in(r, 2, 4);
-        op[FP_KVS] = (uint8_t)rnd_in(r, 2, 5);
-    }
-    p[FP_LFW] = 4;
-    p[FP_LFS] = (uint8_t)rnd_in(r, 30, 40);
-    p[FP_LAMD] = (uint8_t)rnd_in(r, 0, 25);
-    for (n = 1; n <= 6; n++)
-        if (fm_is_carrier(p, n))
-            fm_op(p, n)[FP_AMS] = (uint8_t)rnd_below(r, 2);
-}
 /* a warp: ratios anywhere, partials nailed to frequencies, the pitch thrown about by its envelope */
 static void fm_gen_warp(uint8_t *p, rnd_t *r)
 {
@@ -1112,7 +1080,7 @@ static void fm_ambient(uint8_t *p, int32_t f, rnd_t *r)
     for (n = 1; n <= 6; n++) {
         uint8_t *op = fm_op(p, n);
         if (fm_is_carrier(p, n)) {
-            if ((f != FF_METAL && f != FF_PLUCK && f != FF_MALLET && f != FF_KEYS) || rnd_chance(r, 50))
+            if ((f != FF_METAL && f != FF_PLUCK && f != FF_MALLET) || rnd_chance(r, 50))
                                                               /* swells (a bell, a pluck may keep its strike) */
                 op[FP_R1] = (uint8_t)clampi(op[FP_R1], 0, rnd_in(r, 18, 55));
             op[FP_R1 + 3] = (uint8_t)clampi(op[FP_R1 + 3], 0, rnd_in(r, 8, 28));   /* long tails */
@@ -1173,7 +1141,6 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     case FF_STATIC: fm_gen_static(p, r); break;
     case FF_PLUCK: fm_gen_pluck(p, r); break;
     case FF_MALLET: fm_gen_mallet(p, r); break;
-    case FF_KEYS: fm_gen_keys(p, r); break;
     case FF_WARP: fm_gen_warp(p, r); break;
     case FF_GLITCH: fm_gen_glitch(p, r); break;
     case FF_RUBBER: fm_gen_rubber(p, r); break;

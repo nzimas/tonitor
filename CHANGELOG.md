@@ -8,8 +8,8 @@
 - **Eight new ANIMA kinds** (generation 3): PLUCK, REED, FOG, ORGAN, BITS, DRIFT, MURMUR, HOWL; and every kind
   draws wider: any waveform, wider intervals and ratios, detuning, plucked or swelling envelopes, other
   gestures, pulsing tremolos, crushed rates, sharp resonances.
-- **Six new FM families** (generation 3): PLUCK (strings, bright or dark), MALLET (marimba, vibraphone,
-  kalimba), KEYS (electric piano), and the stranger WARP, GLITCH and RUBBER; any family may now come out
+- **Five new FM families** (generation 3): PLUCK (strings, bright or dark), MALLET (marimba, vibraphone,
+  kalimba), and the stranger WARP, GLITCH and RUBBER; any family may now come out
   plucked, with a modulator on another ratio or an operator detuned.
 - **ANIMA's macros heard**: TONE four octaves either way (and the FM's brightness), the kind's macro from
   nothing to far more (DRIVE down: a pure tone), SPACE from dry to a long ring, MOTION from a still hand to a

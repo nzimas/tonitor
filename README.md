@@ -120,8 +120,8 @@ playing: it shapes the next sounds drawn on that track. The path's key is lit wh
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC — and plucks, mallets and keys, never WARP, GLITCH or RUBBER; then softer attacks (a pluck or a mallet may keep its strike), long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR, BOWL, FOG and DRIFT, never GRIT, SHARDS, MACHINE, BITS or HOWL, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
-| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts, iterations, warps, glitches and rubber, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED, TIDE or KEYS. ANIMA draws mostly GRIT, SWARM, SHARDS, MACHINE, BITS and HOWL, never HAZE, TIDE, CHOIR, FOG or DRIFT, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
+| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC — and plucks and mallets, never WARP, GLITCH or RUBBER; then softer attacks (a pluck or a mallet may keep its strike), long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR, BOWL, FOG and DRIFT, never GRIT, SHARDS, MACHINE, BITS or HOWL, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
+| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts, iterations, warps, glitches and rubber, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS, MACHINE, BITS and HOWL, never HAZE, TIDE, CHOIR, FOG or DRIFT, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
 | **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every track starts here |
 
 Sessions keep each track's path, and the path each of its sounds was drawn on.
@@ -299,7 +299,7 @@ Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 ### FM — six operators, DX7 style
 
 The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
-fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-three families of
+fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-two families of
 sound objects (since 0.22 with their operators on the ratios they were designed with — before, a slip in the
 generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds
 saved then come back as they were):
@@ -325,7 +325,6 @@ saved then come back as they were):
 | **WIND** | breath and gusts over a soft drone |
 | **PLUCK** | plucked strings, bright or dark: the modulators die at once (the attack's brightness), the carriers die away, higher strings quicker |
 | **MALLET** | struck bars — marimba, vibraphone, kalimba: a high modulator's knock, gone at once, the bar ringing on |
-| **KEYS** | an electric piano: a held body with a bright tine struck over it |
 | **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope |
 | **GLITCH** | a quick sample-and-hold stepping the pitch and the level, envelopes chopped short |
 | **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it |
@@ -336,7 +335,7 @@ scaling on the carriers. HOME draws several patches, measures each, and keeps on
 the track's path (darker on AMBIENT, brighter on EXPERIMENTAL) and that is not of the family the track had.
 
 Since 0.29 (generation 3) a patch may also be made plucked whatever its family, have a modulator moved to
-another ratio, or an operator detuned against the rest; the last six families are drawn only from then.
+another ratio, or an operator detuned against the rest; the last five families are drawn only from then.
 About half the patches are then bent once more, gently (an operator detuned to beat, an envelope turned
 over to grow as it holds, the LFO waiting and then moving the timbre, an octave down, more feedback, a
 modulator's ratio moved to a neighbour, a partial nailed to a frequency).
