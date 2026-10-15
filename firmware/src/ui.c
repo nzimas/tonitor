@@ -888,6 +888,12 @@ static void ui_leds(void)
     fm1_led_key(14u + KEY_RAND, loop[ui.sel].dmode == LD_RAND);
     fm1_led_key(14u + KEY_HALF, loop[ui.sel].rate == LS_HALF);
     fm1_led_key(14u + KEY_DOUBLE, loop[ui.sel].rate == LS_DOUBLE);
+    {   /* the black keys that do something glow while they are not on (lit takes the brightest); SHIFT does not */
+        static const uint8_t FN[8] = {KEY_AMB, KEY_EXP, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_EDIT};
+        uint32_t k;
+        for (k = 0; k < 8u; k++)
+            led_dim_key(14u + FN[k], 1);
+    }
 }
 
 /* -------------------------------------------------------------- screen --- */

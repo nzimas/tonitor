@@ -28,6 +28,7 @@ build/host transpose
 build/host tracktransp
 build/host loopmodes
 build/host delay build/screens
+build/host glow
 build/host ties
 build/host budget
 build/host anref | diff -q - tests/golden/anima_render.txt >/dev/null || { echo "FAIL anima: the render is no longer the same"; exit 1; }

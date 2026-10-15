@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.33
+
+Changed
+- The black keys with a function (AMBIENT, EXPERIMENTAL, REVERSE, PENDULUM, RANDOM, HALF SPEED, DOUBLE SPEED,
+  EDIT) are dimly lit while off and fully lit while on. SHIFT and the black keys without a function stay unlit.
+
 ## 0.32
 
 Added

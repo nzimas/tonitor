@@ -3972,6 +3972,35 @@ static int cmd_delay(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* the black keys with a function glow while off (lit when on); SHIFT and the keys with none stay dark */
+static int key_glows(uint32_t k)
+{
+    uint32_t p, r;
+    for (p = 0; p < FM1_NCOL; p++)
+        for (r = 1; r < 5u; r++)
+            if (FM1_KEYMAP[r][p] == (int8_t)(14u + k))
+                return (fm1_led_dim[p] >> r) & 1u;
+    return -1;
+}
+static int cmd_glow(void)
+{
+    static const uint8_t FN[8] = {KEY_AMB, KEY_EXP, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_EDIT};
+    uint32_t fail = 0, k, j;
+    grain_reset();
+    ui_leds();
+    for (k = 0; k < NKEY; k++) {
+        int fn = 0;
+        if (white_ix(k) >= 0)
+            continue;
+        for (j = 0; j < 8u; j++)
+            fn |= FN[j] == k;
+        if (key_glows(k) != fn)
+            printf("FAIL glow: black key %u %s\n", k, fn ? "does not glow" : "glows, with no function"), fail++;
+    }
+    printf("glow: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -4359,6 +4388,8 @@ int main(int argc, char **argv)
         return cmd_ties();
     if (argc >= 2 && !strcmp(argv[1], "clicks"))
         return cmd_clicks();
+    if (argc >= 2 && !strcmp(argv[1], "glow"))
+        return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))
         return cmd_delay(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))
