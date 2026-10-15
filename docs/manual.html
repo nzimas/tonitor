@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/site.css?v=da7793149d">
 </head>
 <body>
 <div class="layout">
@@ -140,7 +140,7 @@
 <p>A preset keeps what draws the sound again, exactly — its seed, its path and the generation of the generators that drew it — and its level: all 256 take one sector of flash, beside the sessions. Saving erases flash, which silences the audio for a moment, as a session save does.</p>
 <h3 id="sessions">Sessions</h3>
 <p>The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–64.</p>
-<p>A session stores in full the sound of the engine each layer is on, and the other three as the seed that made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB sector of flash. A session is the whole machine: every layer's engine and its four sounds, its path, octave, level, pan, reverb send, filter, granulator (and the character it was drawn with), crush, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and the layer chosen. They are kept in the FM-1's flash, in the area SLOOP uses for its projects (<b>saving overwrites any SLOOP projects, presets and samples left on the device</b>): dozens of typical sessions, at least ten even with six full loops. A session also keeps the seeds its sounds were made from, with the path and the <i>generation</i> of the generators that drew them: every generation is kept exactly as it was (a test checks thousands of sounds of each), so sessions and presets saved under an older Tonitor load with the same sounds after an update that brings new generators. Erasing flash silences the audio for a moment: a save uses blank flash when there is some, and the FM-1 blanks free flash by itself while nothing sounds.</p>
+<p>A session stores in full the sound of the engine each layer is on, and the other three as the seed that made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB sector of flash. A session is the whole machine: every layer's engine and its four sounds, its path, octave, level, pan, reverb send, filter, granulator (and the character it was drawn with), crush, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and the layer chosen. They are kept in the FM-1's flash, in its user data area (<b>saving overwrites any projects, presets or samples another firmware left there</b>): dozens of typical sessions, at least ten even with six full loops. A session also keeps the seeds its sounds were made from, with the path and the <i>generation</i> of the generators that drew them: every generation is kept exactly as it was (a test checks thousands of sounds of each), so sessions and presets saved under an older Tonitor load with the same sounds after an update that brings new generators. Erasing flash silences the audio for a moment: a save uses blank flash when there is some, and the FM-1 blanks free flash by itself while nothing sounds.</p>
 <h3 id="the-granulator">The granulator</h3>
 <p>Each layer keeps the last half second of its own sound (at 22 kHz, 8-bit mu-law: a little grit is part of it) and plays grains out of it, after its filter. Each layer's granulator has a <b>character of its own</b>, drawn at random when the FM-1 starts and every time a session is loaded: the intervals its grains are pitched to, how often they reverse, stutter, drop out or freeze, the shape of its scattered grains, how far its feedback and darkening go, how it drifts. The knob's position is saved with the session; the character is drawn anew. When the layer's notes end, its grains ring on for about two seconds.</p>
 <h3 id="the-reverb">The reverb</h3>
@@ -225,8 +225,7 @@
 <p>Each kind has two parameters of its own, the first two macros; <b>CRUSH</b> and <b>CHAOS</b> are the other two. Its level is measured when it is drawn, and never raised so far that its loudest click could clip.</p>
     </main>
     <footer>
-      <p>Tonitor is by Nuno Zimas, built on <a href="https://github.com/hugelton/Felucca">Felucca</a> and
-        <a href="https://github.com/isod89/sloop-fm1">SLOOP</a>. Firmware: GPL-3.0. Website and logo: MIT.
+      <p>Tonitor is by Nuno Zimas, built on <a href="https://github.com/hugelton/Felucca">Felucca</a>. Firmware: GPL-3.0. Website and logo: MIT.
         <a href="https://github.com/nzimas/tonitor">Source on GitHub</a>.</p>
       <p>M-VAVE and FM-1 are trademarks of their owner, used only to say which device Tonitor runs on.</p>
     </footer>

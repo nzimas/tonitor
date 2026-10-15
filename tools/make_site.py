@@ -18,6 +18,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 REPO = "https://github.com/nzimas/tonitor"
+# the stylesheet's address changes with it, so browsers never keep an old one
+CSS_V = hashlib.sha256((Path(__file__).resolve().parent.parent / "docs/css/site.css").read_bytes()).hexdigest()[:10]
 
 
 def slug(text):
@@ -147,7 +149,7 @@ def page(title, current, body, desc, head=""):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css">{head}
+<link rel="stylesheet" href="css/site.css?v={CSS_V}">{head}
 </head>
 <body>
 <div class="layout">
@@ -171,8 +173,7 @@ def page(title, current, body, desc, head=""):
 {body}
     </main>
     <footer>
-      <p>Tonitor is by Nuno Zimas, built on <a href="https://github.com/hugelton/Felucca">Felucca</a> and
-        <a href="https://github.com/isod89/sloop-fm1">SLOOP</a>. Firmware: GPL-3.0. Website and logo: MIT.
+      <p>Tonitor is by Nuno Zimas, built on <a href="https://github.com/hugelton/Felucca">Felucca</a>. Firmware: GPL-3.0. Website and logo: MIT.
         <a href="{REPO}">Source on GitHub</a>.</p>
       <p>M-VAVE and FM-1 are trademarks of their owner, used only to say which device Tonitor runs on.</p>
     </footer>

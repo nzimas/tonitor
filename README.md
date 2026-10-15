@@ -65,7 +65,7 @@ the FM-1 with a USB data cable, open the page in a desktop **Chrome, Edge or Ope
 MIDI with SysEx), and follow it. It finds the FM-1, checks what it runs, writes Tonitor and checks the
 result. Nothing is uploaded anywhere: the page talks to the FM-1 directly.
 
-It installs over whatever the FM-1 runs now — M-VAVE's own firmware, SLOOP, Felucca or an earlier Tonitor.
+It installs over whatever the FM-1 runs now — M-VAVE's own firmware, another alternative firmware or an earlier Tonitor.
 Do not unplug the FM-1 while it writes.
 
 To build and install from source instead, see [Building from source](#building-from-source).
@@ -75,10 +75,10 @@ RESCUE), then install again. Two failed starts in a row also enter it. Holding *
 seconds enters the chip's own updater (UBOOT). If the FM-1 no longer starts at all, recovery needs
 [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
 
-**Going back:** the installer and `./install.sh` install any FM-1 package, for example a SLOOP release; to
+**Going back:** the installer and `./install.sh` install any FM-1 package; to
 return to M-VAVE's firmware, use M-VAVE's own updater. Apart from the update itself, Tonitor writes to the
-FM-1's flash only when you save a session — into the area SLOOP keeps its projects in, so **saving Tonitor
-sessions overwrites SLOOP projects** stored there.
+FM-1's flash only when you save a session — into a user data area that other firmwares may also use, so
+**saving Tonitor sessions overwrites any projects another firmware left** there.
 
 # Manual
 
@@ -236,8 +236,8 @@ made them and their level (the same sounds, drawn again at once), so a session u
 sector of flash. A session is the whole machine: every layer's engine and its four sounds, its path, octave, level, pan,
 reverb send, filter, granulator (and the character it was drawn with), crush, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the layer chosen. They are kept in the
-FM-1's flash, in the area SLOOP uses for its projects (**saving overwrites any SLOOP projects, presets and
-samples left on the device**): dozens of typical sessions, at least ten even with six full loops.
+FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
+left there**): dozens of typical sessions, at least ten even with six full loops.
 A session also keeps the seeds its sounds were made from, with the path and the *generation* of the
 generators that drew them: every generation is kept exactly as it was (a test checks thousands of sounds of
 each), so sessions and presets saved under an older Tonitor load with the same sounds after an update that
@@ -453,15 +453,15 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
 `anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six layers,
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
-`main.c` (boot, interrupts). From SLOOP / Felucca, unchanged or nearly: `firmware/hal/`, `firmware/loader/`,
+`main.c` (boot, interrupts). Based on Felucca and earlier open FM-1 firmware work: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
 browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` builds its pages from `site/` (home, install), this README (the manual) and `CHANGELOG.md` and publishes `build/tonitor.fwsc` for the installer.
 
 # Licence
 
 - **The firmware** is free software under the **GNU General Public License, version 3 only**
-  (`GPL-3.0-only`, [`LICENSE`](LICENSE)): it is a work based on Felucca and SLOOP, which are GPL-3.0. The
-  browser installer (`docs/js/fm1ota.js`), a port of their installer, is GPL-3.0 too.
+  (`GPL-3.0-only`, [`LICENSE`](LICENSE)): it is a work based on GPL-3.0 code (see [`LICENSING.md`](LICENSING.md)). The
+  browser installer (`docs/js/fm1ota.js`), a port of Felucca's installer, is GPL-3.0 too.
 - **The website, the logo and the documentation** written for Tonitor (`docs/` except `docs/js/fm1ota.js`
   and the firmware package, and this README's text) are under the **MIT licence**
   ([`LICENSES/MIT.txt`](LICENSES/MIT.txt)).
@@ -474,9 +474,8 @@ browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` 
 
 Tonitor is by Nuno Zimas. It stands on the work of others:
 
-- [**Felucca**](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments and
-  [**SLOOP**](https://github.com/isod89/sloop-fm1) by isod89 — the hardware layer, USB stack, update loader,
-  rescue mode and installer that made an FM-1 firmware possible at all.
+- [**Felucca**](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments — the hardware
+  layer, USB stack, update loader, rescue mode and installer that made an FM-1 firmware possible at all.
 - **msfa** by Google Inc. and Pascal Gauthier (Apache-2.0), from Dexed, in Felucca's integer port — the FM.
 - **ANIMA** is ported from the anima opcode of Vascular.
 - **CALIGULA** follows the architecture of [**LIRA-8**](https://github.com/MikeMorenoDSP/LIRA-8) by Miguel
@@ -495,7 +494,7 @@ maker of the FM-1, and it is not affiliated with them.
 **Installing it replaces the device's original firmware and may void any warranty that applies to your
 FM-1**, if any applies at all; check the terms of your warranty before installing. Installing any firmware
 carries a risk: an interrupted or failed update can leave the device unable to start until it is recovered
-(see [Installing](#installing)), and saving sessions overwrites data that other firmwares (SLOOP) keep in the
+(see [Installing](#installing)), and saving sessions overwrites data that other firmwares may keep in the
 same flash area.
 
 The software is provided **"as is", without warranty of any kind**, express or implied, including but not
