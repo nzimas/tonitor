@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * TONITOR: the sounds of each past generation of the generators -- 0 (up to 0.20), 1 (0.21), 2 (0.22, and RUSSOLO from 0.26) -- fingerprinted, so
+ * TONITOR: the sounds of each past generation of the generators -- 0 (up to 0.20), 1 (0.21), 2 (0.22, and RUSSOLO from 0.26), 3 (0.29) -- fingerprinted, so
  * that every later firmware draws them again bit for bit from their seeds: the sessions and presets that keep only
  * seeds depend on it. `golden G` prints one line per (engine, kind, path): an FNV-1a hash over many seeds of the
  * design's fields as generation G had them. Built with the host harness (tests/run_tests.sh). */
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 {
     uint32_t gen = argc > 1 ? (uint32_t)atoi(argv[1]) : 0u;
     /* each generation's kinds, and the bytes of its designs (later fields go after them) */
-    int32_t nf = gen ? 17 : 9, na = gen ? 14 : 8, nc = gen ? 10 : 6;
+    int32_t nf = gen >= 3u ? FF_N : gen ? 17 : 9, na = gen >= 3u ? AK_N : gen ? 14 : 8, nc = gen ? 10 : 6;
     uint32_t anb = gen ? 384u : GEN0_AN_BYTES, calb = gen ? 212u : GEN0_CAL_BYTES;
     static fm_patch_t fp;
     static an_design_t ad;

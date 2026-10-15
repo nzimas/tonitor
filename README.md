@@ -41,7 +41,7 @@ track in its own colour.
 - **Four sound engines**, chosen per track:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
-  - **ANIMA** — a synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
+  - **ANIMA** — a lo-fi synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
     folding, a phaser and a resonator), all moved by the hand's gestures.
   - **CALIGULA** — a restless eight-oscillator organism after the architecture of the LYRA-8, with
     cross-modulation, a hyper-LFO, bursts and surges, and a simulated hand on its plates.
@@ -120,8 +120,8 @@ playing: it shapes the next sounds drawn on that track. The path's key is lit wh
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR and BOWL, never GRIT, SHARDS or MACHINE, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
-| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts and iterations, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS and MACHINE, never HAZE, TIDE or CHOIR, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
+| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC — and plucks, mallets and keys, never WARP, GLITCH or RUBBER; then softer attacks (a pluck or a mallet may keep its strike), long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR, BOWL, FOG and DRIFT, never GRIT, SHARDS, MACHINE, BITS or HOWL, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
+| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts, iterations, warps, glitches and rubber, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED, TIDE or KEYS. ANIMA draws mostly GRIT, SWARM, SHARDS, MACHINE, BITS and HOWL, never HAZE, TIDE, CHOIR, FOG or DRIFT, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
 | **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every track starts here |
 
 Sessions keep each track's path, and the path each of its sounds was drawn on.
@@ -130,7 +130,8 @@ Sessions keep each track's path, and the path each of its sounds was drawn on.
 
 Press **EDIT** (the black key just left of SHIFT; lit while on) and the four knobs across the top stop being
 the filter, the granulator, the crush and the send: they become **four macros** that reshape the chosen
-track's sound, while it plays, under a held note. Each is turned from the middle, which is the sound as HOME
+track's sound, while it plays, under a held note. ANIMA's answer early in the turn (a quarter of the way, half the
+change), since its sound moves by itself. Each is turned from the middle, which is the sound as HOME
 drew it; either way transforms it. While a knob turns, the whole screen is its dial, with the macro's name
 for this sound and how far it is turned (+40 %, -25 %, AS DRAWN). Press EDIT again to give the knobs back.
 
@@ -139,7 +140,7 @@ The macros are chosen for each engine, and for some by the kind of sound:
 | | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | **FM** | **BRIGHT**: the modulation index, and the carriers tilted (the higher partials up) | **DETUNE** (the carriers pulled apart: beating, chorus) — or **SKEW** for metallic and noisy families (every partial off its ratio: clangour) | **GRIT**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
-| **ANIMA** | **TONE**: every filter up or down | what the kind is about: **GRAINS**, **AIR** (the noise), **FM** (the index), **VOWEL** (the formant) or **DRIVE** | **SPACE**: the resonator wetter and ringing longer (brought in if the sound had none), or drier | **MOTION**: the hand's pace, its LFOs and the tremolo |
+| **ANIMA** | **TONE**: every filter four octaves up or down (sharper when up), the FM brighter or darker | what the kind is about, from nothing to far more: **GRAINS**, **AIR** (the noise), **FM** (the index), **VOWEL** (the formant, sharper when up) or **DRIVE** (folded hard; turned down, a pure tone: the second voice, FM, noise and grains drawn out) | **SPACE**: the resonator much wetter and ringing longer (brought in if the sound had none), or dry | **MOTION**: the hand four times quicker, a tremolo pulsing — or nearly still, no tremolo |
 | **CALIGULA** | **EDGE**: triangles to squares | **DEPTH**: how deeply the pairs modulate each other | **CHAOS** (total feedback and drive) — or **ECHO** (the delay) for SPORE, VEIL, LITANY and MOTH | **HAND**: how busy the hand is, its touches and bursts — or **PULSE** (the gates' speed) for HIVE, MOTH and WIRE |
 | **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **CHAOS**: how much chance drives it; above the middle, stutters too |
 
@@ -298,7 +299,7 @@ Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 ### FM — six operators, DX7 style
 
 The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
-fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of seventeen families of
+fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-three families of
 sound objects (since 0.22 with their operators on the ratios they were designed with — before, a slip in the
 generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds
 saved then come back as they were):
@@ -322,18 +323,31 @@ saved then come back as they were):
 | **SHARDS** | a tone broken by random steps of pitch and chopped by a square |
 | **STATIC** | ring-modulated bands from modulators nailed to audio frequencies |
 | **WIND** | breath and gusts over a soft drone |
+| **PLUCK** | plucked strings, bright or dark: the modulators die at once (the attack's brightness), the carriers die away, higher strings quicker |
+| **MALLET** | struck bars — marimba, vibraphone, kalimba: a high modulator's knock, gone at once, the bar ringing on |
+| **KEYS** | an electric piano: a held body with a bright tine struck over it |
+| **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope |
+| **GLITCH** | a quick sample-and-hold stepping the pitch and the level, envelopes chopped short |
+| **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it |
 
 Each patch is then shaped with care: modulators on high ratios turned down (their sidebands alias and
 scream), the brightness scaled down the keyboard so high notes are not shrill nor low ones muddy, rate
 scaling on the carriers. HOME draws several patches, measures each, and keeps one whose brightness suits
 the track's path (darker on AMBIENT, brighter on EXPERIMENTAL) and that is not of the family the track had.
 
+Since 0.29 (generation 3) a patch may also be made plucked whatever its family, have a modulator moved to
+another ratio, or an operator detuned against the rest; the last six families are drawn only from then.
 About half the patches are then bent once more, gently (an operator detuned to beat, an envelope turned
 over to grow as it holds, the LFO waiting and then moving the timbre, an octave down, more feedback, a
 modulator's ratio moved to a neighbour, a partial nailed to a frequency).
 Every patch is rendered offline as it is made and given the gain that brings it to one loudness.
 
-### ANIMA — a synthesizer played by a simulated hand
+### ANIMA — a lo-fi synthesizer played by a simulated hand
+
+ANIMA is the lo-fi engine: each voice runs at half the sample rate (22.05 kHz, so nothing above 11 kHz),
+its samples drawn out to the full rate by straight lines between them. Its pitches, rates and filters are
+scaled to sound where they would at the full rate; what goes is the top octave of air — and half of the
+chip's time, so more voices sound at once.
 
 A fixed-point port of the *anima* opcode from Vascular, rebuilt for the FM-1. While a key is held, a
 simulated finger rests on a virtual surface and drags one figure after another — orbits, figures of
@@ -346,11 +360,19 @@ grain cloud, a filtered noise, a resonant filter, a wavetable tremolo; then the 
 downsampler, a waveshaper, a phaser, a second filter and a comb resonator tuned to the note. Each new
 sound is a *design*: which of these are in, on which waveforms, and for every parameter which gesture
 moves it, over what range, along what curve, plus a mod matrix of three to seven routes and Anima's
-eight sliders, drawn — often far from their middle. Fourteen kinds: **HAZE**, **VOYAGE**, **GLASS**,
+eight sliders, drawn — often far from their middle. Twenty-two kinds: **HAZE**, **VOYAGE**, **GLASS**,
 **BELLS**, **GOLDEN** (Anima's own) and **BREATH**, **GRIT**, **SWARM**, **TIDE** (waves of noise over a low
 drone), **CHOIR** (vowels, a formant the hand moves), **SHARDS** (glass grains scattered and crushed),
 **BOWL** (a beating inharmonic hum in a ringing comb), **DUST** (sparse crackle over a dark drone),
-**MACHINE** (a pulsing, folded mechanism). The filter follows the keyboard, so low notes are not muffled
+**MACHINE** (a pulsing, folded mechanism), and since 0.29 **PLUCK** (a plucked string: a burst through the
+comb tuned to the note, dying away), **REED** (nasal, through a formant the hand moves, a breath in it),
+**FOG** (a stack under fog, a slow phaser drifting through it), **ORGAN** (drawbars, a rotary tremolo, a
+little drive), **BITS** (pulses in few bits: the rate crushed and dragged about, folded), **DRIFT** (two saws
+drifting against each other, a chorus the hand moves), **MURMUR** (a dark cloud of noisy grains) and
+**HOWL** (noise through a resonance so sharp it whistles, swept by the hand). Every kind draws wider since
+0.29 (generation 3): any of the 24 waveforms, wider intervals and ratios, a detuning, now and then a plucked
+envelope or a slow swell, another way for the hand to move, a pulsing tremolo, a crushed rate or a sharp
+resonance. The filter follows the keyboard, so low notes are not muffled
 nor high ones shrill; the second oscillator's interval suits the path (consonant on AMBIENT, anything on
 EXPERIMENTAL); and an AMBIENT sound nearly always has a resonant space to ring in.
 

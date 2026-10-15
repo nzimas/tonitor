@@ -2,10 +2,23 @@
 
 ## 0.29
 
-- **ANIMA lighter on the chip**: the wavetables its voices play are copied into RAM while they play (from the
-  flash, a read could cost twenty times as much), and its inner loop keeps what it works on close at hand. The
-  sound is exactly the same, sample for sample. To make room, a track's loops now hold about 500 notes between
-  them (were about 1000); a session saved with more loads the first 500 or so of each track.
+- **ANIMA, a lo-fi engine**: its voices are computed at half the sample rate (22.05 kHz: nothing above 11 kHz)
+  and drawn out to the full rate by straight lines; pitches, rates and filters scaled to stay where they were.
+  It costs the chip about 9 % of its time a voice instead of 15 %.
+- **Eight new ANIMA kinds** (generation 3): PLUCK, REED, FOG, ORGAN, BITS, DRIFT, MURMUR, HOWL; and every kind
+  draws wider: any waveform, wider intervals and ratios, detuning, plucked or swelling envelopes, other
+  gestures, pulsing tremolos, crushed rates, sharp resonances.
+- **Six new FM families** (generation 3): PLUCK (strings, bright or dark), MALLET (marimba, vibraphone,
+  kalimba), KEYS (electric piano), and the stranger WARP, GLITCH and RUBBER; any family may now come out
+  plucked, with a modulator on another ratio or an operator detuned.
+- **ANIMA's macros heard**: TONE four octaves either way (and the FM's brightness), the kind's macro from
+  nothing to far more (DRIVE down: a pure tone), SPACE from dry to a long ring, MOTION from a still hand to a
+  quick one with a tremolo; and each answers early in its turn.
+- **ANIMA lighter still**: the wavetables its voices play are copied into RAM while they play (from the flash a
+  read could cost twenty times as much). To make room, a track's loops now hold about 500 notes between them
+  (were about 1000); a session saved with more loads the first 500 or so of each track.
+- Sounds saved before (sessions, presets) are drawn again exactly as they were — the new kinds and families
+  are generation 3's — though an ANIMA sound now plays at the lower rate.
 
 ## 0.28
 

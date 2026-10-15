@@ -45,25 +45,30 @@
 <h3>FM</h3>
 <p>Six-operator frequency modulation in the style of the DX7, built on msfa (the core of Dexed): 32 algorithms,
   four-rate, four-level envelopes, operators on frequency ratios or fixed frequencies, operator feedback, an LFO
-  and a pitch envelope. HOME generates a patch from one of seventeen families, among them bells and gongs on
+  and a pitch envelope. HOME generates a patch from one of twenty-three families, among them bells and gongs on
   inharmonic ratios, slowly beating drones, feedback noise, struck sounds with a falling pitch, sounds pulsed by
-  the LFO, glissandi, formant vowels, odd-harmonic tones and ring-modulated bands. Each patch is rendered once when
+  the LFO, glissandi, formant vowels, odd-harmonic tones, ring-modulated bands, plucked strings, struck bars,
+  electric pianos, and stranger ones: free ratios with a wandering pitch, sample-and-hold steps, bouncing pitch
+  envelopes. Each patch is rendered once when
   it is generated and its level adjusted to a common loudness. Polyphonic, from the shared pool of voices.</p>
 <p>Macros: <b>BRIGHT</b> (modulation index), <b>DETUNE</b> or <b>SKEW</b> (carrier detuning, or operators moved
   off their ratios), <b>GRIT</b> (feedback and saturation, or a low-pass), <b>MOTION</b> (LFO depth and a
   tremolo).</p>
 
 <h3>ANIMA</h3>
-<p>A fixed-point port of the anima opcode from Vascular. A voice has two wavetable oscillators (24 single-cycle
+<p>A lo-fi engine: each voice is computed at half the sample rate (22.05 kHz, nothing above 11 kHz) and drawn out
+  to the full rate by straight lines. A fixed-point port of the anima opcode from Vascular. A voice has two wavetable oscillators (24 single-cycle
   tables), an FM pair, a stack of up to four transposed copies, a grain generator, filtered noise, a resonant
   state-variable filter and a tremolo, followed by a sample-rate reducer, a waveshaper, a four-stage phaser, a
   second filter and a comb resonator tuned to the note. While a key is held, a simulated finger moves over a
   virtual surface; its position, pressure, speed and the time it has been down are routed to the voice's
   parameters through a modulation matrix. The key sets the pitch; the movement changes timbre, level and the
-  resonator. Fourteen kinds of design; polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>TONE</b> (all filter cutoffs), a macro for the main element of the design (<b>GRAINS</b>,
-  <b>AIR</b>, <b>FM</b>, <b>VOWEL</b> or <b>DRIVE</b>), <b>SPACE</b> (resonator mix and feedback), <b>MOTION</b>
-  (speed of the movement, LFOs and tremolo).</p>
+  resonator. Twenty-two kinds of design, among them plucked strings, reeds, organs, crushed pulses, drifting saws,
+  grain clouds and whistling resonances; polyphonic, from the shared pool of voices.</p>
+<p>Macros: <b>TONE</b> (all filter cutoffs, four octaves either way, and the FM's brightness), a macro for the
+  main element of the design (<b>GRAINS</b>, <b>AIR</b>, <b>FM</b>, <b>VOWEL</b> or <b>DRIVE</b>), <b>SPACE</b>
+  (from dry to a long-ringing resonator), <b>MOTION</b> (from a nearly still hand to a quick one with a
+  tremolo).</p>
 
 <h3>CALIGULA</h3>
 <p>Modelled on the architecture of the SOMA LYRA-8, after Miguel Moreno's LIRA-8. Eight oscillators in four

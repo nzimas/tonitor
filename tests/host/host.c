@@ -2368,6 +2368,46 @@ static void mac_render(uint32_t e, int32_t kind, uint32_t seed, const int8_t *m)
             mac_buf[n++] = out[i];
     }
 }
+/* how much each ANIMA macro changes the sound: the difference between the render with the macro at an end and
+ * without it, against the sound (the hand moves alike in both: what differs is the macro's), dB; FM beside it */
+static int cmd_macdiff(void)
+{
+    static int32_t base[MAC_N], alt[MAC_N];
+    uint32_t e, j, kind, end;
+    for (e = 0; e < 2u; e++)
+        for (j = 0; j < NMAC; j++)
+            for (end = 0; end < 2u; end++) {
+                double v[64];
+                uint32_t nv = 0, x, y;
+                for (kind = 0; kind < (e ? (uint32_t)AK_N : (uint32_t)FF_N) && nv < 64u; kind++) {
+                    int8_t m[NMAC] = {0, 0, 0, 0};
+                    double d2 = 0, b2 = 0;
+                    uint32_t i;
+                    mac_render(e, (int32_t)kind, 4000u + kind * 31u, m);
+                    memcpy(base, mac_buf, sizeof base);
+                    m[j] = end ? MAC_MAX : -MAC_MAX;
+                    mac_render(e, (int32_t)kind, 4000u + kind * 31u, m);
+                    memcpy(alt, mac_buf, sizeof alt);
+                    for (i = 0; i < MAC_N; i++) {
+                        double dd = (double)alt[i] - base[i];
+                        d2 += dd * dd;
+                        b2 += (double)base[i] * base[i];
+                    }
+                    if (b2 > 1e3)
+                        v[nv++] = 10 * log10(d2 / b2 + 1e-9);
+                }
+                for (x = 1; x < nv; x++)
+                    for (y = x; y > 0 && v[y - 1] > v[y]; y--) {
+                        double t = v[y];
+                        v[y] = v[y - 1];
+                        v[y - 1] = t;
+                    }
+                printf("macdiff %-6s %u %s: the change %+5.1f dB against the sound (median; the least %+5.1f)\n", e ? "ANIMA" : "FM",
+                       j + 1, end ? "up  " : "down", nv ? v[nv / 2u] : 0.0, nv ? v[0] : 0.0);
+            }
+    return 0;
+}
+
 static int cmd_macros(const char *dir)
 {
     static const uint32_t NK[4] = {FF_N, AK_N, CS_N, RK_N};
@@ -2398,7 +2438,8 @@ static int cmd_macros(const char *dir)
     /* each macro moves each engine's sounds; the brightening ones brighten; none silences or blows up */
     for (e = 0; e < 4u; e++)
         for (j = 0; j < NMAC; j++) {
-            uint32_t moved = 0, tried = 0, wrong = 0, bad = 0;
+            uint32_t moved = 0, tried = 0, wrong = 0, bad = 0, nch = 0;
+            static double chs[256];
             for (kind = 0; kind < NK[e]; kind++)
                 for (s = 0; s < 2u; s++) {
                     int8_t m[NMAC] = {0, 0, 0, 0};
@@ -2420,6 +2461,8 @@ static int cmd_macros(const char *dir)
                     mspec(sh);
                     tried++;
                     ch = mspec_dist(sl, s0) + mspec_dist(sh, s0);   /* dB: how far each end takes the spectrum */
+                    if (nch < 256u)
+                        chs[nch++] = ch;
                     if (ch > 3.0 || fabs(fh.am - fl.am) > 0.05)
                         moved++;
                     else if (getenv("MACDBG"))
@@ -2440,8 +2483,17 @@ static int cmd_macros(const char *dir)
                                    fl.rms, f0.rms, fh.rms, fl.peak, fh.peak);
                     }
                 }
-            printf("macros %-8s %u: moves %u of %u sounds%s%s\n", EN[e], j + 1, moved, tried,
-                   wrong ? " (darker turned up on some)" : "", bad ? " (silent or wild at an end on some)" : "");
+            {   /* (how far, typically: the median of the two ends' distances from the sound as drawn) */
+                uint32_t x, y;
+                for (x = 1; x < nch; x++)
+                    for (y = x; y > 0 && chs[y - 1] > chs[y]; y--) {
+                        double t = chs[y];
+                        chs[y] = chs[y - 1];
+                        chs[y - 1] = t;
+                    }
+                printf("macros %-8s %u: moves %u of %u sounds, typically by %.1f dB%s%s\n", EN[e], j + 1, moved, tried,
+                       nch ? chs[nch / 2u] : 0.0, wrong ? " (darker turned up on some)" : "", bad ? " (silent or wild at an end on some)" : "");
+            }
             if (moved * 10u < tried * 8u)
                 printf("FAIL macros: %s macro %u moves too few sounds\n", EN[e], j + 1), fail++;
             if (wrong * 10u > tried)
@@ -2731,6 +2783,26 @@ static void ck_keys(const uint32_t *k, uint32_t n, int down)
     for (i = 0; i < n; i++)
         press_key(k[i], down);
 }
+/* the sounds every track starts with, drawn on generation gen (as sounds_init, which draws on GEN_NOW): a test of
+ * the loops' mechanics keeps the sounds it was made with */
+static void sounds_gen(uint32_t gen)
+{
+    uint32_t l;
+    for (l = 0; l < NLAYER; l++) {
+        uint32_t s = next_seed();
+        fm_generate(&fm_buf[l][0], -1, s, PATH_OPEN, gen);
+        fm_measure(&fm_buf[l][0]);
+        an_design(&an_buf[l][0], -1, s * 7u + 3u, PATH_OPEN, gen);
+        an_measure(&an_buf[l][0]);
+        cal_design(&cal_buf[l][0], -1, s * 13u + 5u, PATH_OPEN, gen);
+        cal_measure(&cal_buf[l][0]);
+        rus_design(&rus_buf[l][0], -1, s * 17u + 9u, PATH_OPEN, gen);
+        rus_measure(&rus_buf[l][0]);
+        fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
+        cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = 0;
+        gran_profile(l, next_seed());
+    }
+}
 static int cmd_clicks(void)
 {
     static const char *const EN[4] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
@@ -2739,10 +2811,8 @@ static int cmd_clicks(void)
     for (e = 0; e < 4u; e++) {
         uint32_t i, j, nclk = 0, guard = 0;
         double base = 0, nb = 0;
-        layers_init();
-        ui_init();
-        sounds_init();
         grain_reset();
+        sounds_gen(2u);                       /* (after it: grain_reset draws them on GEN_NOW) */
         ck_n = ck_nev = 0;
         press_btn(B_FX);
         while (ui.engine[0] != e && guard++ < 20u) {
@@ -3692,6 +3762,8 @@ int main(int argc, char **argv)
         return cmd_evcost();
     if (argc >= 3 && !strcmp(argv[1], "clip"))
         return cmd_clip(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "macdiff"))
+        return cmd_macdiff();
     if (argc >= 2 && !strcmp(argv[1], "anstat"))
         return cmd_anstat();
     if (argc >= 2 && !strcmp(argv[1], "anref"))

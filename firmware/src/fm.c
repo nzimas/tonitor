@@ -50,21 +50,29 @@
 
 enum { FF_METAL, FF_DRONE, FF_BRUIT, FF_IMPACT, FF_ITERATIF, FF_GLISSE, FF_SPECTRE, FF_ABYSS, FF_FRICTION,
        FF_N0,                    /* (generation 0 draws these nine only) */
-       FF_CHOIR = FF_N0, FF_BOWED, FF_HOLLOW, FF_BLOOM, FF_TIDE, FF_SHARDS, FF_STATIC, FF_WIND, FF_N };
+       FF_CHOIR = FF_N0, FF_BOWED, FF_HOLLOW, FF_BLOOM, FF_TIDE, FF_SHARDS, FF_STATIC, FF_WIND,
+       FF_N1,                    /* (generations 1 and 2 draw these seventeen) */
+       FF_PLUCK = FF_N1, FF_MALLET, FF_KEYS, FF_WARP, FF_GLITCH, FF_RUBBER, FF_N };
 /* the families' weights on each path: generation 0 (the open path: rnd_below, all alike), generation 1 */
 static const uint8_t FF_W[3][FF_N0] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1},
     {3, 4, 0, 0, 1, 1, 4, 3, 0},
     {2, 1, 4, 3, 3, 2, 0, 1, 4},
 };
-static const uint8_t FF_W1[3][FF_N] = {
+static const uint8_t FF_W1[3][FF_N1] = {
     {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
     {3, 4, 0, 0, 1, 1, 4, 3, 0, 4, 4, 4, 3, 4, 0, 0, 2},
     {2, 1, 4, 3, 3, 2, 0, 1, 4, 0, 0, 1, 2, 0, 4, 4, 3},
 };
+static const uint8_t FF_W3[3][FF_N] = {             /* generation 3: plucks, mallets, keys; warps, glitches, rubber */
+    {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 3, 3, 3, 3, 3},
+    {3, 4, 0, 0, 1, 1, 4, 3, 0, 4, 4, 4, 3, 4, 0, 0, 2, 3, 4, 3, 0, 0, 0},
+    {2, 1, 4, 3, 3, 2, 0, 1, 4, 0, 0, 1, 2, 0, 4, 4, 3, 2, 2, 0, 5, 5, 4},
+};
 static const char *const FF_NAME[FF_N] = {"METAL", "DRONE", "BRUIT", "IMPACT", "ITERATIF", "GLISSE", "SPECTRE",
                                           "ABYSS", "FRICTION", "CHOIR", "BOWED", "HOLLOW", "BLOOM", "TIDE",
-                                          "SHARDS", "STATIC", "WIND"};
+                                          "SHARDS", "STATIC", "WIND", "PLUCK", "MALLET", "KEYS", "WARP", "GLITCH",
+                                          "RUBBER"};
 
 typedef struct {
     uint8_t p[FP_SIZE + 1u];
@@ -139,7 +147,7 @@ static uint32_t fm_carriers_of(const uint8_t *p);
 static int fm_skews(uint32_t f)
 {
     return f == FF_METAL || f == FF_BRUIT || f == FF_IMPACT || f == FF_ITERATIF || f == FF_GLISSE || f == FF_FRICTION ||
-           f == FF_SHARDS || f == FF_STATIC || f == FF_WIND;
+           f == FF_SHARDS || f == FF_STATIC || f == FF_WIND || f == FF_WARP || f == FF_GLITCH || f == FF_MALLET;
 }
 static const char *fm_mac_name(const fm_patch_t *pt, uint32_t j)
 {
@@ -839,6 +847,204 @@ static void fm_gen_wind(uint8_t *p, rnd_t *r)
     p[FP_LPMD] = 0;
 }
 
+/* ------------------------------------------------- generation 3's families --- */
+/* plucked strings, bright or dark: the modulators die quickly (the attack's brightness), the carriers die away */
+static void fm_gen_pluck(uint8_t *p, rnd_t *r)
+{
+    static const uint8_t ALG[6] = {4, 5, 0, 1, 15, 21};
+    int n, dark = rnd_chance(r, 45);
+    p[FP_ALG] = ALG[rnd_below(r, 6)];
+    p[FP_FB] = (uint8_t)rnd_in(r, 0, dark ? 3 : 6);
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        if (fm_is_carrier(p, n)) {
+            fm_ratio(op, rnd_chance(r, 75) ? 100 : rnd_chance(r, 50) ? 200 : 50);
+            fm_env(op, 99, rnd_in(r, 28, 52), rnd_in(r, 20, 40), rnd_in(r, 35, 60), 99, rnd_in(r, 40, 75), 0, 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 92, 99);
+            op[FP_DET] = (uint8_t)rnd_in(r, 5, 9);
+        } else {
+            static const int16_t BR[6] = {100, 200, 300, 100, 400, 500};
+            fm_ratio(op, dark ? (rnd_chance(r, 70) ? 100 : 200) : BR[rnd_below(r, 6)]);
+            fm_env(op, 99, rnd_in(r, dark ? 55 : 45, dark ? 85 : 75), rnd_in(r, 30, 60), rnd_in(r, 40, 70), 99,
+                   rnd_in(r, 0, dark ? 25 : 45), 0, 0);
+            op[FP_OL] = (uint8_t)(dark ? rnd_in(r, 55, 76) : rnd_in(r, 74, 92));
+        }
+        op[FP_RS] = (uint8_t)rnd_in(r, 3, 6);              /* (higher strings die quicker) */
+        op[FP_KVS] = (uint8_t)rnd_in(r, 0, 3);
+    }
+    p[FP_LAMD] = 0;
+    p[FP_LPMD] = (uint8_t)rnd_in(r, 0, 4);
+    if (dark && p[FP_TRNSP] >= 12u && rnd_chance(r, 40))
+        p[FP_TRNSP] -= 12;
+}
+/* struck bars: marimba, vibraphone, kalimba -- a high modulator's knock, gone at once; the bar rings on */
+static void fm_gen_mallet(uint8_t *p, rnd_t *r)
+{
+    static const int16_t KNOCK[6] = {350, 400, 700, 1000, 540, 314};
+    int n;
+    p[FP_ALG] = ALG_PAIRS[rnd_below(r, 6)];
+    p[FP_FB] = (uint8_t)rnd_below(r, 3);
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        if (fm_is_carrier(p, n)) {
+            fm_ratio(op, rnd_chance(r, 70) ? 100 : rnd_chance(r, 50) ? 400 : 1000);
+            fm_env(op, 99, rnd_in(r, 32, 55), rnd_in(r, 25, 45), rnd_in(r, 35, 60), 99, rnd_in(r, 30, 60), 0, 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 88, 99);
+            if (rnd_chance(r, 30))
+                op[FP_AMS] = 2;                            /* (a vibraphone's motor) */
+        } else {
+            fm_ratio(op, KNOCK[rnd_below(r, 6)] + rnd_in(r, -6, 6));
+            fm_env(op, 99, rnd_in(r, 75, 95), rnd_in(r, 50, 80), 60, 99, rnd_in(r, 0, 20), 0, 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 68, 90);
+        }
+        op[FP_RS] = (uint8_t)rnd_in(r, 2, 5);
+    }
+    p[FP_LFW] = 4;
+    p[FP_LFS] = (uint8_t)rnd_in(r, 30, 45);
+    p[FP_LAMD] = (uint8_t)rnd_in(r, 0, 30);
+    p[FP_LPMD] = 0;
+}
+/* an electric piano: a held body, a bright tine struck over it */
+static void fm_gen_keys(uint8_t *p, rnd_t *r)
+{
+    int n;
+    p[FP_ALG] = (uint8_t)(rnd_chance(r, 60) ? 4 : 5);      /* (three pairs) */
+    p[FP_FB] = (uint8_t)rnd_in(r, 2, 6);
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        int tine = n >= 3 && n <= 4;
+        if (fm_is_carrier(p, n)) {
+            fm_ratio(op, 100);
+            fm_env(op, 99, rnd_in(r, 20, 40), rnd_in(r, 15, 30), rnd_in(r, 40, 60), 99, rnd_in(r, 70, 90),
+                   rnd_in(r, 0, 40), 0);
+            op[FP_OL] = (uint8_t)(tine ? rnd_in(r, 70, 85) : rnd_in(r, 92, 99));
+            op[FP_DET] = (uint8_t)rnd_in(r, 4, 10);
+        } else {
+            fm_ratio(op, tine ? (rnd_chance(r, 60) ? 1400 : 1100) : 100);
+            fm_env(op, 99, tine ? rnd_in(r, 70, 90) : rnd_in(r, 25, 45), 30, 50, 99, tine ? rnd_in(r, 0, 20) : rnd_in(r, 50, 80),
+                   0, 0);
+            op[FP_OL] = (uint8_t)(tine ? rnd_in(r, 60, 80) : rnd_in(r, 55, 75));
+        }
+        op[FP_RS] = (uint8_t)rnd_in(r, 2, 4);
+        op[FP_KVS] = (uint8_t)rnd_in(r, 2, 5);
+    }
+    p[FP_LFW] = 4;
+    p[FP_LFS] = (uint8_t)rnd_in(r, 30, 40);
+    p[FP_LAMD] = (uint8_t)rnd_in(r, 0, 25);
+    for (n = 1; n <= 6; n++)
+        if (fm_is_carrier(p, n))
+            fm_op(p, n)[FP_AMS] = (uint8_t)rnd_below(r, 2);
+}
+/* a warp: ratios anywhere, partials nailed to frequencies, the pitch thrown about by its envelope */
+static void fm_gen_warp(uint8_t *p, rnd_t *r)
+{
+    int n, i;
+    p[FP_ALG] = (uint8_t)rnd_below(r, 32);
+    p[FP_FB] = (uint8_t)rnd_in(r, 4, 7);
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        if (fm_is_carrier(p, n)) {                         /* (the carriers heard: their levels up, their ratios low) */
+            fm_ratio(op, rnd_in(r, 50, 400));
+            fm_env(op, rnd_in(r, 20, 99), rnd_in(r, 5, 60), rnd_in(r, 5, 60), rnd_in(r, 20, 60), rnd_in(r, 80, 99),
+                   rnd_in(r, 55, 99), rnd_in(r, 65, 99), 0);
+        } else {
+            if (rnd_chance(r, 35))
+                fm_fixed(op, rnd_in(r, 0, 3), rnd_below(r, 100));
+            else
+                fm_ratio(op, rnd_in(r, 50, 1200));
+            fm_env(op, rnd_in(r, 20, 99), rnd_in(r, 5, 60), rnd_in(r, 5, 60), rnd_in(r, 20, 60), rnd_in(r, 50, 99),
+                   rnd_below(r, 99), rnd_in(r, 30, 99), 0);
+        }
+        op[FP_OL] = (uint8_t)(fm_is_carrier(p, n) ? rnd_in(r, 85, 99) : rnd_in(r, 55, 95));
+        op[FP_DET] = (uint8_t)rnd_below(r, 15);
+    }
+    for (i = 0; i < 4; i++) {                              /* the pitch envelope: anywhere, at any pace */
+        p[FP_PR1 + i] = (uint8_t)rnd_in(r, 20, 80);
+        p[FP_PL1 + i] = (uint8_t)rnd_in(r, 33, 67);         /* (bent, never thrown out of hearing) */
+    }
+    p[FP_PL1 + 2] = (uint8_t)rnd_in(r, 40, 60);            /* (it settles near the note) */
+    p[FP_LFW] = (uint8_t)rnd_below(r, 6);
+    p[FP_LFS] = (uint8_t)rnd_in(r, 5, 60);
+    p[FP_LPMD] = (uint8_t)rnd_in(r, 0, 40);
+    p[FP_LPMS] = (uint8_t)rnd_in(r, 2, 6);
+    p[FP_LAMD] = (uint8_t)rnd_in(r, 0, 40);
+}
+/* a glitch: a quick sample-and-hold stepping the pitch and the level, envelopes chopped short */
+static void fm_gen_glitch(uint8_t *p, rnd_t *r)
+{
+    int n;
+    p[FP_ALG] = rnd_chance(r, 50) ? ALG_PAIRS[rnd_below(r, 6)] : ALG_MANY[rnd_below(r, 6)];
+    p[FP_FB] = (uint8_t)rnd_in(r, 2, 7);
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        fm_ratio(op, 100 * rnd_in(r, 1, 8) / (rnd_chance(r, 25) ? 2 : 1));
+        if (fm_is_carrier(p, n)) {
+            fm_env(op, 99, rnd_in(r, 40, 80), rnd_in(r, 30, 70), rnd_in(r, 50, 80), 99, rnd_in(r, 60, 99), rnd_in(r, 40, 90), 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 88, 99);
+            op[FP_AMS] = (uint8_t)rnd_in(r, 2, 3);
+        } else {
+            fm_env(op, 99, rnd_in(r, 50, 99), rnd_in(r, 40, 80), 60, 99, rnd_below(r, 99), rnd_below(r, 99), 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 60, 92);
+        }
+    }
+    p[FP_LFW] = 5;
+    p[FP_LFS] = (uint8_t)rnd_in(r, 70, 99);
+    p[FP_LPMS] = (uint8_t)rnd_in(r, 5, 7);
+    p[FP_LPMD] = (uint8_t)rnd_in(r, 25, 99);
+    p[FP_LAMD] = (uint8_t)rnd_in(r, 30, 90);
+}
+/* rubber: low ratios, the pitch bouncing in at every note (up, under, back) */
+static void fm_gen_rubber(uint8_t *p, rnd_t *r)
+{
+    int n;
+    p[FP_ALG] = rnd_chance(r, 50) ? ALG_DEEP[rnd_below(r, 6)] : ALG_PAIRS[rnd_below(r, 6)];
+    p[FP_FB] = (uint8_t)rnd_in(r, 2, 6);
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        fm_ratio(op, rnd_chance(r, 50) ? 100 : rnd_chance(r, 50) ? 50 : 200);
+        if (fm_is_carrier(p, n)) {
+            fm_env(op, 99, rnd_in(r, 25, 50), rnd_in(r, 20, 40), rnd_in(r, 35, 60), 99, rnd_in(r, 50, 85), rnd_in(r, 0, 60), 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 90, 99);
+        } else {
+            fm_env(op, 99, rnd_in(r, 30, 60), rnd_in(r, 20, 50), 50, 99, rnd_in(r, 40, 80), rnd_in(r, 20, 60), 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 65, 88);
+        }
+    }
+    p[FP_PL1 + 3] = (uint8_t)rnd_in(r, 15, 35);            /* from under the note, */
+    p[FP_PL1] = (uint8_t)rnd_in(r, 62, 80);                /* up past it, */
+    p[FP_PL1 + 1] = (uint8_t)rnd_in(r, 42, 48);            /* back under, */
+    p[FP_PL1 + 2] = 50;                                    /* to it */
+    p[FP_PR1] = (uint8_t)rnd_in(r, 70, 90);
+    p[FP_PR1 + 1] = (uint8_t)rnd_in(r, 60, 85);
+    p[FP_PR1 + 2] = (uint8_t)rnd_in(r, 55, 80);
+    p[FP_PR1 + 3] = 99;
+    p[FP_LAMD] = 0;
+    p[FP_LPMD] = 0;
+}
+/* generation 3's breadth, on every family (after all the earlier draws): now and then plucked, a modulator moved
+ * to another ratio, an operator detuned */
+static void fm_care3(uint8_t *p, int32_t f, uint32_t path, rnd_t *r)
+{
+    static const int16_t R3[8] = {50, 150, 250, 300, 350, 450, 600, 700};
+    int n;
+    if (f < FF_N1 && rnd_chance(r, path == PATH_AMBIENT ? 6 : 14))   /* plucked: struck, dying away */
+        for (n = 1; n <= 6; n++) {
+            uint8_t *op = fm_op(p, n);
+            op[FP_R1] = 99;
+            op[FP_R1 + 1] = (uint8_t)rnd_in(r, fm_is_carrier(p, n) ? 30 : 55, fm_is_carrier(p, n) ? 55 : 85);
+            op[FP_L1] = 99;
+            op[FP_L1 + 2] = 0;
+            op[FP_R1 + 3] = (uint8_t)clampi(op[FP_R1 + 3], 30, 70);
+        }
+    if (rnd_chance(r, 35)) {
+        uint8_t *op = fm_op(p, 1 + rnd_below(r, 6));
+        if (!op[FP_MODE] && !fm_is_carrier(p, (int)(6 - (op - p) / FP_OP)))
+            fm_ratio(op, R3[rnd_below(r, 8)]);
+    }
+    if (rnd_chance(r, 30))
+        fm_op(p, 1 + rnd_below(r, 6))[FP_DET] = (uint8_t)(rnd_chance(r, 50) ? rnd_in(r, 0, 3) : rnd_in(r, 11, 14));
+}
+
 /* generation 1's care, on every patch: no screaming sidebands, the brightness scaled down the keyboard */
 static void fm_shape1(uint8_t *p, uint32_t path, rnd_t *r)
 {
@@ -906,7 +1112,8 @@ static void fm_ambient(uint8_t *p, int32_t f, rnd_t *r)
     for (n = 1; n <= 6; n++) {
         uint8_t *op = fm_op(p, n);
         if (fm_is_carrier(p, n)) {
-            if (f != FF_METAL || rnd_chance(r, 50))           /* swells (a bell may keep its strike) */
+            if ((f != FF_METAL && f != FF_PLUCK && f != FF_MALLET && f != FF_KEYS) || rnd_chance(r, 50))
+                                                              /* swells (a bell, a pluck may keep its strike) */
                 op[FP_R1] = (uint8_t)clampi(op[FP_R1], 0, rnd_in(r, 18, 55));
             op[FP_R1 + 3] = (uint8_t)clampi(op[FP_R1 + 3], 0, rnd_in(r, 8, 28));   /* long tails */
         } else
@@ -942,8 +1149,10 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     rnd_seed(r, seed ^ 0xF00Du);
     if (gen == 0u && (f < 0 || f >= FF_N0))
         f = path == PATH_OPEN ? rnd_below(r, FF_N0) : (int32_t)rnd_weighted(r, FF_W[path], FF_N0);
+    else if (gen <= 2u && (f < 0 || f >= FF_N1))
+        f = (int32_t)rnd_weighted(r, FF_W1[path], FF_N1);
     else if (f < 0 || f >= FF_N)
-        f = (int32_t)rnd_weighted(r, FF_W1[path], FF_N);
+        f = (int32_t)rnd_weighted(r, FF_W3[path], FF_N);
     fm_voice_defaults(p);
     switch (f) {
     case FF_METAL: fm_gen_metal(p, r); break;
@@ -962,6 +1171,12 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     case FF_TIDE: fm_gen_tide(p, r); break;
     case FF_SHARDS: fm_gen_shards(p, r); break;
     case FF_STATIC: fm_gen_static(p, r); break;
+    case FF_PLUCK: fm_gen_pluck(p, r); break;
+    case FF_MALLET: fm_gen_mallet(p, r); break;
+    case FF_KEYS: fm_gen_keys(p, r); break;
+    case FF_WARP: fm_gen_warp(p, r); break;
+    case FF_GLITCH: fm_gen_glitch(p, r); break;
+    case FF_RUBBER: fm_gen_rubber(p, r); break;
     default: fm_gen_wind(p, r); break;
     }
     if (gen >= 1u) {                                     /* generation 1: shaped, bent with care, then leaned */
@@ -970,6 +1185,8 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
             fm_mutate1(p, path, r);
         if (path == PATH_EXP && rnd_chance(r, 35))
             fm_mutate1(p, path, r);
+        if (gen >= 3u)
+            fm_care3(p, f, path, r);
         if (path == PATH_AMBIENT)
             fm_ambient(p, f, r);
         else if (path == PATH_EXP)
