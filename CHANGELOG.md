@@ -2,181 +2,199 @@
 
 ## 0.30
 
-- **One track's loops along the scale**: hold SHIFT, hold a track's button, press OCT+ or OCT−: that track's
-  loops and overdubs move a step of the scale, the others not (TRANSP T3 +2), on top of the move of all the
-  loops. An overdub made meanwhile plays as played; sessions and copies keep it; emptying the track resets it.
-- **The keys move with the loops**: on a track, the white keys play the scale moved as far as that track's
-  loops (all the loops' move and its own), so new material and overdubs fit what is there.
-- SHIFT no longer shows the audio's load.
-- **FM's macros heard**: BRIGHTNESS (was BRIGHT) moves the modulators about 27 dB either way and the feedback with
-  them; DETUNE pulls the carriers ±40 cents apart and the modulators ±25 cents off them, so even a patch of one
-  carrier beats and roughens. Every macro, on every engine, answers early in its turn: a quarter of the way gives
-  half the change.
-- **Macros named for what they do**: FM BRIGHTNESS, DETUNE or INHARMONIC (was SKEW), SATURATION (was GRIT),
-  MOTION; ANIMA NOISE (was AIR), FORMANT (was VOWEL), RESONATOR (was SPACE); CALIGULA WAVEFORM (was EDGE),
-  MOD DEPTH (was DEPTH), FEEDBACK (was CHAOS), DELAY (was ECHO), TOUCHES (was HAND), GATE RATE (was PULSE);
-  RUSSOLO RANDOMNESS (was CHAOS). A long name takes a smaller size on the dial.
+Added
+- Per-track loop transposition: hold SHIFT and a track button, then press OCT+ or OCT− to move that track's
+  loops (all overdubs) by one scale step. The screen shows the value (e.g. TRANSP T3 +2). It is added to the
+  global loop transposition (SHIFT + OCT). Stored in sessions (format 11), copied with the track, reset when the
+  track's loops are cleared.
+- The white keys follow the transposition of the selected track (global + per-track), so new notes and
+  overdubs are in the same transposed scale. Overdubs store the transposition at which they were recorded and
+  play back as recorded. USB MIDI notes are not transposed.
+
+Changed
+- FM macros: BRIGHT renamed BRIGHTNESS, range on modulator output levels increased from ±26 to ±36 steps
+  (about ±27 dB); turning it up also raises feedback. DETUNE now spreads carriers ±40 cents (was ±30) and
+  modulators ±25 cents (was ±12), so single-carrier patches also produce beating.
+- All macros on all engines use a square-root response: a quarter turn gives half of the full change.
+- Macro names: FM SKEW → INHARMONIC, GRIT → SATURATION; ANIMA AIR → NOISE, VOWEL → FORMANT, SPACE →
+  RESONATOR; CALIGULA EDGE → WAVEFORM, DEPTH → MOD DEPTH, CHAOS → FEEDBACK, ECHO → DELAY, HAND → TOUCHES,
+  PULSE → GATE RATE; RUSSOLO CHAOS → RANDOMNESS. Names too wide for the dial title use the smaller font.
+- SHIFT no longer displays the audio load.
 
 ## 0.29
 
-- **ANIMA, a lo-fi engine**: its voices are computed at half the sample rate (22.05 kHz: nothing above 11 kHz)
-  and drawn out to the full rate by straight lines; pitches, rates and filters scaled to stay where they were.
-  It costs the chip about 9 % of its time a voice instead of 15 %.
-- **Eight new ANIMA kinds** (generation 3): PLUCK, REED, FOG, ORGAN, BITS, DRIFT, MURMUR, HOWL; and every kind
-  draws wider: any waveform, wider intervals and ratios, detuning, plucked or swelling envelopes, other
-  gestures, pulsing tremolos, crushed rates, sharp resonances.
-- **Five new FM families** (generation 3): PLUCK (strings, bright or dark), MALLET (marimba, vibraphone,
-  kalimba), and the stranger WARP, GLITCH and RUBBER; any family may now come out
-  plucked, with a modulator on another ratio or an operator detuned.
-- **ANIMA's macros heard**: TONE four octaves either way (and the FM's brightness), the kind's macro from
-  nothing to far more (DRIVE down: a pure tone), SPACE from dry to a long ring, MOTION from a still hand to a
-  quick one with a tremolo; and each answers early in its turn.
-- **ANIMA lighter still**: the wavetables its voices play are copied into RAM while they play (from the flash a
-  read could cost twenty times as much). To make room, a track's loops now hold about 500 notes between them
-  (were about 1000); a session saved with more loads the first 500 or so of each track.
-- Sounds saved before (sessions, presets) are drawn again exactly as they were — the new kinds and families
-  are generation 3's — though an ANIMA sound now plays at the lower rate.
+Added
+- Generator generation 3. ANIMA: eight kinds (PLUCK, REED, FOG, ORGAN, BITS, DRIFT, MURMUR, HOWL). FM: five
+  families (PLUCK, MALLET, WARP, GLITCH, RUBBER). All kinds and families draw from wider ranges: any of the 24
+  wavetables, more intervals, FM ratios and stack steps, detuning, optional percussive or slow-attack envelopes,
+  other hand-motion modes, square-wave tremolo, sample-rate reduction, high filter resonance (ANIMA); optional
+  percussive envelopes, modulator ratio changes and operator detuning (FM).
+
+Changed
+- ANIMA renders each voice at 22.05 kHz (16 samples per 32-sample block), upsampled by linear interpolation;
+  bandwidth limited to 11 kHz. Oscillator increments, delay lengths, grain lengths and filter coefficients are
+  scaled to keep pitch and timing. CPU cost per voice reduced from about 15 % to about 9 % of a block.
+- ANIMA wavetables in use are copied to a 15-slot RAM cache (one copy per audio block at most); a read from
+  flash costs 6–33 CPU ticks, from RAM 1.6.
+- Loop capacity reduced from 2048 to 1024 note events per track (about 500 notes) to free memory for the
+  cache. Sessions with longer loops load the first 1024 events per track.
+- ANIMA macros: TONE ±4 octaves on all filters (was ±2.5) and FM index; the kind macro (GRAINS, AIR, FM, VOWEL,
+  DRIVE) ranges from zero to several times the design value, DRIVE below centre removes the second
+  oscillator, FM, noise and grains; SPACE from 0 to 0.85 resonator mix; MOTION from ¼ to 4× hand speed, adding
+  a tremolo above centre. At centre the sound is unchanged.
+
+Compatibility
+- Sounds stored as seeds (sessions, presets) regenerate identically for generations 0–2. ANIMA sounds play at
+  the new sample rate.
 
 ## 0.28
 
-- **Copy a track onto another**: hold a track's button (0.8 s) to copy it — COPIED, its button blinking — then
-  hold another track's button to paste it there — PASTED. The tone (engine, the four sounds and their macros,
-  filter, granulator, crush, send, octave, path) and all the loops go across; level and pan stay. The next hold
-  copies again.
-- **Tracks**: what the manual called layers are now called tracks, everywhere.
+Added
+- Track copy/paste: holding a track button for 0.8 s copies the track (screen: COPIED; the button blinks while
+  the clipboard holds it). Holding another track button pastes it (screen: PASTED) and empties the clipboard.
+  Copied: engine, the sound of each of the four engines with macros, filter, granulator, crush, reverb send,
+  octave, generative path, all loops with their mute states. Not copied: level, pan. The destination's latched
+  notes are released.
+
+Changed
+- Documentation uses "track" instead of "layer".
 
 ## 0.27
 
-- **Loops moved along the scale**: SHIFT + OCT+ / OCT− moves every loop of every track one step of the chosen
-  scale up or down (C to D in C major), the notes sounding moving at once; up to two octaves of the scale either
-  way, shown on the screen. Another scale or root chosen meanwhile is walked instead. An overdub recorded while
-  the loops are moved plays back as played. Sessions keep it; sessions saved before load as they were. The
-  screen says TRANSP +2, TRANSP 0.
-- **An empty session is a clean slate**: choosing an empty slot on the SESSIONS page now starts afresh, as at
-  switching on — no loops, no latches, new sounds on every track, every setting, the scale, the reverb and the
-  transposition at their defaults. The session you were in stays saved as it was.
-- **Drones stay whole in loops**: a note still held when REC closes the loop is tied over the loop's end, sounding
-  on as it goes round instead of being let go and struck again each time (which was heard as a stutter, ANIMA and
-  CALIGULA above all).
-- **No click when ANIMA reuses a voice**: a voice taken over for a new note (loops going round, many notes at once)
-  kept its comb resonator, phaser and sample hold from the note before, heard again at full level as the new note
-  began. They now start empty.
-- **No more bursts when a loop starts**: with the machine busy (many release tails ringing), a loop starting —
-  CALIGULA above all — could make the audio late for a few milliseconds, heard as a burst. Tonitor now measures
-  what each voice and organism costs as it plays, and before anything new starts it makes room ahead, letting the
-  oldest release tails go quickly, so the audio is never late. A held note is let go only if the audio is late
-  after all (past 100 %). SHIFT shows the load now, as one percentage.
+Added
+- Global loop transposition: SHIFT + OCT+/OCT− moves all loops by one step of the current scale, up to two
+  octaves of the scale either way. Sounding notes are moved immediately. Changing scale or root re-maps the
+  loops to the new scale. Stored in sessions (format 10).
+- Selecting an empty session slot resets the machine to its power-on state: loops and latches cleared, new
+  sounds on all tracks, all track settings, scale, root, reverb and transposition at defaults.
+
+Fixed
+- A note held while REC closes a loop is no longer released at the loop end and retriggered at the start; it
+  sustains across the loop boundary.
+- ANIMA voice reuse: the comb resonator, phaser and sample-and-hold states of a reassigned voice are now
+  cleared; previously the previous note's state was audible as a click.
+- Audio dropouts when starting a loop under high load: the render cost of each voice and organism is now
+  measured per block, and before new voices start the oldest release tails are faded out (2 ms) until the
+  predicted cost is under 82 % of the block. Held notes are only dropped if a buffer is actually late.
 
 ## 0.26
 
-- **RUSSOLO**, a fourth engine: noise, logic and broken buffers, re-making the techniques of Robert Heel's
-  Noisferatu. Seventeen kinds — HOLD, DUST, GATES, CRACKLE (noise); NOR, XOR, RING, CASCADE, CLANG (oscillators
-  combined bit by bit); CHUNKS, JUMP, WANDER, BEND, QUAD (generated buffers read with their addresses bent);
-  BLIPS, WALK, CHORD (chance-driven tones) — at a third of the sample rate in 10 bits, crushed and sample-held
-  further as each sound says. A key gates it and sets its pitch; one organism a track, as CALIGULA. Its macros:
-  the kind's two parameters, CRUSH and CHAOS. The paths lean it: AMBIENT to chords, dust, crackle, blips and
-  walks, clean and slow; EXPERIMENTAL to logic and bent buffers, crushed and abrupt. Presets: 64 for it too.
-- **Sessions are a fuller snapshot**: they now also keep each track's granulator character and its latched
-  notes (which sound again on load). The master reverb was already kept. Sessions and presets saved before load
-  as they were.
+Added
+- RUSSOLO engine, based on the techniques of Noisferatu by Robert Heel: 17 kinds of noise, logic-gate
+  oscillators, buffer manipulation and random tones, rendered at FS/3 with 10-bit values plus per-sound bit and
+  sample-hold reduction. One instance per track; keys gate it and set its pitch. Macros: two per kind, CRUSH,
+  CHAOS. 64 presets.
+- Sessions also store each track's granulator character and latched notes (format 8).
+
 ## 0.25
 
-- **Voices from a shared pool**: twelve voices for all the tracks instead of two fixed per track. A track takes as
-  many as its notes need — a twelve-note chord on one track, single notes on others. With all twelve busy, a new
-  note takes the oldest release (any track), else its own track's oldest held note, else the oldest held anywhere.
+Changed
+- Voice allocation: a pool of 12 voices shared by all tracks replaces two fixed voices per track. Stealing
+  order: oldest release tail, then the oldest held note of the same track, then the oldest held note.
 
 ## 0.24
 
-- Sessions are written to and read from the flash a sector at a time: about 50 KB of RAM freed (more than half of
-  it), for more voices and a fourth engine to come. Nothing changes in use; every session saved before loads.
-- The start-up screen's name fits the screen.
+Changed
+- Sessions are read and written one 4 KB flash sector at a time; about 54 KB of RAM freed. Session format
+  unchanged.
+
+Fixed
+- The name on the start-up screen fits.
 
 ## 0.23
 
-- **Overdubs in and out**: hold PLAY and the chosen track's loops appear on the white keys (the first loop on
-  the leftmost, then each overdub), lit while they play and shown on the screen. A key takes its loop out or
-  brings it back in — while they play, at once and from its start; while stopped, choosing what PLAY will
-  start. PLAY pressed and let go still starts and stops the loops. Sessions keep which loops are out.
+Added
+- Overdub muting: holding PLAY shows the selected track's loops on the white keys; pressing a key mutes or
+  unmutes that loop. Mute states are stored in sessions (format 7).
 
 ## 0.22
 
-- **Macros**: the black key before SHIFT turns **EDIT** on (lit) and off. While it is on, KNOB 1–4 are four
-  macros that reshape the chosen track's sound live, chosen for each engine and kind of sound — FM: BRIGHT,
-  DETUNE or SKEW, GRIT, MOTION; ANIMA: TONE, GRAINS / AIR / FM / VOWEL / DRIVE, SPACE, MOTION; CALIGULA: EDGE,
-  DEPTH, CHAOS or ECHO, HAND or PULSE. The middle is the sound as drawn. Sessions and presets keep them; HOME
-  starts a new sound in the middle.
-- **FM in tune**: a slip in the FM generator put nearly every operator ratio near an even multiple, so patches
-  played about two octaves above the key and lost most of their designed ratios (bells, near-harmonic beating).
-  New sounds now have the ratios they were designed with, at the key's pitch. Sounds saved before (sessions,
-  presets) come back exactly as they were.
+Added
+- EDIT key (the black key left of SHIFT): KNOB 1–4 control four macros of the selected track's sound, defined
+  per engine and kind. Stored in sessions and presets.
+
+Fixed
+- FM generator: operator ratios were computed with the fine value 100 times too large, placing patches about
+  two octaves above the played note. Corrected for new sounds (generation 2); generations 0 and 1 are kept
+  unchanged so stored sounds regenerate identically.
 
 ## 0.21
 
-- **Presets**: SHIFT + SAVE opens the chosen track's engine's presets, 64 an engine (P1–P64), four a page.
-  SAVE held saves the track's sound into the slot chosen (asking OVERWRITE? over a full one), SAVE loads it.
-- **Richer, smarter generators** (generation 1):
-  - FM: eight new families — CHOIR, BOWED, HOLLOW, BLOOM, TIDE, SHARDS, STATIC, WIND; every patch shaped
-    with care (no screaming sidebands, brightness scaled down the keyboard), gentler mutations, and several
-    patches drawn and measured, keeping one whose brightness suits the path.
-  - ANIMA: six new kinds — TIDE, CHOIR, SHARDS, BOWL, DUST, MACHINE; the filter follows the keyboard; the
-    second oscillator's interval suits the path; AMBIENT sounds get a space to ring in.
-  - CALIGULA: four new species — LITANY, UNDERTOW, WIRE, MOTH; four new tunings (fourths, a minor seventh,
-    open fifths, a quarter-tone cluster); the hand plays phrases, often on a pulse; a bed that the gates
-    never close.
-- Sounds saved before (in sessions) come back exactly as they were: the older generators are kept as they
-  were, and a test checks it.
+Added
+- Presets: SHIFT + SAVE opens 64 preset slots per engine.
+- Generator generation 1. FM: eight families (CHOIR, BOWED, HOLLOW, BLOOM, TIDE, SHARDS, STATIC, WIND),
+  modulator levels reduced on high ratios, keyboard level scaling, several candidates generated and the one
+  whose brightness fits the path kept. ANIMA: six kinds (TIDE, CHOIR, SHARDS, BOWL, DUST, MACHINE), filter
+  keyboard tracking, path-dependent oscillator intervals, resonator on most AMBIENT sounds. CALIGULA: four
+  species (LITANY, UNDERTOW, WIRE, MOTH), four tunings, repeated touch patterns.
 
-## 0.20 — Tonitor
+Compatibility
+- Generation 0 is kept; sounds stored as seeds regenerate identically (checked by a test).
 
-- The firmware is now called **Tonitor** (it was developed as ACOUSMA). The FM-1 shows the new name at
-  start-up and over USB ("FM-1 Tonitor"); sessions saved before keep working.
-- A **browser installer**: install from Chrome, Edge or Opera over Web MIDI, no tools needed.
-- The website, the logo, the manual online.
+## 0.20
+
+Changed
+- Firmware renamed Tonitor (previously ACOUSMA). USB device name "FM-1 Tonitor". Existing sessions load.
+
+Added
+- Browser installer using Web MIDI (Chrome, Edge, Opera).
+- Website and online manual.
 
 ## 0.19
 
-- **SHIFT + PLAY** with no loop playing starts every loop there is, all together from their starts.
+Added
+- SHIFT + PLAY with no loop playing starts all loops from their beginnings.
 
 ## 0.18
 
-- On the SESSIONS page, **SAVE held** saves into the slot shown: an empty one asks SAVE NEW, a full one asks
-  **OVERWRITE?** (on NO until turned to YES).
-- Slots holding a session show their number in red; empty slots in grey with EMPTY.
+Added
+- Sessions page: holding SAVE saves to the displayed slot, with an OVERWRITE? confirmation for occupied slots.
+  Occupied slots shown in red, empty slots in grey.
 
 ## 0.17
 
-- **ANIMA EXPERIMENTAL** made much wilder and more textured: crushed rates, folding, dragged noise,
-  scattered grains, fast tremolo, a ringing comb.
-- **SHIFT + PLAY** stops every loop on every track, from any track.
-- The level meter runs across the bottom of the screen, above the pan; the level is shown in %.
-- Long messages (EXPERIMENTAL) fit the screen.
+Changed
+- ANIMA EXPERIMENTAL path: sample-rate reduction, wavefolding, band-pass noise, scattered grains, fast
+  tremolo and high resonator feedback on most sounds.
+- Level meter moved to the bottom of the screen; level shown in percent.
+
+Added
+- SHIFT + PLAY stops all loops on all tracks.
+
+Fixed
+- Long messages fit the screen.
 
 ## 0.16
 
-- **Generative paths**: AMBIENT and EXPERIMENTAL on the two leftmost black keys, per track, for every
-  engine.
-- CALIGULA's slow swells and long releases now play as designed.
-- Under heavy load the note just played is never the one dropped (ANIMA notes no longer go silent beside
-  CALIGULA); SHIFT shows the audio load.
+Added
+- Generative paths AMBIENT and EXPERIMENTAL on the two leftmost black keys, per track.
+
+Fixed
+- CALIGULA slow attacks and long releases.
+- Overload handling no longer drops the most recently played note.
 
 ## 0.15
 
-- Latching: hold keys, then press SHIFT. On the SCALE page SELECT chooses the root, ALGORITHM the scale.
+Changed
+- Latching: hold keys, then press SHIFT. SCALE page: SELECT sets the root, ALGORITHM the scale.
 
 ## 0.14
 
-- **SHIFT** (the rightmost black key) and **latched keys**.
+Added
+- SHIFT key and latched notes.
 
 ## 0.13
 
-- CALIGULA played from the keys like the other engines, a simulated hand on its plates.
+Changed
+- CALIGULA played from the keyboard.
 
 ## 0.12
 
-- **CALIGULA**, a third engine.
+Added
+- CALIGULA engine.
 
 ## 0.1 – 0.11
 
-- FM and ANIMA engines; six tracks with two voices each; a free looper per track, then up to ten overdubs;
-  track level, pan and reverb send; the master reverb; 64 session slots; scales on the white keys; the DJ
-  filter, the granulator and the crush per track.
+- FM and ANIMA engines; six tracks with two voices each; one looper per track with up to ten overdubs; track
+  level, pan and reverb send; master reverb; 64 session slots; scales on the white keys; per-track filter,
+  granulator and crush.
