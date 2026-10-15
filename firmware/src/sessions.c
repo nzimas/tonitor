@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 11u           /* 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 12u           /* 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -343,7 +343,8 @@ static void ses_emit(void)
         y.send = ui.send[l];
         y.flt = ui.flt[l];
         y.gr = ui.gr[l];
-        y.loop_state = (uint8_t)(lp->play ? 1 : 0);    /* the loops kept (one still recording is not) */
+        y.loop_state = (uint8_t)((lp->play ? 1 : 0) | lp->dmode << 1 | lp->rate << 3);   /* the loops kept (one still
+                                                         * recording is not); format 12: their direction and speed */
         y.loop_len = nt | (uint32_t)(uint8_t)ui.cr[l] << 8 | (uint32_t)ui.path[l] << 16;   /* (the crush, the path in
                                                                                              * the spare bits) */
         {   /* (and, should the sound kept in full have to be drawn again: its generation and path) */
@@ -747,6 +748,7 @@ static void ses_fresh(uint32_t num)
 static struct {
     uint8_t full, from, engine, path, play;
     int8_t oct, send, flt, gr, cr, lxt;
+    uint8_t dmode, rate;
     uint32_t gseed;
     int8_t mac[NENG][NMAC];
     fm_patch_t fm;
@@ -773,6 +775,8 @@ static void clip_copy(uint32_t l)
     clip.gr = ui.gr[l];
     clip.cr = ui.cr[l];
     clip.lxt = ui.lxt[l];
+    clip.dmode = loop[l].dmode;
+    clip.rate = loop[l].rate;
     clip.gseed = gran[l].seed;
     memcpy(clip.mac, ui.mac[l], sizeof clip.mac);
     clip.fm = fm_buf[l][fm_pub[l]];
@@ -834,6 +838,8 @@ static void clip_paste(uint32_t l)
             lp->trk[k].pos = lp->trk[k].ix = lp->trk[k].wrap = 0;
         lp->nev = clip.nev;
         lp->mute = clip.mute;
+        lp->dmode = clip.dmode;
+        lp->rate = clip.rate;
         lp->nheld = 0;
         RING_PUBLISH();
         lp->ntrk = clip.ntrk;
@@ -1041,7 +1047,9 @@ static int ses_load(uint32_t i)
                 ui.path[l] = (uint8_t)((y.loop_len >> 16 & 0xFFu) < PATH_N ? y.loop_len >> 16 & 0xFFu : PATH_OPEN);
                 y.loop_len &= 0xFFu;
                 nt = y.loop_len > LOOP_TRK ? LOOP_TRK : y.loop_len;
-                play = y.loop_state;
+                play = h.format >= 12u ? y.loop_state & 1u : y.loop_state;
+                lp->dmode = (uint8_t)(h.format >= 12u && (y.loop_state >> 1 & 3u) <= LD_PEND ? y.loop_state >> 1 & 3u : LD_FWD);
+                lp->rate = (uint8_t)(h.format >= 12u && (y.loop_state >> 3 & 3u) <= LS_DOUBLE ? y.loop_state >> 3 & 3u : LS_NORMAL);
                 for (k = 0; k < y.loop_len; k++) {
                     uint32_t tl[2];
                     ses_in(tl, sizeof tl);

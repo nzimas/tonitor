@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.31
+
+Added
+- Loop direction and speed per track, on the 4th–7th black keys (lit while on): REVERSE, PENDULUM (forwards
+  and backwards alternately), HALF SPEED, DOUBLE SPEED. REVERSE/PENDULUM and HALF/DOUBLE are exclusive pairs;
+  direction and speed combine. Applies to all overdubs of the track, each within its own length. A direction
+  change continues from the current position (sounding notes are not cut or retriggered). The loop clock runs
+  at the selected speed, so overdubs recorded at half or double speed keep their played timing; overdubs
+  recorded in reverse are stored mirrored and play back as played. Stored in sessions (format 12), copied with
+  the track, reset when the track's loops are cleared.
+
 ## 0.30
 
 Added

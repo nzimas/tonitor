@@ -96,6 +96,8 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). |
+| the 4th and 5th black keys | the chosen track's loops **REVERSE** (played backwards) or **PENDULUM** (forwards and backwards in turn); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
+| the 6th and 7th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
 | the other black keys | play no notes (kept for other functions to come). |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
@@ -155,6 +157,25 @@ track is chosen, and on another track the same keys play as usual, so a drone ca
 while you play another. Pressing a latched key without SHIFT does nothing (it sounds already); **SHIFT and
 the lit key** lets go of it, and its note ends as a lifted key's would. Loading a session lets go of every
 latch. Latched notes hold voices of the shared pool: with all twelve busy, a new note can take one, even a latched one's.
+
+### Direction and speed
+
+The 4th to 7th black keys set how the chosen track's loops play, all its overdubs together, each within its own
+length:
+
+| Key | Setting |
+| --- | --- |
+| 4th black key | **REVERSE**: the loops play backwards — each note starts where it ended and ends where it started |
+| 5th black key | **PENDULUM**: forwards to the end of each loop, backwards to its start, and so on |
+| 6th black key | **HALF SPEED**: the loops take twice as long (the pitch does not change) |
+| 7th black key | **DOUBLE SPEED**: the loops take half as long |
+
+REVERSE and PENDULUM exclude each other, as do HALF and DOUBLE; pressing the lit key again returns to forwards
+or to normal speed. Direction and speed combine (backwards at half speed, pendulum at double, and so on).
+Changing the direction while a loop plays continues from where it is: a note sounding at that moment carries on
+and ends where its start was. An overdub recorded at half or double speed, or while the loops play backwards, is
+stored so that it plays back as it was played. Sessions keep the settings; copying a track copies them;
+emptying a track's loops (REC held) returns them to forwards and normal speed.
 
 ### Copying a track
 

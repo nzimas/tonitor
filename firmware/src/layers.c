@@ -110,11 +110,18 @@ enum { LR_IDLE, LR_ARMED, LR_REC };
 #define LE_ON(e) ((e) >> 31)
 #define LE(t, note, on) (((t) & 0xFFFFFFu) | ((uint32_t)((note) & 0x7Fu) << 24) | ((uint32_t)((on) != 0) << 31))
 typedef struct {
-    uint32_t len, pos;           /* blocks; pos: where it is */
-    uint16_t first, n, ix;       /* its events in the looper's ev[]; the next to play */
+    uint32_t len;                /* blocks of loop time */
+    int32_t pos;                 /* where it is: the block of loop time it plays next */
+    uint16_t first, n;           /* its events in the looper's ev[] */
+    int16_t ix;                  /* the next event to play: forwards the first after those played, backwards the last
+                                  * before them (-1: none) */
     int8_t xb;                   /* the loops' transposition when it was recorded (it plays at lx_steps - xb) */
     uint8_t wrap;                /* it has just gone round (its notes tied over the end are still sounding) */
+    int8_t dir;                  /* 1 forwards, -1 backwards (the looper's direction; PENDULUM turns it at the ends) */
+    uint32_t snd[4];             /* the notes it sounds now (as recorded, before the transposition) */
 } loop_trk_t;
+enum { LD_FWD, LD_REV, LD_PEND };   /* the direction a looper plays its loops in */
+enum { LS_NORMAL, LS_HALF, LS_DOUBLE };   /* .. and its speed */
 typedef struct {
     volatile uint8_t rec;        /* LR_*: the screen's and the LEDs' */
     volatile uint8_t play;       /* the loops go round */
@@ -122,7 +129,9 @@ typedef struct {
     volatile uint16_t mute;      /* the loops held out (PLAY held, a white key each): a bit each */
     uint8_t nheld;
     uint8_t held[16];            /* notes on in the recording, not yet off */
-    uint32_t start;              /* the block the recording began on */
+    uint32_t start;              /* the loop clock when the recording began */
+    uint32_t lclk;               /* the loop clock: half blocks of loop time, 1 a block at half speed, 2, 4 at double */
+    uint8_t dmode, rate;         /* LD_*, LS_* (the 4th .. 7th black keys) */
     uint32_t nev;                /* events used, every loop's */
     loop_trk_t trk[LOOP_TRK];
     uint32_t ev[LOOP_N];
@@ -163,24 +172,14 @@ static int trk_tied(const looper_t *p, const loop_trk_t *t, uint32_t e)
         }
     return 0;
 }
-/* the notes loop t holds now (its events played so far; a tied note over its end, just gone round, too) */
-static void trk_held(const looper_t *p, const loop_trk_t *t, uint32_t held[4])
+/* a loop from its start in its looper's direction (at its end, backwards) */
+static void trk_start(const looper_t *p, loop_trk_t *t)
 {
-    uint32_t i;
-    held[0] = held[1] = held[2] = held[3] = 0;
-    for (i = 0; i < t->ix; i++) {
-        uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
-        if (LE_ON(e))
-            held[nt >> 5] |= 1u << (nt & 31u);
-        else if (!trk_tied(p, t, e))              /* (a tied note sounds on over its end) */
-            held[nt >> 5] &= ~(1u << (nt & 31u));
-    }
-    if (t->wrap)
-        for (i = 0; i < t->n && LE_T(p->ev[t->first + i]) == 0u; i++) {
-            uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
-            if (LE_ON(e) && trk_tied(p, t, e))
-                held[nt >> 5] |= 1u << (nt & 31u);
-        }
+    t->dir = (int8_t)(p->dmode == LD_REV ? -1 : 1);
+    t->pos = t->dir > 0 ? 0 : (int32_t)t->len - 1;
+    t->ix = (int16_t)(t->dir > 0 ? 0 : (int32_t)t->n - 1);
+    t->wrap = 0;
+    memset(t->snd, 0, sizeof t->snd);
 }
 /* the loops' transposition (SHIFT + OCT): every loop moved by steps of the scale, its notes walked up or down the
  * scale's pitch classes (a mask from C); a note off the scale keeps its distance from the scale note below it.
@@ -297,7 +296,7 @@ static void lim_block(int32_t *env, int32_t *g, int32_t *x, uint32_t n)
 }
 
 /* --------------------------------------------------------- events --- */
-enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK, EV_LOOP_XP };
+enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK, EV_LOOP_XP, EV_LOOP_MODE };
 typedef struct { uint8_t type, layer, note, val; } ev_t;
 #define EVQ 64u
 static ev_t evq[EVQ];
@@ -444,6 +443,8 @@ static void note_off(uint32_t l, uint32_t note, uint32_t src)
 static void loop_notes_off(uint32_t l)
 {
     uint32_t k;
+    for (k = 0; k < LOOP_TRK; k++)
+        memset(loop[l].trk[k].snd, 0, sizeof loop[l].trk[k].snd);
     cal_release(&cal_rt[l], 2u);
     if (lay[l].engine == ENG_RUS)
         rus_release(&rus_rt[l]);                  /* (its notes are not told apart: all of them) */
@@ -542,7 +543,7 @@ static void change_apply(uint32_t l)
 /* ------------------------------------------------------ the loopers --- */
 static void loop_put(looper_t *p, uint32_t on, uint32_t note)
 {
-    uint32_t t = blk_clock - p->start, k;
+    uint32_t t = (p->lclk - p->start) >> 1, k;   /* (in loop time: played back at this speed, as played) */
     if (on) {
         if (p->nev >= LOOP_N - 16u || p->nheld >= 16u)
             return;                               /* full: no more notes (room is kept for their ends) */
@@ -559,10 +560,8 @@ static void loop_put(looper_t *p, uint32_t on, uint32_t note)
 static void loop_rewind(looper_t *p)               /* every loop from its start */
 {
     uint32_t k;
-    for (k = 0; k < p->ntrk; k++) {
-        p->trk[k].pos = p->trk[k].ix = 0;
-        p->trk[k].wrap = 0;
-    }
+    for (k = 0; k < p->ntrk; k++)
+        trk_start(p, &p->trk[k]);
 }
 static void loop_cmd(uint32_t l, uint32_t type)
 {
@@ -571,7 +570,7 @@ static void loop_cmd(uint32_t l, uint32_t type)
     case EV_LOOP_REC:
         if (p->rec == LR_REC) {                   /* the end: a loop as long as this */
             loop_trk_t *t = &p->trk[p->ntrk];
-            uint32_t len = blk_clock - p->start, i;
+            uint32_t len = (p->lclk - p->start) >> 1, i;
             if (len < 2u)
                 len = 2u;
             for (i = t->first; i < p->nev; i++)
@@ -581,8 +580,18 @@ static void loop_cmd(uint32_t l, uint32_t type)
                 p->ev[p->nev++] = LE(len - 1u, p->held[--p->nheld], 0);
             t->len = len;
             t->n = (uint16_t)(p->nev - t->first);
-            t->pos = t->ix = 0;
-            t->wrap = 0;
+            if (p->dmode == LD_REV) {             /* recorded while the loops play backwards: kept turned round, so
+                                                   * that played backwards it is as it was played */
+                uint32_t a = t->first, b = p->nev - 1u;
+                for (i = t->first; i < p->nev; i++)
+                    p->ev[i] = LE(len - 1u - LE_T(p->ev[i]), LE_NOTE(p->ev[i]), !LE_ON(p->ev[i]));
+                for (; a < b; a++, b--) {
+                    uint32_t x = p->ev[a];
+                    p->ev[a] = p->ev[b];
+                    p->ev[b] = x;
+                }
+            }
+            trk_start(p, t);
             if (!p->play)
                 loop_rewind(p);                   /* stopped: all of them again, with the new one */
             p->mute &= (uint16_t)~(1u << p->ntrk);   /* (a new one plays) */
@@ -608,6 +617,8 @@ static void loop_cmd(uint32_t l, uint32_t type)
         break;
     case EV_LOOP_CLEAR:
         loop_notes_off(l);
+        p->dmode = LD_FWD;                        /* (emptied: forwards, at its speed, again) */
+        p->rate = LS_NORMAL;
         p->play = 0;
         p->mute = 0;
         p->ntrk = 0;
@@ -633,7 +644,7 @@ static void loop_hear(uint32_t l, uint32_t on, uint32_t note)
     looper_t *p = &loop[l];
     if (p->rec == LR_ARMED && on) {
         p->rec = LR_REC;
-        p->start = blk_clock;
+        p->start = p->lclk;
         p->trk[p->ntrk].first = (uint16_t)p->nev;
         p->trk[p->ntrk].xb = (int8_t)(lx_steps + lx_tr[l]);   /* (it plays back as played, whatever the others are
                                                               * moved by) */
@@ -652,54 +663,141 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
     if (k >= p->ntrk)
         return;
     if (on && (p->mute & bit)) {
-        if (p->play) {
-            t->pos = t->ix = 0;
-            t->wrap = 0;
-        }
+        if (p->play)
+            trk_start(p, t);
         p->mute &= (uint16_t)~bit;
     } else if (!on && !(p->mute & bit)) {
         if (p->play) {
-            uint32_t held[4], n;
-            trk_held(p, t, held);
+            uint32_t n;
             for (n = 0; n < 128u; n++)
-                if ((held[n >> 5] >> (n & 31u)) & 1u)
+                if ((t->snd[n >> 5] >> (n & 31u)) & 1u)
                     note_off(l, lx_map(n, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
+            memset(t->snd, 0, sizeof t->snd);
         }
         p->mute |= (uint16_t)bit;
     }
 }
-/* one block of every loop that plays */
+/* an event of loop t played: as recorded, or (backwards) turned round -- its start an end, its end a start. A note
+ * tied over the loop's end is never let go there, nor struck again just after (forwards: its start is the loop's
+ * first block, its end the last; backwards the other way round) */
+static void trk_play(uint32_t l, loop_trk_t *t, const looper_t *p, uint32_t e, int as_on)
+{
+    uint32_t raw = LE_NOTE(e), nt = lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask);
+    int tied = trk_tied(p, t, e);
+    if (as_on) {
+        if (t->wrap && tied)
+            return;                               /* (still sounding from the round before) */
+        note_on(l, nt, SRC_LOOP);
+        t->snd[raw >> 5] |= 1u << (raw & 31u);
+        TELE(20);
+#if TELEMETRY
+        tele_non++;
+#endif
+    } else if (!tied) {
+        note_off(l, nt, SRC_LOOP);
+        t->snd[raw >> 5] &= ~(1u << (raw & 31u));
+    }
+}
+/* one block of loop time of loop t, in its direction; at an end, round again -- or, PENDULUM, back the other way */
+static void trk_step(uint32_t l, looper_t *p, loop_trk_t *t)
+{
+    const uint32_t *ev = p->ev + t->first;
+    if (t->dir > 0) {
+        while (t->ix < (int32_t)t->n && (int32_t)LE_T(ev[t->ix]) <= t->pos) {
+            uint32_t e = ev[t->ix++];
+            trk_play(l, t, p, e, (int)LE_ON(e));
+        }
+        t->wrap = 0;
+        if (++t->pos >= (int32_t)t->len) {
+            if (p->dmode == LD_PEND) {
+                t->dir = -1;
+                t->pos = (int32_t)t->len - 1;
+                t->ix = (int16_t)(t->n - 1u);
+            } else {
+                t->pos = 0;
+                t->ix = 0;
+            }
+            t->wrap = 1;
+            TELE(21);
+        }
+    } else {
+        while (t->ix >= 0 && (int32_t)LE_T(ev[t->ix]) >= t->pos) {
+            uint32_t e = ev[t->ix--];
+            trk_play(l, t, p, e, !LE_ON(e));
+        }
+        t->wrap = 0;
+        if (--t->pos < 0) {
+            if (p->dmode == LD_PEND) {
+                t->dir = 1;
+                t->pos = 0;
+                t->ix = 0;
+            } else {
+                t->pos = (int32_t)t->len - 1;
+                t->ix = (int16_t)(t->n - 1u);
+            }
+            t->wrap = 1;
+            TELE(21);
+        }
+    }
+}
+/* loop t turned round where it is: what is next forwards is next backwards, and the other way (the events of the
+ * block it is at played again, turned: what had just started ends, what had just ended starts) */
+static void trk_turn(loop_trk_t *t, int dir)
+{
+    if (dir == t->dir)
+        return;
+    t->dir = (int8_t)dir;
+    if (dir < 0) {
+        t->pos--;
+        t->ix--;
+        if (t->pos < 0) {                         /* (at its very start: from its end) */
+            t->pos = (int32_t)t->len - 1;
+            t->ix = (int16_t)(t->n - 1u);
+            t->wrap = 1;
+        }
+    } else {
+        t->pos++;
+        t->ix++;
+        if (t->pos >= (int32_t)t->len) {
+            t->pos = 0;
+            t->ix = 0;
+            t->wrap = 1;
+        }
+    }
+}
+/* the direction or the speed of layer l's loops (the black keys): forwards, backwards, PENDULUM; half, double */
+static void loop_mode(uint32_t l, uint32_t what, uint32_t val)
+{
+    looper_t *p = &loop[l];
+    uint32_t k;
+    if (what) {
+        p->rate = (uint8_t)(val <= LS_DOUBLE ? val : LS_NORMAL);
+        return;
+    }
+    p->dmode = (uint8_t)(val <= LD_PEND ? val : LD_FWD);
+    if (p->dmode != LD_PEND)
+        for (k = 0; k < p->ntrk; k++)
+            trk_turn(&p->trk[k], p->dmode == LD_REV ? -1 : 1);
+}
+/* one block of every loop that plays: as many blocks of loop time as the speed has passed (at half speed every
+ * other block, at double two) */
 static void loops_run(void)
 {
     uint32_t l, k;
     for (l = 0; l < NLAYER; l++) {
         looper_t *p = &loop[l];
+        uint32_t was = p->lclk, steps;
+        p->lclk += p->rate == LS_HALF ? 1u : p->rate == LS_DOUBLE ? 4u : 2u;
+        steps = (p->lclk >> 1) - (was >> 1);
         if (!p->play)
             continue;
         for (k = 0; k < p->ntrk; k++) {
             loop_trk_t *t = &p->trk[k];
+            uint32_t s;
             if ((p->mute >> k) & 1u)
                 continue;                         /* (held out: it waits, silent, where it is) */
-            while (t->ix < t->n && LE_T(p->ev[t->first + t->ix]) <= t->pos) {
-                uint32_t e = p->ev[t->first + t->ix++], nt = lx_map(LE_NOTE(e), lx_steps + lx_tr[l] - t->xb, lx_mask);
-                if (LE_ON(e)) {
-                    if (!(t->wrap && trk_tied(p, t, e))) {   /* (tied: still sounding from the round before) */
-                        note_on(l, nt, SRC_LOOP);
-                        TELE(20);
-#if TELEMETRY
-                        tele_non++;
-#endif
-                    }
-                } else if (!trk_tied(p, t, e))
-                    note_off(l, nt, SRC_LOOP);
-            }
-            t->wrap = 0;
-            if (++t->pos >= t->len) {
-                t->pos = 0;
-                t->ix = 0;
-                t->wrap = 1;
-                TELE(21);
-            }
+            for (s = 0; s < steps; s++)
+                trk_step(l, p, t);
         }
     }
 }
@@ -724,12 +822,11 @@ static void loop_retune(void)
                 continue;
             for (k = 0; k < p->ntrk; k++) {
                 loop_trk_t *t = &p->trk[k];
-                uint32_t held[4], n;
+                uint32_t n;
                 if ((p->mute >> k) & 1u)
                     continue;
-                trk_held(p, t, held);
                 for (n = 0; n < 128u; n++)
-                    if ((held[n >> 5] >> (n & 31u)) & 1u) {
+                    if ((t->snd[n >> 5] >> (n & 31u)) & 1u) {
                         uint32_t was = lx_map(n, lx_steps + lx_tr[l] - t->xb, lx_mask), now = lx_map(n, s + tr[l] - t->xb, m);
                         if (was == now)
                             continue;
@@ -785,6 +882,9 @@ static void events_take(void)        /* audio ISR, at a block start */
             break;
         case EV_LOOP_SET:
             loop_set(e.layer, e.val);
+            break;
+        case EV_LOOP_MODE:                        /* (note: 0 the direction, 1 the speed; val: which) */
+            loop_mode(e.layer, e.note, e.val);
             break;
         case EV_LOOP_XP:                          /* SHIFT and OCT: the loops moved along the scale */
             loop_retune();

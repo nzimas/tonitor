@@ -692,6 +692,8 @@ static int cmd_flows(void)
         for (k = 0; k < NKEY; k++) {
             if (white_ix(k) < 0) {
                 uint32_t before = ev_w;
+                if (k == KEY_REV || k == KEY_PEND || k == KEY_HALF || k == KEY_DOUBLE)
+                    continue;                    /* (the loops' direction and speed: loopmodes) */
                 press_phys(k, 1);
                 press_phys(k, 0);
                 if (ev_w != before)
@@ -3517,6 +3519,213 @@ static int cmd_tracktransp(void)
     return fail ? 1 : 0;
 }
 
+/* the loops' direction and speed (the 4th .. 7th black keys): backwards, PENDULUM; half, double; combined; turned
+ * round mid-note without a note hanging or struck twice; overdubs made backwards or at half speed play as played;
+ * sessions keep them; emptied, they reset */
+static uint32_t lm_sounds(uint32_t l, uint32_t note)
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NVOICE; k++)
+        n += vox[k].gate && vox_owner(&vox[k]) == l && vox[k].src == SRC_LOOP && vox[k].note == note;
+    return n;
+}
+static void lm_key(uint32_t k)
+{
+    press_phys(k, 1);
+    press_phys(k, 0);
+    run_blocks(1, 0);
+}
+static uint32_t lm_period(uint32_t l)                  /* blocks between two goings round of loop 1 */
+{
+    uint32_t b = 0, w = 0, first = 0, was = loop[l].trk[0].wrap;
+    while (b++ < 40000u) {
+        run_blocks(1, 0);
+        if (loop[l].trk[0].wrap && !was) {            /* (the turn itself: at half speed the flag stays a block) */
+            if (w++ == 1u)
+                return b - first;
+            first = b;
+        }
+        was = loop[l].trk[0].wrap;
+    }
+    return 0;
+}
+static int cmd_loopmodes(void)
+{
+    uint32_t fail = 0, c3 = scale_note(0, 0), e3 = scale_note(2, 0), g3 = scale_note(4, 0), b, len, per, bad, hang;
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    press_btn(B_REC);                                 /* C3 0 .. 100, E3 150 .. 250, closed at 300 */
+    press_key(0, 1);
+    run_blocks(100, 0);
+    press_key(0, 0);
+    run_blocks(50, 0);
+    press_key(2, 1);
+    run_blocks(100, 0);
+    press_key(2, 0);
+    run_blocks(50, 0);
+    press_btn(B_REC);
+    run_blocks(1, 0);
+    len = loop[0].trk[0].len;
+    loop_to(0, 50);
+    if (!lm_sounds(0, c3) || lm_sounds(0, e3))
+        printf("FAIL loopmodes: forwards, C3 does not sound at 50\n"), fail++;
+    loop_to(0, 200);                                  /* E3 sounding: backwards from here */
+    lm_key(KEY_REV);
+    ui_leds();
+    if (loop[0].dmode != LD_REV || !host_led[14u + KEY_REV] || strcmp(ui.msg, "REVERSE"))
+        printf("FAIL loopmodes: the 4th black key does not turn REVERSE on, lit\n"), fail++;
+    if (lm_sounds(0, e3) != 1u)
+        printf("FAIL loopmodes: turned round mid-note, E3 does not sound on (once)\n"), fail++;
+    run_blocks(20, 0);
+    if (loop[0].trk[0].dir != -1 || loop[0].trk[0].pos > 185)
+        printf("FAIL loopmodes: it does not go backwards (dir %d, pos %d)\n", loop[0].trk[0].dir, loop[0].trk[0].pos), fail++;
+    while (loop[0].trk[0].pos > 120)
+        run_blocks(1, 0);
+    if (lm_sounds(0, e3) || lm_sounds(0, c3))
+        printf("FAIL loopmodes: backwards at 120, a note sounds (E3 %u, C3 %u)\n", lm_sounds(0, e3), lm_sounds(0, c3)), fail++;
+    while (loop[0].trk[0].pos > 60)
+        run_blocks(1, 0);
+    if (lm_sounds(0, c3) != 1u)
+        printf("FAIL loopmodes: backwards at 60, C3 does not sound\n"), fail++;
+    per = lm_period(0);
+    if (per < len - 2u || per > len + 2u)
+        printf("FAIL loopmodes: backwards, its period is %u (the loop is %u)\n", per, len), fail++;
+    lm_key(KEY_HALF);                                 /* backwards at half speed */
+    per = lm_period(0);
+    if (per < 2u * len - 4u || per > 2u * len + 4u || loop[0].trk[0].dir != -1)
+        printf("FAIL loopmodes: half speed, its period is %u (twice %u)\n", per, len), fail++;
+    lm_key(KEY_DOUBLE);                               /* double: half is let go */
+    ui_leds();
+    if (loop[0].rate != LS_DOUBLE || host_led[14u + KEY_HALF] || !host_led[14u + KEY_DOUBLE])
+        printf("FAIL loopmodes: DOUBLE does not replace HALF\n"), fail++;
+    per = lm_period(0);
+    if (per < len / 2u - 2u || per > len / 2u + 2u)
+        printf("FAIL loopmodes: double speed, its period is %u (half %u)\n", per, len), fail++;
+    lm_key(KEY_DOUBLE);                               /* normal again; PENDULUM: both ways in turn */
+    lm_key(KEY_PEND);
+    {
+        uint32_t fw = 0, bw = 0;
+        for (b = 0; b < 4u * len; b++) {
+            run_blocks(1, 0);
+            if (loop[0].trk[0].dir > 0)
+                fw++;
+            else
+                bw++;
+        }
+        if (fw < len || bw < len || loop[0].dmode != LD_PEND)
+            printf("FAIL loopmodes: PENDULUM does not go both ways (%u / %u)\n", fw, bw), fail++;
+    }
+    lm_key(KEY_PEND);
+    if (loop[0].dmode != LD_FWD)
+        printf("FAIL loopmodes: PENDULUM again is not forwards\n"), fail++;
+    /* an overdub at half speed: G3 held 200 blocks is 100 of loop time, and sounds 200 blocks at half speed */
+    lm_key(KEY_HALF);
+    press_btn(B_REC);
+    loop_to(0, 0);
+    press_key(4, 1);
+    run_blocks(200, 0);
+    press_key(4, 0);
+    run_blocks(10, 0);
+    press_btn(B_REC);
+    run_blocks(1, 0);
+    {
+        uint32_t i, on = 0, off = 0, dur = 0, b2;
+        const loop_trk_t *t = &loop[0].trk[1];
+        for (i = 0; i < t->n; i++) {
+            uint32_t e = loop[0].ev[t->first + i];
+            if (LE_NOTE(e) == g3)
+                *(LE_ON(e) ? &on : &off) = LE_T(e);
+        }
+        if (off - on < 95u || off - on > 105u)
+            printf("FAIL loopmodes: an overdub at half speed is not kept in loop time (%u)\n", off - on), fail++;
+        while (!lm_sounds(0, g3))
+            run_blocks(1, 0);
+        for (b2 = 0; b2 < 400u && lm_sounds(0, g3); b2++, dur++)
+            run_blocks(1, 0);
+        if (dur < 190u || dur > 210u)
+            printf("FAIL loopmodes: at half speed it does not sound as long as it was played (%u)\n", dur), fail++;
+    }
+    lm_key(KEY_HALF);
+    /* an overdub made backwards: played C3 then E3, heard backwards C3 then E3 */
+    lm_key(KEY_REV);
+    press_btn(B_REC);
+    run_blocks(5, 0);
+    press_key(7, 1);
+    run_blocks(40, 0);
+    press_key(7, 0);
+    run_blocks(30, 0);
+    press_key(9, 1);
+    run_blocks(40, 0);
+    press_key(9, 0);
+    run_blocks(30, 0);
+    press_btn(B_REC);
+    run_blocks(1, 0);
+    {
+        uint32_t n1 = scale_note(7, 0), n2 = scale_note(9, 0), seen = 0, b2;
+        for (b2 = 0; b2 < 3u * loop[0].trk[2].len && seen < 2u; b2++) {
+            run_blocks(1, 0);
+            if (!seen && lm_sounds(0, n2))
+                break;                                /* (the second before the first: turned round) */
+            if (!seen && lm_sounds(0, n1))
+                seen = 1;
+            else if (seen == 1u && lm_sounds(0, n2))
+                seen = 2;
+        }
+        if (seen != 2u)
+            printf("FAIL loopmodes: an overdub made backwards does not play as played (%u)\n", seen), fail++;
+    }
+    /* a session keeps them; emptied, they reset */
+    lm_key(KEY_DOUBLE);
+    if (ses_save(1) != SES_OK)
+        printf("FAIL loopmodes: not saved\n"), fail++;
+    loop[0].dmode = LD_FWD;
+    loop[0].rate = LS_NORMAL;
+    ses_load_slot(1);
+    if (loop[0].dmode != LD_REV || loop[0].rate != LS_DOUBLE || !loop[0].play)
+        printf("FAIL loopmodes: a session does not keep them (%u %u)\n", loop[0].dmode, loop[0].rate), fail++;
+    /* turned about at random: never a note hanging, never one struck twice */
+    {
+        static const uint32_t KS[4] = {KEY_REV, KEY_PEND, KEY_HALF, KEY_DOUBLE};
+        uint32_t r = 12345u;
+        bad = 0;
+        for (b = 0; b < 6000u; b++) {
+            if (b % 37u == 0u) {
+                r = r * 1103515245u + 12345u;
+                lm_key(KS[(r >> 16) & 3u]);
+            }
+            run_blocks(1, 0);
+            if (lm_sounds(0, c3) > 1u || lm_sounds(0, e3) > 1u || lm_sounds(0, g3) > 1u)
+                bad++;
+        }
+        press_btn(B_PLAY);
+        run_blocks(5, 0);
+        hang = 0;
+        for (b = 0; b < NVOICE; b++)
+            hang += vox[b].gate && vox[b].src == SRC_LOOP;
+        if (bad || hang)
+            printf("FAIL loopmodes: turned about at random, %u blocks with a note twice, %u hanging after stop\n", bad, hang), fail++;
+    }
+    {   /* REC held: emptied, forwards at normal speed again */
+        uint32_t t;
+        host_press |= 1u << PANEL_BTN[B_REC];
+        fm1_in.buttons |= 1u << PANEL_BTN[B_REC];
+        ui_input();
+        for (t = 0; t < 1100u; t += 50u) {
+            fm1_ms += 50u;
+            ui_input();
+        }
+        fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+        ui_input();
+        run_blocks(3, 0);
+        if (loop[0].ntrk || loop[0].dmode != LD_FWD || loop[0].rate != LS_NORMAL)
+            printf("FAIL loopmodes: emptied, the direction or speed stays\n"), fail++;
+    }
+    printf("loopmodes: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -3904,6 +4113,8 @@ int main(int argc, char **argv)
         return cmd_ties();
     if (argc >= 2 && !strcmp(argv[1], "clicks"))
         return cmd_clicks();
+    if (argc >= 2 && !strcmp(argv[1], "loopmodes"))
+        return cmd_loopmodes();
     if (argc >= 2 && !strcmp(argv[1], "tracktransp"))
         return cmd_tracktransp();
     if (argc >= 2 && !strcmp(argv[1], "transpose"))
