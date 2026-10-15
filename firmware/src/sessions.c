@@ -739,6 +739,106 @@ static void ses_fresh(uint32_t num)
     ses_choose(num);
     ui.force = 1;
 }
+/* the clipboard: a track's tone (its engine, its four sounds and their macros, filter, granulator, crush, send,
+ * octave, path) and its loops, copied by holding its button; pasted onto another track by holding that one's.
+ * Level and pan stay with the track pasted onto (its place in the mix) */
+static struct {
+    uint8_t full, from, engine, path, play;
+    int8_t oct, send, flt, gr, cr;
+    uint32_t gseed;
+    int8_t mac[NENG][NMAC];
+    fm_patch_t fm;
+    an_design_t an;
+    cal_design_t cal;
+    rus_design_t rus;
+    uint8_t ntrk;
+    uint16_t mute;
+    uint32_t nev;
+    loop_trk_t trk[LOOP_TRK];
+    uint32_t ev[LOOP_N];
+} clip POOL;
+static int clip_from(void) { return clip.full ? (int)clip.from : -1; }
+static void clip_copy(uint32_t l)
+{
+    const looper_t *p = &loop[l];
+    uint32_t nt = p->ntrk, n = nt ? p->trk[nt - 1u].first + p->trk[nt - 1u].n : 0;   /* (the loops closed) */
+    clip.from = (uint8_t)l;
+    clip.engine = ui.engine[l];
+    clip.path = ui.path[l];
+    clip.oct = ui.oct[l];
+    clip.send = ui.send[l];
+    clip.flt = ui.flt[l];
+    clip.gr = ui.gr[l];
+    clip.cr = ui.cr[l];
+    clip.gseed = gran[l].seed;
+    memcpy(clip.mac, ui.mac[l], sizeof clip.mac);
+    clip.fm = fm_buf[l][fm_pub[l]];
+    clip.an = an_buf[l][an_pub[l]];
+    clip.cal = cal_buf[l][cal_pub[l]];
+    clip.rus = rus_buf[l][rus_pub[l]];
+    clip.ntrk = (uint8_t)nt;
+    clip.mute = p->mute;
+    clip.play = p->play;
+    clip.nev = n;
+    memcpy(clip.trk, p->trk, sizeof clip.trk);
+    memcpy(clip.ev, p->ev, n * 4u);
+    clip.full = 1;
+}
+static void clip_paste(uint32_t l)
+{
+    looper_t *lp = &loop[l];
+    uint32_t fk, ak, ck, rk, k;
+    ui.latch[l] = 0;                                    /* silence there, its loops emptied, its latches let go */
+    ev_post(EV_STOP, l, 0, 0);
+    ev_post(EV_LOOP_CLEAR, l, 0, 0);
+    ses_events_drain();
+    ui.engine[l] = clip.engine;
+    ui.path[l] = clip.path;
+    ui.oct[l] = clip.oct;
+    ui.send[l] = clip.send;
+    ui.flt[l] = clip.flt;
+    ui.gr[l] = clip.gr;
+    ui.cr[l] = clip.cr;
+    memcpy(ui.mac[l], clip.mac, sizeof clip.mac);
+    gran_profile(l, clip.gseed);
+    level_pan_apply(l);
+    sound_slot_free(&fm_pub[l], &fm_use[l]);            /* the sounds, into the buffers the ISR is not using */
+    sound_slot_free(&an_pub[l], &an_use[l]);
+    sound_slot_free(&cal_pub[l], &cal_use[l]);
+    sound_slot_free(&rus_pub[l], &rus_use[l]);
+    fk = fm_use[l] ^ 1u;
+    ak = an_use[l] ^ 1u;
+    ck = cal_use[l] ^ 1u;
+    rk = rus_use[l] ^ 1u;
+    fm_buf[l][fk] = clip.fm;
+    an_buf[l][ak] = clip.an;
+    cal_buf[l][ck] = clip.cal;
+    rus_buf[l][rk] = clip.rus;
+    RING_PUBLISH();
+    cal_pub[l] = (uint8_t)ck;
+    rus_pub[l] = (uint8_t)rk;
+    RING_PUBLISH();
+    fm_pub[l] = (uint8_t)fk;
+    an_pub[l] = (uint8_t)ak;
+    ev_post(EV_ENGINE, l, 0, ui.engine[l]);
+    mac_apply(l);
+    if (clip.ntrk) {                                    /* the loops: into the emptied looper, then set going */
+        memcpy(lp->trk, clip.trk, sizeof lp->trk);
+        memcpy(lp->ev, clip.ev, clip.nev * 4u);
+        for (k = 0; k < clip.ntrk; k++)
+            lp->trk[k].pos = lp->trk[k].ix = lp->trk[k].wrap = 0;
+        lp->nev = clip.nev;
+        lp->mute = clip.mute;
+        lp->nheld = 0;
+        RING_PUBLISH();
+        lp->ntrk = clip.ntrk;
+        RING_PUBLISH();
+        ev_post(EV_LOOP_SET, l, 0, clip.play);
+    }
+    ses_events_drain();
+    clip.full = 0;
+    ui.force = 1;
+}
 /* load the session in slot num */
 static int ses_load_slot(uint32_t num)
 {

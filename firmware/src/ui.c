@@ -104,6 +104,8 @@ static struct {
     int16_t shown_pre;           /* (what the page shows: slot, question and answer) */
     uint32_t save_t0;            /* SAVE pressed at: held 0.8 s is a save, shorter a press */
     uint8_t save_down, save_long;
+    uint8_t trk_down, trk_done;  /* a track's button held (its number + 1) since trk_t0: copy, or paste */
+    uint32_t trk_t0;
     int8_t shown_ses;            /* (the page as last drawn) */
     int16_t shown_ses_ix;
     /* the screen: what each band shows, as last drawn */
@@ -237,6 +239,9 @@ static int ses_has(uint32_t num);
 static int ses_current(void);
 static void ses_choose(uint32_t num);
 static void ses_fresh(uint32_t num);
+static void clip_copy(uint32_t l);
+static void clip_paste(uint32_t l);
+static int clip_from(void);                  /* the track on the clipboard, -1 if it is empty */
 static int ses_load_slot(uint32_t num);
 static void mac_apply(uint32_t l);
 static int pre_kind(uint32_t e, uint32_t slot);   /* the kind of sound in engine e's slot, -1 if none */
@@ -450,6 +455,9 @@ static void ui_input(void)
     (void)rel;
     for (l = 0; l < NLAYER; l++)
         if (btn_bit(press, LAYER_BTN[l])) {
+            ui.trk_down = (uint8_t)(l + 1u);
+            ui.trk_t0 = fm1_ms;
+            ui.trk_done = 0;
             ui.sel = (uint8_t)l;
             if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page) {   /* a layer chosen: back to it */
                 ui.rv_page = 0;
@@ -459,6 +467,26 @@ static void ui_input(void)
                 ui.force = 1;
             }
         }
+    if (ui.trk_down) {                           /* a track's button held: it is copied, or the copy pasted onto it */
+        l = ui.trk_down - 1u;
+        if (!btn_bit(fm1_in.buttons, LAYER_BTN[l]))
+            ui.trk_down = 0;
+        else if (!ui.trk_done && (uint32_t)(fm1_ms - ui.trk_t0) >= 800u) {
+            char n[12] = "TRACK ";
+            ui.trk_done = 1;
+            n[6] = (char)('1' + l);
+            n[7] = 0;
+            if (clip_from() >= 0 && clip_from() != (int)l) {
+                flash("PASTING", n, LAYER_COL[l]);
+                ui_draw();
+                clip_paste(l);
+                flash("PASTED", n, LAYER_COL[l]);
+            } else {
+                clip_copy(l);
+                flash("COPIED", n, LAYER_COL[l]);
+            }
+        }
+    }
     if (btn_bit(press, B_SEQ)) {
         ui.rv_page = (uint8_t)!ui.rv_page;
         ui.ses_page = 0;
@@ -766,7 +794,8 @@ static void ui_leds(void)
 {
     uint32_t l, k;
     for (l = 0; l < NLAYER; l++) {
-        fm1_led_key(PANEL_BTN[LAYER_BTN[l]], l == ui.sel);
+        fm1_led_key(PANEL_BTN[LAYER_BTN[l]], clip_from() == (int)l ? (fm1_ms / 250u) & 1u : l == ui.sel);   /* (on the
+                                                                                                         * clipboard: it blinks) */
         led_dim_key(PANEL_BTN[LAYER_BTN[l]], layer_sounding(l));   /* the others glow while they sound */
     }
     {
@@ -1108,7 +1137,7 @@ static int draw_flash(void)
     if (all_digits(ui.flash_l2))
         cv_text_c(4, &FONT_XL, ui.flash_l2, fg);
     else
-        cv_text_c(10, &FONT_L, ui.flash_l2, fg);
+        cv_text_fit(10, &FONT_L, ui.flash_l2, fg);   /* (squeezed a little rather than cut at the edge) */
     cv_blit(0, 100);
     cv_begin(240, 28, bg);
     cv_blit(0, 212);

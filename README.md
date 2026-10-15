@@ -28,17 +28,17 @@ music** — sound heard for itself, its texture, its grain and its movement — 
 dark ambient above all.
 
 **It is not a groovebox.** There is no tempo, no step sequencer, no pattern, no drum kit. Instead there
-are six layers of *sound objects*: each layer has its own engine, its own sound, voices drawn from a shared pool as it needs them, and its own free
+are six tracks of *sound objects*: each track has its own engine, its own sound, voices drawn from a shared pool as it needs them, and its own free
 loop recorder, and every sound is drawn by algorithms that aim for surprise rather than for a preset that
 sounds nice. You play textures, drones, gestures and their slow transformations, layer them, loop them
 freely out of time with each other, and shape them while they play.
 
 The screen is made for **low vision**: very few words, in very large type, with high contrast, and each
-layer in its own colour.
+track in its own colour.
 
 ### Highlights
 
-- **Four sound engines**, chosen per layer:
+- **Four sound engines**, chosen per track:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
@@ -48,15 +48,15 @@ layer in its own colour.
   - **RUSSOLO** — noise, logic and broken buffers: sample-and-hold and dusty noise, oscillators combined
     bit by bit, generated buffers read with their address bits bent, chance-driven tones; crushed and
     sample-held like a small DAC.
-- **Generative paths** — lean each layer's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
+- **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
-- **Six free loopers**, one per layer, with up to ten overdubs each, every loop with its own length.
+- **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
 - **Latching**: hold notes, press SHIFT, and they sustain as drones while you play on top.
-- Per layer: **DJ resonant filter**, **granulator** (dark ↔ scatter), **bit/rate crush**, level, pan and
+- Per track: **DJ resonant filter**, **granulator** (dark ↔ scatter), **bit/rate crush**, level, pan and
   a send to a lush **master reverb** (Dattorro plate).
 - **Scales** on the white keys (major, minors, dorian, pentatonic, whole tone, enigmatic, Japanese *in*),
   any root.
-- **64 session slots** in the FM-1's flash: every layer, sound, loop and setting.
+- **64 session slots** in the FM-1's flash: every track, sound, loop and setting.
 
 ## Installing
 
@@ -86,51 +86,51 @@ FM-1's flash only when you save a session — into a user data area that other f
 
 | Control | What it does |
 | --- | --- |
-| **FX SEL ENV LFO EDIT GLO** (top row) | choose layer **1 2 3 4 5 6**. The chosen layer's button is lit; the others glow while they sound. |
-| **PRESETS** knob | the chosen layer's engine: **FM**, **ANIMA**, **CALIGULA** or **RUSSOLO**, left to right. Each layer keeps a sound of each engine, so turning back finds the sound it had. |
-| **HOME** | a **new sound** for the chosen layer, on its engine (never the same family twice in a row). HOME lights for a moment. |
-| **OCT− / OCT+** | the chosen layer's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
-| **SHIFT + OCT− / OCT+** | **every loop** of every layer down or up **one step of the scale** (see [the loopers](#the-loopers)). |
-| the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the layers**: a note takes a free voice, so a layer has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any layer), else the oldest note held on its own layer, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a layer, outside the pool.) A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
+| **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1 2 3 4 5 6**. The chosen track's button is lit; the others glow while they sound. **Held** (0.8 s): **copy** the track, or **paste** the copy onto it — see [Copying a track](#copying-a-track). |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA** or **RUSSOLO**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
+| **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
+| **OCT− / OCT+** | the chosen track's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
+| **SHIFT + OCT− / OCT+** | **every loop** of every track down or up **one step of the scale** (see [the loopers](#the-loopers)). |
+| the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
 | the rightmost black key | **SHIFT** (lit while held; each press shows how busy the audio is, in % of the time it has, e.g. `LOAD 62%`. Tonitor measures what every voice costs as it plays, and before a new note, organism or loop would take more time than there is, it lets the oldest release tails go, quickly, so the sound never breaks up; a held note goes only if the audio is late after all). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
-| the two leftmost black keys | the chosen layer's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
-| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen layer's sound. See [Macros](#macros). |
+| the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
+| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). |
 | the other black keys | play no notes (kept for other functions to come). |
-| **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a layer button, goes back. |
-| **REC** | the chosen layer's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a layer**. |
-| **REC held** (1 s) | **empty** the chosen layer's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
-| **PLAY** | pressed and let go: stop the chosen layer's loops, or play them again, each from its start. **Held**: the chosen layer's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit while they play. **SHIFT and PLAY**, from any layer: if any loop plays, every loop on every layer stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen layer's own. |
-| **SELECT** knob | the chosen layer's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a layer starts at 87 % (0 dB). |
-| **KNOB 1** | the chosen layer's **DJ filter**: from the middle (off), left is a resonant **low-pass** coming down from 20 kHz to ~35 Hz, right a resonant **high-pass** going up from 16 Hz to ~12 kHz; the further from the middle, the more resonant. While you turn it, and for a second after, the **whole screen is its dial** (in the layer's colour, the mode and cutoff under it: LP 1.2 KHZ). Saved with the session. |
-| **KNOB 2** | the chosen layer's **granulator**: the middle is off (as it starts). **Left** towards dark ambient: long, overlapping, slowly drifting grains, pitched down now and then, darkened, fed back on themselves, sometimes frozen. **Right** towards scattering: short, fast grains, their timing, place, pitch and level jittered more and more, reversed, stuttered, full of holes, decimated at the far end. The further from the middle, the more grains and the less of the layer. While you turn it, the **whole screen is its dial** (DARK 40, SCATTER 25, OFF). Saved with the session. |
-| **KNOB 3** | the chosen layer's **crush**: the middle is off (as it starts). **Left** takes the bit depth down from 16 to 1.5 bits (the sound coarsens, then breaks up, quiet tails gating out); **right** takes the sample rate down from 44.1 kHz to ~300 Hz (metallic aliasing, then a stepped buzz). Both along curves that keep the first half of the way playable; the rate glides, it does not jump. While you turn it, the **whole screen is its dial** (BITS 6.5, RATE 2.6K). After the granulator, before the layer's limiter. Saved with the session. |
-| **KNOB 4** | the chosen layer's **reverb send**, 0–100 (40 at the start). While you turn it, the **whole screen is its dial** (SEND 40), as for the filter and the granulator. |
-| **SAVE** | the **SESSIONS page**: **PRESETS** turns through the **64 slots** (the number shown very large: **red** when the slot holds a session, faint **grey** with EMPTY under it when it does not; the session loaded says LOADED). **SAVE** on a saved slot **loads** it; on an empty slot it starts a **new session** there: a clean slate, as when the FM-1 is switched on — the loops and latches gone, every layer on its first engine with new sounds and its settings at their defaults, the scale, reverb and transposition too (the session you were in stays saved as it was) — and the next save goes there. Either way back to playing. A layer button goes back without either. |
-| **SHIFT + SAVE** | the chosen layer's engine's **PRESETS page** (see [Presets](#presets)); SHIFT + SAVE again, or a layer button, goes back. |
+| **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
+| **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
+| **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
+| **PLAY** | pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit while they play. **SHIFT and PLAY**, from any track: if any loop plays, every loop on every track stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen track's own. |
+| **SELECT** knob | the chosen track's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a track starts at 87 % (0 dB). |
+| **KNOB 1** | the chosen track's **DJ filter**: from the middle (off), left is a resonant **low-pass** coming down from 20 kHz to ~35 Hz, right a resonant **high-pass** going up from 16 Hz to ~12 kHz; the further from the middle, the more resonant. While you turn it, and for a second after, the **whole screen is its dial** (in the track's colour, the mode and cutoff under it: LP 1.2 KHZ). Saved with the session. |
+| **KNOB 2** | the chosen track's **granulator**: the middle is off (as it starts). **Left** towards dark ambient: long, overlapping, slowly drifting grains, pitched down now and then, darkened, fed back on themselves, sometimes frozen. **Right** towards scattering: short, fast grains, their timing, place, pitch and level jittered more and more, reversed, stuttered, full of holes, decimated at the far end. The further from the middle, the more grains and the less of the track. While you turn it, the **whole screen is its dial** (DARK 40, SCATTER 25, OFF). Saved with the session. |
+| **KNOB 3** | the chosen track's **crush**: the middle is off (as it starts). **Left** takes the bit depth down from 16 to 1.5 bits (the sound coarsens, then breaks up, quiet tails gating out); **right** takes the sample rate down from 44.1 kHz to ~300 Hz (metallic aliasing, then a stepped buzz). Both along curves that keep the first half of the way playable; the rate glides, it does not jump. While you turn it, the **whole screen is its dial** (BITS 6.5, RATE 2.6K). After the granulator, before the track's limiter. Saved with the session. |
+| **KNOB 4** | the chosen track's **reverb send**, 0–100 (40 at the start). While you turn it, the **whole screen is its dial** (SEND 40), as for the filter and the granulator. |
+| **SAVE** | the **SESSIONS page**: **PRESETS** turns through the **64 slots** (the number shown very large: **red** when the slot holds a session, faint **grey** with EMPTY under it when it does not; the session loaded says LOADED). **SAVE** on a saved slot **loads** it; on an empty slot it starts a **new session** there: a clean slate, as when the FM-1 is switched on — the loops and latches gone, every track on its first engine with new sounds and its settings at their defaults, the scale, reverb and transposition too (the session you were in stays saved as it was) — and the next save goes there. Either way back to playing. A track button goes back without either. |
+| **SHIFT + SAVE** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)); SHIFT + SAVE again, or a track button, goes back. |
 | **SAVE held** (0.8 s) | **save** into the session loaded or chosen, at once; the whole screen flashes SAVED and the number. With none loaded or chosen yet (just after switching on), the first empty slot is offered: **PRESETS** chooses **NO** / **YES**, **SAVE** answers. **On the SESSIONS page**, SAVE held saves into the slot shown, whatever is loaded: an empty one asks SAVE NEW; one holding a session asks **OVERWRITE?** in red, on **NO** until PRESETS turns it to YES; SAVE answers. |
-| **SEQ** | the **REVERB page** (SEQ lit). There **KNOB 1–4** are **SIZE**, **DECAY**, **DAMP**, **MIX**. SEQ again, or a layer button, goes back. |
-| **ALGORITHM** knob | the chosen layer's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Layers start spread out: 1 and 2 half left and right, 3 and 4 a quarter, 5 and 6 near the middle. |
-| USB MIDI in | notes play the chosen layer, as the keys do. |
+| **SEQ** | the **REVERB page** (SEQ lit). There **KNOB 1–4** are **SIZE**, **DECAY**, **DAMP**, **MIX**. SEQ again, or a track button, goes back. |
+| **ALGORITHM** knob | the chosen track's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Tracks start spread out: 1 and 2 half left and right, 3 and 4 a quarter, 5 and 6 near the middle. |
+| USB MIDI in | notes play the chosen track, as the keys do. |
 | **MASTER** | the level. |
 
 ### Generative paths
 
-Each layer has a path that leans what **HOME** draws, on every engine. A path changes nothing already
-playing: it shapes the next sounds drawn on that layer. The path's key is lit while that layer is chosen.
+Each track has a path that leans what **HOME** draws, on every engine. A path changes nothing already
+playing: it shapes the next sounds drawn on that track. The path's key is lit while that track is chosen.
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
 | **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR and BOWL, never GRIT, SHARDS or MACHINE, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
 | **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts and iterations, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS and MACHINE, never HAZE, TIDE or CHOIR, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
-| **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every layer starts here |
+| **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every track starts here |
 
-Sessions keep each layer's path, and the path each of its sounds was drawn on.
+Sessions keep each track's path, and the path each of its sounds was drawn on.
 
 ### Macros
 
 Press **EDIT** (the black key just left of SHIFT; lit while on) and the four knobs across the top stop being
 the filter, the granulator, the crush and the send: they become **four macros** that reshape the chosen
-layer's sound, while it plays, under a held note. Each is turned from the middle, which is the sound as HOME
+track's sound, while it plays, under a held note. Each is turned from the middle, which is the sound as HOME
 drew it; either way transforms it. While a knob turns, the whole screen is its dial, with the macro's name
 for this sound and how far it is turned (+40 %, -25 %, AS DRAWN). Press EDIT again to give the knobs back.
 
@@ -143,39 +143,53 @@ The macros are chosen for each engine, and for some by the kind of sound:
 | **CALIGULA** | **EDGE**: triangles to squares | **DEPTH**: how deeply the pairs modulate each other | **CHAOS** (total feedback and drive) — or **ECHO** (the delay) for SPORE, VEIL, LITANY and MOTH | **HAND**: how busy the hand is, its touches and bursts — or **PULSE** (the gates' speed) for HIVE, MOTH and WIRE |
 | **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **CHAOS**: how much chance drives it; above the middle, stutters too |
 
-Each layer keeps the macros of each of its four sounds. **HOME** draws a new sound as it comes (its macros
+Each track keeps the macros of each of its four sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.
 
 ### Latched keys
 
 Hold one or more white keys and press **SHIFT** (the rightmost black key): they latch, sounding on after
-you let go, and they stay lit. A key pressed while SHIFT is already held plays as usual (unless it is lit). Latches belong to the layer they were made on: the keys are lit while that
-layer is chosen, and on another layer the same keys play as usual, so a drone can be left on one layer
+you let go, and they stay lit. A key pressed while SHIFT is already held plays as usual (unless it is lit). Latches belong to the track they were made on: the keys are lit while that
+track is chosen, and on another track the same keys play as usual, so a drone can be left on one track
 while you play another. Pressing a latched key without SHIFT does nothing (it sounds already); **SHIFT and
 the lit key** lets go of it, and its note ends as a lifted key's would. Loading a session lets go of every
 latch. Latched notes hold voices of the shared pool: with all twelve busy, a new note can take one, even a latched one's.
 
+### Copying a track
+
+Hold a track's button until the screen flashes **COPIED / TRACK n**: the track is on the clipboard, and its
+button blinks. Choose another track and hold its button until **PASTED / TRACK n**: it now has the copied
+track's tone and loops. The clipboard is then empty: the next hold copies again. Holding the copied track's own
+button again copies it again (as it is now), pasting nothing.
+
+What is copied: the **tone** — the engine, the sounds of all four engines with their macros, the filter, the
+granulator, the crush, the reverb send, the octave and the generative path — and **all the loops**, every
+overdub, those taken out still out, playing or stopped as they were (pasted, they start from their beginnings).
+The copy is taken when you hold the button: what the track does afterwards is not pasted. The track pasted
+onto keeps its **level** and **pan** (its place in the mix); whatever it had before is replaced, and its
+latched notes are let go.
+
 ### The loopers
 
-Every layer has its own looper of up to **ten loops**, and they are all **free**: no tempo, no grid, no
-quantising — not even between a layer's own loops. Each overdub is a loop of its own, as long as you made
+Every track has its own looper of up to **ten loops**, and they are all **free**: no tempo, no grid, no
+quantising — not even between a track's own loops. Each overdub is a loop of its own, as long as you made
 it (from its first note to REC), going round in its own length over the others, so they drift in and out of
 phase. Each plays back exactly what was played, to 0.73 ms. A note still held when REC closes the loop is
 **tied over its end**: it sounds on unbroken as the loop goes round, so a drone stays one long note rather than
-being struck again each time. The keys go on playing the layer over its loops,
+being struck again each time. The keys go on playing the track over its loops,
 and the loops' notes and the keys' never cut each other's notes off — but all of them share the pool's twelve
-voices with the other layers, so many loops and layers at once take voices from each other. A layer's loops hold about 1000 notes between
+voices with the other tracks, so many loops and tracks at once take voices from each other. A track's loops hold about 1000 notes between
 them; nothing is lost when the FM-1 is switched off if the session is saved.
 
-**Bringing loops in and out.** Hold **PLAY** (it does not start or stop anything held): the chosen layer's
+**Bringing loops in and out.** Hold **PLAY** (it does not start or stop anything held): the chosen track's
 loops appear on the white keys, the first loop — the foundation — on the leftmost, each overdub on the next,
-up to ten, lit while they play; the screen shows them too (in the layer's colour: in; a grey frame: out).
+up to ten, lit while they play; the screen shows them too (in the track's colour: in; a grey frame: out).
 Press a key to take its loop out — its notes stop, the others go on — or to bring it back in: it comes in
 **at once, from its start**. With the loops stopped it chooses which will play: take out all but one, let go
 of PLAY, press PLAY, and only that one starts; then bring the others in, one by one, as the piece unfolds.
 Every loop is in when recorded. Sessions keep which loops are out.
 
-**Moving the loops along the scale.** Hold **SHIFT** and press **OCT+** or **OCT−**: every loop of every layer
+**Moving the loops along the scale.** Hold **SHIFT** and press **OCT+** or **OCT−**: every loop of every track
 moves one step of the chosen scale up or down — from C to D in C major, from C to D♯ in C minor pentatonic —
 so each loop keeps its shape within the scale. The notes sounding move at once; the screen shows how far the
 loops are moved (TRANSP +2, TRANSP -1, TRANSP 0), up to two octaves of the scale either way. Choosing another scale
@@ -185,18 +199,18 @@ it**, the others staying where they are. Sessions keep how far the loops are mov
 
 ### The screen
 
-From top to bottom: the **layer number** (very large, in the layer's colour), its **engine** (FM or
-ANIMA, in white), the **family of its sound** (in the layer's colour). When something changes (NEW,
-OCT +1, LOOP), a black-on-white message replaces the family for a moment. While the chosen layer's
+From top to bottom: the **track number** (very large, in the track's colour), its **engine** (FM or
+ANIMA, in white), the **family of its sound** (in the track's colour). When something changes (NEW,
+OCT +1, LOOP), a black-on-white message replaces the family for a moment. While the chosen track's
 looper is armed the band below the engine flashes **ARMED** in red; while it records it shows **REC**,
 white on red. A message too long for the band at its usual size (EXPERIMENTAL) is drawn a size smaller.
-Under it, across the screen, the layer's **level meter**: a bar filling from the left with the layer's colour
+Under it, across the screen, the track's **level meter**: a bar filling from the left with the track's colour
 as it sounds (-48 to +6 dB), and a white mark at the level the SELECT knob sets (red at the left when the
-layer is off). At the very bottom, the layer's **pan**: a block in its colour on a track from left to right,
+track is off). At the very bottom, the track's **pan**: a block in its colour on a track from left to right,
 with a tick at the middle.
 
 KNOB 1 to 4 (filter, granulator, crush, reverb send) each show, while they turn and for a second after, the
-same full-screen dial: the knob's name and the layer, an arc from 7 to 5 o'clock lit in the layer's colour,
+same full-screen dial: the knob's name and the track, an arc from 7 to 5 o'clock lit in the track's colour,
 a white pointer, and in large type what it does.
 
 The **REVERB page** shows the title and its four values in rows, each with a bar; the row you just
@@ -205,7 +219,7 @@ turned is drawn black on white for a moment.
 ### Scales
 
 One scale and root for the whole keyboard (and saved with the session); C major at the start. The root
-sits on the first white key, in the octave from C3 to B3 (each layer's OCT moves it); the scale climbs
+sits on the first white key, in the octave from C3 to B3 (each track's OCT moves it); the scale climbs
 from there across the 16 white keys, so a pentatonic scale spans more than three octaves.
 
 | Scale | Steps |
@@ -224,14 +238,14 @@ USB MIDI notes are not quantised.
 
 ### Presets
 
-Each engine has **64 presets**, P1 to P64, for the sounds you want to keep and bring back on any layer.
-Hold **SHIFT** and press **SAVE**: the PRESETS page of the chosen layer's engine opens, four slots a page.
+Each engine has **64 presets**, P1 to P64, for the sounds you want to keep and bring back on any track.
+Hold **SHIFT** and press **SAVE**: the PRESETS page of the chosen track's engine opens, four slots a page.
 **PRESETS** turns through them; a slot holding a sound shows its number in red and the sound's name, an
 empty one EMPTY in grey.
 
-- **SAVE held** saves the layer's sound into the slot chosen. Over a sound already there it asks
+- **SAVE held** saves the track's sound into the slot chosen. Over a sound already there it asks
   **OVERWRITE?** first, on **NO** until PRESETS turns it to YES; SAVE answers.
-- **SAVE** loads the slot chosen into the layer (which crossfades to it, as to a new sound) and goes back to
+- **SAVE** loads the slot chosen into the track (which crossfades to it, as to a new sound) and goes back to
   playing.
 
 A preset keeps what draws the sound again, exactly — its seed, its path and the generation of the
@@ -242,11 +256,11 @@ erases flash, which silences the audio for a moment, as a session save does.
 
 The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–64.
 
-A session stores in full the sound of the engine each layer is on, and the other three as the seed that
+A session stores in full the sound of the engine each track is on, and the other three as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
-sector of flash. A session is the whole machine: every layer's engine and its four sounds, its path, octave, level, pan,
+sector of flash. A session is the whole machine: every track's engine and its four sounds, its path, octave, level, pan,
 reverb send, filter, granulator (and the character it was drawn with), crush, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
-the layer chosen. They are kept in the
+the track chosen. They are kept in the
 FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
 left there**): dozens of typical sessions, at least ten even with six full loops.
 A session also keeps the seeds its sounds were made from, with the path and the *generation* of the
@@ -257,17 +271,17 @@ uses blank flash when there is some, and the FM-1 blanks free flash by itself wh
 
 ### The granulator
 
-Each layer keeps the last half second of its own sound (at 22 kHz, 8-bit mu-law: a little grit is part of
-it) and plays grains out of it, after its filter. Each layer's granulator has a **character of its own**,
+Each track keeps the last half second of its own sound (at 22 kHz, 8-bit mu-law: a little grit is part of
+it) and plays grains out of it, after its filter. Each track's granulator has a **character of its own**,
 drawn at random when the FM-1 starts and every time a session is loaded: the intervals its grains are
 pitched to, how often they reverse, stutter, drop out or freeze, the shape of its scattered grains, how far
 its feedback and darkening go, how it drifts. The knob's position is saved with the session; the character
-is drawn anew. When the layer's notes end, its grains ring on for about two seconds.
+is drawn anew. When the track's notes end, its grains ring on for about two seconds.
 
 ### The reverb
 
 A plate after Jon Dattorro (1997): predelay, input diffusion, and a figure-of-eight tank whose two
-allpasses sweep slowly out of step, so the tail stays in motion and never rings. Each layer sends to it
+allpasses sweep slowly out of step, so the tail stays in motion and never rings. Each track sends to it
 after its level; the reverb's return is added to the mix before the master.
 
 | | | at the start |
@@ -277,7 +291,7 @@ after its level; the reverb's return is added to the mix before the master.
 | **DAMP** | how fast the highs die in the tail | 40 |
 | **MIX** | the reverb's return level, ×0 to ×4 | 50 (×1) |
 
-Layer colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
+Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 
 ## The engines
 
@@ -312,7 +326,7 @@ saved then come back as they were):
 Each patch is then shaped with care: modulators on high ratios turned down (their sidebands alias and
 scream), the brightness scaled down the keyboard so high notes are not shrill nor low ones muddy, rate
 scaling on the carriers. HOME draws several patches, measures each, and keeps one whose brightness suits
-the layer's path (darker on AMBIENT, brighter on EXPERIMENTAL) and that is not of the family the layer had.
+the track's path (darker on AMBIENT, brighter on EXPERIMENTAL) and that is not of the family the track had.
 
 About half the patches are then bent once more, gently (an operator detuned to beat, an envelope turned
 over to grow as it holds, the LFO waiting and then moving the timbre, an octave down, more feedback, a
@@ -340,7 +354,7 @@ drone), **CHOIR** (vowels, a formant the hand moves), **SHARDS** (glass grains s
 nor high ones shrill; the second oscillator's interval suits the path (consonant on AMBIENT, anything on
 EXPERIMENTAL); and an AMBIENT sound nearly always has a resonant space to ring in.
 
-In Vascular a design plays up to six fingers, each a voice; here a layer has one voice, so the hand has
+In Vascular a design plays up to six fingers, each a voice; here a track has one voice, so the hand has
 one finger on the sound.
 
 ### CALIGULA — an organism
@@ -354,7 +368,7 @@ organism, saturated, fed back in). A **hyper LFO** of two LFOs (alone, AND, OR, 
 modulation and gates chosen pairs into irregular rhythms; a short modulated delay (two lines, ~35 ms)
 choruses, flanges or warps it; a drive.
 
-A CALIGULA layer is **played like the others**: the white keys play the scale's notes, and it is
+A CALIGULA track is **played like the others**: the white keys play the scale's notes, and it is
 **silent until a key is down**. A key wakes the organism at that note; a second key on top moves the
 whole organism to the new note at once (a snap, not a glide), and letting go of it goes back to the key
 still held; letting go of the last key lifts the hand and the organism rings out. It is **rooted**:
@@ -395,10 +409,10 @@ The fourth engine re-makes the techniques of Robert Heel's Noisferatu (GPL-3.0) 
 keys. It runs at a third of the sample rate (about 14.7 kHz) in 10-bit values, each held until the next —
 the grit of a small DAC — then reduces its bits and holds its samples further as the sound says.
 
-A RUSSOLO layer is **played like the others** and is **silent until a key is down**: the key opens an
+A RUSSOLO track is **played like the others** and is **silent until a key is down**: the key opens an
 envelope and sets the pitch (the oscillators' frequency, the speed a buffer is read at, the rate noise is
 sampled at); a second key on top moves it there at once; letting go of the last key lets it fade. Like
-CALIGULA it is one organism a layer, outside the pool of voices. **HOME** draws one of seventeen kinds:
+CALIGULA it is one organism a track, outside the pool of voices. **HOME** draws one of seventeen kinds:
 
 | Kind | |
 | --- | --- |
@@ -455,14 +469,14 @@ needs only `clang`, Python and (for the browser installer) Node. It checks the f
 chip cannot run (it has no FPU and no compiler runtime), then runs the real DSP, sound generators, mixer,
 loopers, sessions and screen code on the computer, and the browser installer against a simulated FM-1:
 
-- `build/sounds/` — WAVs of every engine, family and path, and `mix.wav`, the six layers entering one after
+- `build/sounds/` — WAVs of every engine, family and path, and `mix.wav`, the six tracks entering one after
   another;
 - `build/screens/` — the screen in its states, as PNGs.
 
 ## How it is built
 
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
-`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six layers,
+`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). Based on Felucca and earlier open FM-1 firmware work: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
@@ -486,7 +500,7 @@ browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` 
 Tonitor is by Nuno Zimas. It stands on the work of others:
 
 - [**Felucca**](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments — the hardware
-  layer, USB stack, update loader, rescue mode and installer that made an FM-1 firmware possible at all.
+  track, USB stack, update loader, rescue mode and installer that made an FM-1 firmware possible at all.
 - **msfa** by Google Inc. and Pascal Gauthier (Apache-2.0), from Dexed, in Felucca's integer port — the FM.
 - **ANIMA** is ported from the anima opcode of Vascular.
 - **CALIGULA** follows the architecture of [**LIRA-8**](https://github.com/MikeMorenoDSP/LIRA-8) by Miguel

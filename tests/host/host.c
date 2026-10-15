@@ -3124,6 +3124,125 @@ static int cmd_budget(void)
     return fail ? 1 : 0;
 }
 
+/* a track's button held 0.8 s: copied (it blinks); another's held: pasted there (the tone and the loops), the
+ * clipboard emptied; the source held again: copied again */
+static void hold_btn(uint32_t label, uint32_t ms)
+{
+    uint32_t t;
+    host_press |= 1u << PANEL_BTN[label];
+    fm1_in.buttons |= 1u << PANEL_BTN[label];
+    ui_input();
+    for (t = 0; t < ms; t += 50u) {
+        fm1_ms += 50u;
+        ui_input();
+        run_blocks(2, 0);
+    }
+    fm1_in.buttons &= ~(1u << PANEL_BTN[label]);
+    ui_input();
+}
+static int cmd_clip(const char *dir)
+{
+    uint32_t fail = 0, k, i;
+    static fm_patch_t f0;
+    static an_design_t a0;
+    char path[512];
+    layers_init();
+    ui_init();
+    sounds_init();
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);                                  /* track 1: ANIMA, macros, settings, three loops, one out */
+    while (ui.engine[0] != ENG_ANIMA) {
+        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        ui_input();
+    }
+    ui.mac[0][ENG_ANIMA][1] = 30;
+    mac_apply(0);
+    ui.flt[0] = 7;
+    ui.oct[0] = -1;
+    ui.send[0] = 77;
+    ui.level[0] = 11;
+    ui.path[0] = PATH_EXP;
+    for (i = 0; i < 3u; i++) {
+        press_btn(B_REC);
+        press_key(i * 2u, 1);
+        run_blocks(300 + 50 * i, 0);
+        press_key(i * 2u, 0);
+        run_blocks(20, 0);
+        press_btn(B_REC);
+        run_blocks(30, 0);
+    }
+    loop_trk_set(0, 1, 0);
+    run_blocks(10, 0);
+    f0 = fm_buf[0][fm_pub[0]];
+    a0 = an_buf[0][an_pub[0]];
+    hold_btn(B_FX, 900);                              /* copied */
+    ui_leds();
+    if (clip_from() != 0 || !ui.flash_on || strcmp(ui.flash_l1, "COPIED"))
+        printf("FAIL clip: holding track 1 does not copy it\n"), fail++;
+    {
+        uint32_t lit = 0, unlit = 0;
+        for (k = 0; k < 8u; k++) {
+            fm1_ms += 125u;
+            ui_leds();
+            if (host_led[PANEL_BTN[B_FX]])
+                lit++;
+            else
+                unlit++;
+        }
+        if (!lit || !unlit)
+            printf("FAIL clip: track 1 does not blink while it is on the clipboard\n"), fail++;
+    }
+    press_btn(B_ENV);                                 /* track 3: chosen, then held: pasted */
+    ui.level[2] = 15;
+    ui.latch[2] = 1u;
+    ui_draw();
+    hold_btn(B_ENV, 900);
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-35-pasted.ppm", dir);
+    ppm(path);
+    run_blocks(200, 0);
+    if (clip_from() >= 0 || strcmp(ui.flash_l1, "PASTED"))
+        printf("FAIL clip: holding track 3 does not paste (or the clipboard is not emptied)\n"), fail++;
+    if (ui.engine[2] != ENG_ANIMA || lay[2].engine != ENG_ANIMA || memcmp(&an_buf[2][an_pub[2]], &a0, sizeof a0)
+        || memcmp(&fm_buf[2][fm_pub[2]], &f0, sizeof f0) || ui.mac[2][ENG_ANIMA][1] != 30 || ui.flt[2] != 7
+        || ui.oct[2] != -1 || ui.send[2] != 77 || ui.path[2] != PATH_EXP)
+        printf("FAIL clip: track 3 does not have track 1's tone\n"), fail++;
+    if (ui.level[2] != 15 || ui.latch[2])
+        printf("FAIL clip: track 3's level was taken, or its latch kept\n"), fail++;
+    if (loop[2].ntrk != 3u || loop[2].mute != loop[0].mute || loop[2].nev != loop[0].nev || !loop[2].play
+        || memcmp(loop[2].ev, loop[0].ev, loop[0].nev * 4u))
+        printf("FAIL clip: track 3 does not have track 1's loops, playing (%u loops)\n", loop[2].ntrk), fail++;
+    for (k = 0; k < 3u; k++)
+        if (loop[2].trk[k].len != loop[0].trk[k].len)
+            printf("FAIL clip: loop %u's length differs\n", k + 1), fail++;
+    {
+        uint32_t n = 0;
+        for (k = 0; k < NVOICE; k++)
+            n += vox[k].gate && vox_owner(&vox[k]) == 2u && vox[k].src == SRC_LOOP;
+        run_blocks(800, 0);
+        for (k = 0; k < NVOICE; k++)
+            n += vox[k].gate && vox_owner(&vox[k]) == 2u && vox[k].src == SRC_LOOP;
+        if (!n)
+            printf("FAIL clip: track 3's pasted loops do not play\n"), fail++;
+    }
+    if (loop[0].ntrk != 3u || !loop[0].play || ui.engine[0] != ENG_ANIMA)
+        printf("FAIL clip: track 1 was changed by the copy\n"), fail++;
+    hold_btn(B_ENV, 900);                             /* the next hold: a copy again (of track 3) */
+    if (clip_from() != 2)
+        printf("FAIL clip: after a paste, a hold does not copy again\n"), fail++;
+    hold_btn(B_ENV, 900);                             /* the source held again: copied again, nothing pasted */
+    if (clip_from() != 2 || strcmp(ui.flash_l1, "COPIED"))
+        printf("FAIL clip: the source held again does not copy it again\n"), fail++;
+    hold_btn(B_LFO, 300);                             /* a short press only chooses */
+    if (clip_from() != 2 || ui.sel != 3u)
+        printf("FAIL clip: a short press did something else than choose the track\n"), fail++;
+    printf("clip: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -3495,6 +3614,8 @@ int main(int argc, char **argv)
         return cmd_voices();
     if (argc >= 2 && !strcmp(argv[1], "evcost"))
         return cmd_evcost();
+    if (argc >= 3 && !strcmp(argv[1], "clip"))
+        return cmd_clip(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "budget"))
         return cmd_budget();
     if (argc >= 2 && !strcmp(argv[1], "burst"))

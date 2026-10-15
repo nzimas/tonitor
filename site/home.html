@@ -8,34 +8,36 @@
 
 <h2>Features</h2>
 <dl class="features">
-  <dt>Six layers</dt>
+  <dt>Six tracks</dt>
   <dd>Each with its own engine, sound, octave, level and pan.</dd>
   <dt>Voices</dt>
-  <dd>Twelve voices shared by all layers: each layer takes as many as its notes need.</dd>
+  <dd>Twelve voices shared by all tracks: each track takes as many as its notes need.</dd>
   <dt>Four engines</dt>
-  <dd>FM, ANIMA, CALIGULA and RUSSOLO, chosen per layer (described <a href="#engines">below</a>).</dd>
+  <dd>FM, ANIMA, CALIGULA and RUSSOLO, chosen per track (described <a href="#engines">below</a>).</dd>
   <dt>Sound generation</dt>
-  <dd>HOME generates a new sound for the layer from the engine's families of sounds.</dd>
+  <dd>HOME generates a new sound for the track from the engine's families of sounds.</dd>
   <dt>Generative paths</dt>
-  <dd>Per layer, new sounds can be biased towards ambient (darker, slower) or experimental (noisier, harder).</dd>
+  <dd>Per track, new sounds can be biased towards ambient (darker, slower) or experimental (noisier, harder).</dd>
   <dt>Macros</dt>
   <dd>With EDIT on, the four knobs adjust four engine-specific parameters of the current sound.</dd>
+  <dt>Copy and paste</dt>
+  <dd>Holding a track's button copies its sound and loops; holding another's pastes them there.</dd>
   <dt>Loopers</dt>
-  <dd>One per layer, up to ten overdubs, each with its own length; each can be switched in and out. All the loops can be transposed together by steps of the scale.</dd>
+  <dd>One per track, up to ten overdubs, each with its own length; each can be switched in and out. All the loops can be transposed together by steps of the scale.</dd>
   <dt>Latching</dt>
   <dd>Notes held when SHIFT is pressed keep sounding after the keys are released.</dd>
   <dt>Filter, grains, crush</dt>
-  <dd>A resonant low/high-pass filter, a granulator and a bit-depth and sample-rate reducer on every layer.</dd>
+  <dd>A resonant low/high-pass filter, a granulator and a bit-depth and sample-rate reducer on every track.</dd>
   <dt>Reverb</dt>
-  <dd>A plate reverb (Dattorro) with a send from every layer.</dd>
+  <dd>A plate reverb (Dattorro) with a send from every track.</dd>
   <dt>Scales</dt>
   <dd>The white keys play a scale from any root.</dd>
   <dt>Presets</dt>
-  <dd>64 per engine; a stored sound can be loaded on any layer.</dd>
+  <dd>64 per engine; a stored sound can be loaded on any track.</dd>
   <dt>Sessions</dt>
-  <dd>64 slots holding every layer, sound, loop, latched note and setting, the reverb included.</dd>
+  <dd>64 slots holding every track, sound, loop, latched note and setting, the reverb included.</dd>
   <dt>Low vision</dt>
-  <dd>Few words, very large type, high contrast, a colour per layer.</dd>
+  <dd>Few words, very large type, high contrast, a colour per track.</dd>
 </dl>
 
 <h2 id="engines">Engines</h2>
@@ -68,7 +70,7 @@
   pairs, each variable from triangle to square. Each pair is frequency-modulated by its partner, by the other
   pair on its side, by a pair on the other side or by the engine's own output (total feedback). Two LFOs combined
   into one modulation source change the modulation depth and can gate pairs on and off. Two short modulated delay
-  lines, a drive stage and the total feedback follow. One voice per layer: the key sets the note the eight
+  lines, a drive stage and the total feedback follow. One voice per track: the key sets the note the eight
   oscillators are tuned around, in intervals chosen when the sound is generated. While a key is held, a simulated
   hand touches the eight oscillators' sensors, at irregular times or in repeated patterns, and the engine adds
   short bursts and occasional rises of feedback and drive. Ten kinds of design.</p>
@@ -84,7 +86,7 @@
   squares, and triangles at an inharmonic ratio redrawn on a clock; a generated buffer of noise, saw and silent
   chunks, read at the key's speed, with random jumps, a wandering window, or its address bits forced, flipped or
   held; and tones fired by chance on the key's harmonics, a random walk over a scale, and slowly beating chords.
-  The key opens an envelope and sets the pitch or read speed. One voice per layer.</p>
+  The key opens an envelope and sets the pitch or read speed. One voice per track.</p>
 <p>Macros: two parameters specific to the kind (for example <b>RATIO</b> and <b>DRIFT</b>, or <b>DENSITY</b> and
   <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>CHAOS</b> (how much chance drives it; above the
   middle it also stutters).</p>
