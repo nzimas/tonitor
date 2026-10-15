@@ -157,6 +157,8 @@ def page(title, current, body, desc, head=""):
     <nav aria-label="Site">
       {links}
     </nav>
+    <a class="donate" href="https://www.paypal.com/donate/?business=nzimas.lv%40gmail.com&amp;item_name=Tonitor&amp;currency_code=EUR"
+       rel="noopener">Donate with PayPal</a>
   </aside>
   <div class="content">
     <main>

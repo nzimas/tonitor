@@ -46,6 +46,9 @@ img { max-width: 100%; }
 .side nav a { color: var(--dim); text-decoration: none; padding: 8px 12px; border-radius: 6px; border-left: 3px solid transparent; }
 .side nav a:hover { color: var(--fg); background: var(--bg2); }
 .side nav a[aria-current="page"] { color: var(--fg); background: var(--bg2); border-left-color: var(--l5); font-weight: 700; }
+.donate { display: block; margin-top: 22px; padding: 9px 12px; text-align: center; font-weight: 700; color: var(--fg); text-decoration: none;
+  border: 1px solid var(--l2); border-radius: 6px; }
+.donate:hover { background: var(--l2); color: var(--bg); }
 
 .content { flex: 1; min-width: 0; padding: 0 48px; }
 main { max-width: var(--max); padding: 40px 0 50px; }
@@ -111,6 +114,7 @@ main blockquote { border-left: 4px solid var(--l5); margin: 16px 0; padding: 4px
   .side nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
   .side nav a { border-left: 0; border-bottom: 3px solid transparent; padding: 6px 10px; }
   .side nav a[aria-current="page"] { border-bottom-color: var(--l5); }
+  .donate { display: inline-block; margin-top: 10px; padding: 6px 12px; }
   .content { padding: 0 20px; }
   main { padding-top: 26px; }
   body { font-size: 17px; }
