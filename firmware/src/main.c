@@ -3,6 +3,7 @@
  * and the update hooks follow SLOOP's / Felucca's main.c and audio.c (Leo Kuroshita, GPL-3.0). */
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
 extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
+extern uint32_t _ft_start[], _ft_end[], _ft_load[];
 
 /* ------------------------------------------------------------ audio --- */
 #define HALF_FRAMES 256u         /* an I2S half buffer: 5.8 ms */
@@ -436,6 +437,8 @@ void fm1_cstart(void)
         *d = *s;
     for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++)
         *d = *s;                                     /* the flash driver, which runs from RAM */
+    for (s = _ft_load, d = _ft_start; d < _ft_end; s++, d++)
+        *d = *s;                                     /* the audio's hottest code, run from RAM too */
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     fm1_boot.p3_rst = (uint8_t)p3;

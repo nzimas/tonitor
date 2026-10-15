@@ -756,7 +756,7 @@ static struct {
     uint32_t nev;
     loop_trk_t trk[LOOP_TRK];
     uint32_t ev[LOOP_N];
-} clip POOL;
+} clip;                          /* (in RAM: the pool keeps its headroom) */
 static int clip_from(void) { return clip.full ? (int)clip.from : -1; }
 static void clip_copy(uint32_t l)
 {

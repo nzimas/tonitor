@@ -385,7 +385,11 @@ static void save_short(void)
 
 static uint32_t next_seed(void)
 {
+#if TELEMETRY
+    ui.seed = ui.seed * 1664525u + 1013904223u;  /* (a diagnostic build: the same sounds at every start) */
+#else
     ui.seed = ui.seed * 1664525u + 1013904223u + fm1_ticks();
+#endif
     return ui.seed;
 }
 
@@ -432,6 +436,10 @@ static void midi_take(void)                      /* USB MIDI notes (usb.c's ring
 {
     while (mi_r != mi_w) {
         uint32_t pkt = midi_in_q[mi_r % MQ], cin = pkt & 15u, note = (pkt >> 16) & 0x7Fu, vel = pkt >> 24 & 0x7Fu;
+#if TELEMETRY
+        if (((pkt >> 8) & 15u) < NLAYER && cin == 9u && vel)
+            ui.sel = (uint8_t)((pkt >> 8) & 15u);   /* (a diagnostic build: the MIDI channel chooses the track) */
+#endif
         RING_PUBLISH();
         mi_r++;
         if (cin == 9u && vel) {
@@ -1406,7 +1414,11 @@ static void ui_init(void)
     rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
     ui.rv_touched = -1;
     ui.shown_sel = ui.shown_eng = ui.shown_msg = -1;
+#if TELEMETRY
+    ui.seed = 0x5EEDu;
+#else
     ui.seed = fm1_ticks() ^ 0x5EEDu;
+#endif
     ui.force = 1;
 }
 

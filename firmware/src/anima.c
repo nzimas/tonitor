@@ -696,7 +696,10 @@ static void an_control(an_voice_t *v, const an_design_t *d)
 
 /* ------------------------------------------------------- one block --- */
 /* renders n (= CTL) samples, Q15 into out; returns 0 when the voice is silent for good */
-static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
+#ifndef AN_RENDER_PLACE
+#define AN_RENDER_PLACE /* (from the flash, for now) */
+#endif
+static AN_RENDER_PLACE int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
 {
     uint32_t i, k, ns = clampi(d->multiCount, 1, 4);
     int32_t e0, e1, de, e, a0, da, a;

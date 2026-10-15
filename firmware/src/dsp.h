@@ -14,8 +14,10 @@
 /* big zero-initialised buffers go to the pool (app.ld: 336 KiB beside the 96 KiB of .data / .bss) */
 #ifdef HOST
 #define POOL
+#define FAST                     /* (the host: no RAM code) */
 #else
 #define POOL __attribute__((section(".pool")))
+#define FAST __attribute__((section(".fast_text"), noinline))   /* run from RAM (app.ld): the audio's hottest code */
 #endif
 
 #define Q15 32768
