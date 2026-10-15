@@ -1023,10 +1023,18 @@ static int cmd_sessions(const char *dir)
     if (!str_eq(ui.flash_l1, "FULL"))
         printf("FAIL sessions: no FULL when the flash is full\n"), fail++;
     /* a save cut short: two copies of session 1; the newer one wins at the next boot */
-    {
+    {   /* (session 1 as saved, copied from the flash; its sequence number newer) */
+        static uint8_t rec[SES_BUF];
         int i1 = ses_find(1);
-        uint32_t len = ses_pack(1), ns = (len + 4095u) / 4096u;
+        ses_head_t *rh = (ses_head_t *)rec;
+        uint32_t len, ns;
         int at = -1;
+        ses_flash_read(SES_LO + ses.sect[i1] * SES_SECT, rec, sizeof(ses_head_t));
+        len = rh->len;
+        ses_flash_read(SES_LO + ses.sect[i1] * SES_SECT, rec, len);
+        rh->seq = ++ses.seq;
+        rh->head_crc = ses_crc(rec, 30u, 0);
+        ns = (len + 4095u) / 4096u;
         for (i = 0; i + ns <= SES_NSECT && at < 0; i++) {
             uint32_t k;
             for (k = 0; k < ns && !ses.used[i + k]; k++)
@@ -1041,7 +1049,7 @@ static int cmd_sessions(const char *dir)
         }
         for (i = 0; i < ns; i++)
             ses_flash_erase(SES_LO + ((uint32_t)at + i) * 4096u);
-        ses_flash_prog(SES_LO + (uint32_t)at * 4096u, ses_buf, len);
+        ses_flash_prog(SES_LO + (uint32_t)at * 4096u, rec, len);
         ses_scan(1);
         if (ses_find(1) < 0 || ses.sect[ses_find(1)] != (uint8_t)at)
             printf("FAIL sessions: after a save cut short, not the newer copy (%d)\n", i1), fail++;
@@ -1095,6 +1103,52 @@ static int cmd_sessions(const char *dir)
         if (ses_load_slot(50) != SES_OK || loop[1].ntrk != 1u || loop[1].trk[0].len != 500u || loop[1].trk[0].n != 2u ||
             !loop[1].play || loop[1].ev[0] != ev[0])
             printf("FAIL sessions: a format-1 session does not load (%u loops)\n", loop[1].ntrk), fail++;
+    }
+    {   /* the largest session there can be -- six full loopers, ten loops each, every event used -- written a sector
+         * at a time and read back the same, event for event */
+        static looper_t keep[NLAYER];
+        uint32_t l2, k2;
+        for (l2 = 0; l2 < NLAYER; l2++)
+            ev_post(EV_LOOP_CLEAR, l2, 0, 0);
+        run_blocks(5, 0);
+        memset(host_flash, 0xFF, sizeof host_flash);
+        ses_scan(1);
+        run_blocks(10, 0);
+        for (l2 = 0; l2 < NLAYER; l2++) {
+            looper_t *lp = &loop[l2];
+            uint32_t per = LOOP_N / LOOP_TRK;
+            for (k2 = 0; k2 < LOOP_TRK; k2++) {
+                lp->trk[k2].first = (uint16_t)(k2 * per);
+                lp->trk[k2].n = (uint16_t)per;
+                lp->trk[k2].len = 5000u + k2 * 77u + l2;
+            }
+            for (k2 = 0; k2 < LOOP_N; k2++)
+                lp->ev[k2] = LE((k2 % per) * 20u, 40u + (k2 * 7u + l2) % 40u, (k2 & 1u) == 0u);
+            lp->nev = per * LOOP_TRK;
+            lp->ntrk = LOOP_TRK;
+            lp->mute = (uint16_t)(0x155u >> (l2 & 1u));
+        }
+        memcpy(keep, loop, sizeof keep);
+        if (ses_save(7) != SES_OK)
+            printf("FAIL sessions: the largest session does not save\n"), fail++;
+        printf("sessions: the largest one, %u sectors\n", ses.nsect[ses_find(7)]);
+        for (l2 = 0; l2 < NLAYER; l2++)
+            ev_post(EV_LOOP_CLEAR, l2, 0, 0);
+        run_blocks(5, 0);
+        if (ses_load_slot(7) != SES_OK)
+            printf("FAIL sessions: the largest session does not load\n"), fail++;
+        run_blocks(5, 0);
+        for (l2 = 0; l2 < NLAYER; l2++) {
+            const looper_t *a2 = &keep[l2], *b2 = &loop[l2];
+            if (a2->ntrk != b2->ntrk || a2->mute != b2->mute || memcmp(a2->ev, b2->ev, sizeof a2->ev))
+                printf("FAIL sessions: layer %u's loops come back otherwise\n", l2 + 1), fail++;
+            for (k2 = 0; k2 < LOOP_TRK; k2++)
+                if (a2->trk[k2].len != b2->trk[k2].len || a2->trk[k2].n != b2->trk[k2].n ||
+                    a2->trk[k2].first != b2->trk[k2].first) {
+                    printf("FAIL sessions: layer %u loop %u comes back otherwise\n", l2 + 1, k2 + 1), fail++;
+                    break;
+                }
+        }
     }
     printf("sessions: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
@@ -2404,20 +2458,20 @@ static int cmd_macros(const char *dir)
     if (ui.edit || ui.flt[0] != 6)
         printf("FAIL macros: EDIT off does not give KNOB 1 back to the filter\n"), fail++;
     {   /* 0.21's presets (12 bytes a slot, no macros) still load, and are widened when one is saved */
-        ses_head_t *h = (ses_head_t *)ses_buf;
+        ses_head_t *h = (ses_head_t *)ses_chunk;
         uint32_t len = 32u + NENG * PRE_SLOTS * 12u;
         pre_rec_t old;
-        memset(ses_buf, 0, len);
+        memset(ses_chunk, 0, len);
         memset(&old, 0, sizeof old);
         old.seed = cal_buf[0][cal_pub[0]].seed;
         old.word = ses_c2_word(cal_buf[0][cal_pub[0]].out, GEN_NOW, PATH_OPEN);
         old.used = 1;
         old.kind = cal_buf[0][cal_pub[0]].kind;
-        memcpy(ses_buf + 32u + (ENG_CAL * PRE_SLOTS + 6u) * 12u, &old, 12u);
+        memcpy(ses_chunk + 32u + (ENG_CAL * PRE_SLOTS + 6u) * 12u, &old, 12u);
         h->magic = SES_MAGIC, h->num = PRE_NUM, h->format = 1, h->len = len, h->seq = ++ses.seq;
-        h->body_crc = ses_crc(ses_buf + 32u, len - 32u, 0);
-        h->head_crc = ses_crc(ses_buf, 30u, 0);
-        ses_write(PRE_NUM, len);
+        h->body_crc = ses_crc(ses_chunk + 32u, len - 32u, 0);
+        h->head_crc = ses_crc(ses_chunk, 30u, 0);
+        ses_write_chunk(PRE_NUM, len);
         if (pre_kind(ENG_CAL, 7) != old.kind || pre_load(0, ENG_CAL, 7) != SES_OK || ui.mac[0][ENG_CAL][0])
             printf("FAIL macros: 0.21's presets do not load\n"), fail++;
         ui.mac[0][ENG_CAL][1] = 30;

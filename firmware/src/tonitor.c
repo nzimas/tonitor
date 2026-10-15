@@ -10,7 +10,7 @@
 #define TONITOR_ID "FM-1_700"    /* the package identity (tools/build.py sets it) */
 #endif
 #ifndef TONITOR_VERSION
-#define TONITOR_VERSION "0.23"
+#define TONITOR_VERSION "0.24"
 #endif
 #define FELUCCA_ID TONITOR_ID
 #define FELUCCA_OTA 1            /* the update entry (the installer), and the rescue mode */

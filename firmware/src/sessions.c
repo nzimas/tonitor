@@ -57,7 +57,80 @@ static struct {
     uint16_t current;            /* the session loaded or last saved, 0 = none */
     uint8_t ok;                  /* the flash is ours to use */
 } ses;
-static uint8_t ses_buf[SES_BUF];
+/* A record goes to and from the flash through one sector's buffer, a sector at a time (the largest session is
+ * ~55 KB: no RAM holds it whole): counted first (its length and CRC, for its head), then written; read back
+ * through the same buffer. Small records (the presets) are made in it whole */
+static uint8_t ses_chunk[SES_SECT];
+static uint16_t ses_crc(const uint8_t *p, uint32_t n, uint32_t c);
+enum { SS_COUNT, SS_WRITE, SS_READ };
+static struct {
+    uint8_t mode;
+    int err;
+    uint32_t base, pos;          /* the record's place in the flash; bytes so far */
+    uint16_t crc;                /* of its body (after the head) so far */
+    uint32_t window;             /* SS_READ: the part of the record in ses_chunk (its offset), ~0: none */
+} ss;
+static void ss_begin(uint32_t mode, uint32_t base)
+{
+    ss.mode = (uint8_t)mode;
+    ss.err = 0;
+    ss.base = base;
+    ss.pos = 0;
+    ss.crc = 0;
+    ss.window = 0xFFFFFFFFu;
+}
+static void ss_crc(const uint8_t *b, uint32_t n)       /* (the head is not the body's) */
+{
+    if (ss.pos + n <= sizeof(ses_head_t))
+        return;
+    if (ss.pos < sizeof(ses_head_t)) {
+        b += sizeof(ses_head_t) - ss.pos;
+        n -= sizeof(ses_head_t) - ss.pos;
+    }
+    ss.crc = ses_crc(b, n, ss.crc);
+}
+/* n bytes out: counted, or into the sector's buffer, a full one written */
+static void ses_out(const void *src, uint32_t n)
+{
+    const uint8_t *b = src;
+    while (n) {
+        uint32_t at = ss.pos % SES_SECT, k = SES_SECT - at < n ? SES_SECT - at : n;
+        ss_crc(b, k);
+        if (ss.mode == SS_WRITE) {
+            memcpy(ses_chunk + at, b, k);
+            if (at + k == SES_SECT && ses_flash_prog(ss.base + ss.pos + k - SES_SECT, ses_chunk, SES_SECT))
+                ss.err = 1;
+        }
+        ss.pos += k;
+        b += k;
+        n -= k;
+    }
+}
+static void ss_end(void)                               /* (the last part of a sector) */
+{
+    uint32_t at = ss.pos % SES_SECT;
+    if (ss.mode == SS_WRITE && at && ses_flash_prog(ss.base + ss.pos - at, ses_chunk, at))
+        ss.err = 1;
+}
+/* n bytes in (dst 0: passed over), through the sector's buffer */
+static void ses_in(void *dst, uint32_t n)
+{
+    uint8_t *d = dst;
+    while (n) {
+        uint32_t w = ss.pos / SES_SECT * SES_SECT, at = ss.pos - w, k = SES_SECT - at < n ? SES_SECT - at : n;
+        if (ss.window != w) {
+            ses_flash_read(ss.base + w, ses_chunk, SES_SECT);
+            ss.window = w;
+        }
+        ss_crc(ses_chunk + at, k);
+        if (d) {
+            memcpy(d, ses_chunk + at, k);
+            d += k;
+        }
+        ss.pos += k;
+        n -= k;
+    }
+}
 
 static uint16_t ses_crc(const uint8_t *p, uint32_t n, uint32_t c)   /* CRC16, poly 0x1021 */
 {
@@ -243,17 +316,10 @@ static uint32_t ses_full_gen(const ses_head_t *h, uint32_t loop_n)
     return h->format >= 5u && (loop_n >> 16 & 15u) < GEN_N ? loop_n >> 16 & 15u : 0u;
 }
 
-static uint8_t *ses_put(uint8_t *p, const void *src, uint32_t n)
-{
-    memcpy(p, src, n);
-    return p + n;
-}
 
-/* the machine now, into ses_buf; its length */
-static uint32_t ses_pack(uint32_t num)
+/* the machine now: a session's body, out through ses_out */
+static void ses_emit(void)
 {
-    ses_head_t *h = (ses_head_t *)ses_buf;
-    uint8_t *p = ses_buf + sizeof *h;
     uint32_t l, i;
     uint8_t g[8];
     g[0] = ui.sel;
@@ -262,7 +328,7 @@ static uint32_t ses_pack(uint32_t num)
     g[5] = ui.scale;
     g[6] = ui.root;
     g[7] = 0;
-    p = ses_put(p, g, sizeof g);
+    ses_out(g, sizeof g);
     for (l = 0; l < NLAYER; l++) {
         ses_layer_t y;
         const looper_t *lp = &loop[l];
@@ -285,11 +351,11 @@ static uint32_t ses_pack(uint32_t num)
                                                                                               : cal_buf[l][cal_pub[l]].path;
             y.loop_n = n | g << 16 | pa << 20;
         }
-        p = ses_put(p, &y, sizeof y);
-        p = ses_put(p, ui.mac[l], NENG * NMAC);         /* (format 6: EDIT's macros on each of its sounds) */
+        ses_out(&y, sizeof y);
+        ses_out(ui.mac[l], NENG * NMAC);         /* (format 6: EDIT's macros on each of its sounds) */
         {
             uint16_t mu = lp->mute;                     /* (format 7: the loops held out) */
-            p = ses_put(p, &mu, 2u);
+            ses_out(&mu, 2u);
         }
         /* the sounds: the engine in use in full; the other two as the seed that made them, their level and
          * (top byte, format 4) their path (drawn again from them: the same sound, at once) -- so a session
@@ -297,76 +363,81 @@ static uint32_t ses_pack(uint32_t num)
         {
             uint32_t c2[2];
             if (y.engine == ENG_FM)
-                p = ses_put(p, &fm_buf[l][fm_pub[l]], sizeof(fm_patch_t));
+                ses_out(&fm_buf[l][fm_pub[l]], sizeof(fm_patch_t));
             else {
                 c2[0] = fm_buf[l][fm_pub[l]].seed;
                 c2[1] = ses_c2_word(fm_buf[l][fm_pub[l]].gain, fm_buf[l][fm_pub[l]].gen, fm_buf[l][fm_pub[l]].path);
-                p = ses_put(p, c2, sizeof c2);
+                ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_ANIMA)
-                p = ses_put(p, &an_buf[l][an_pub[l]], sizeof(an_design_t));
+                ses_out(&an_buf[l][an_pub[l]], sizeof(an_design_t));
             else {
                 c2[0] = an_buf[l][an_pub[l]].seed;
                 c2[1] = ses_c2_word(an_buf[l][an_pub[l]].out, an_buf[l][an_pub[l]].gen, an_buf[l][an_pub[l]].path);
-                p = ses_put(p, c2, sizeof c2);
+                ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_CAL)
-                p = ses_put(p, &cal_buf[l][cal_pub[l]], sizeof(cal_design_t));
+                ses_out(&cal_buf[l][cal_pub[l]], sizeof(cal_design_t));
             else {
                 c2[0] = cal_buf[l][cal_pub[l]].seed;
                 c2[1] = ses_c2_word(cal_buf[l][cal_pub[l]].out, cal_buf[l][cal_pub[l]].gen, cal_buf[l][cal_pub[l]].path);
-                p = ses_put(p, c2, sizeof c2);
+                ses_out(c2, sizeof c2);
             }
         }
         for (k = 0; k < nt; k++) {
             uint32_t tl[2];
             tl[0] = lp->trk[k].len;
             tl[1] = lp->trk[k].n;
-            p = ses_put(p, tl, sizeof tl);
+            ses_out(tl, sizeof tl);
         }
-        for (i = 0; i < n && p + 4 <= ses_buf + SES_BUF; i++)   /* t (24 bits), note, on */
-            p = ses_put(p, &lp->ev[i], 4u);
+        for (i = 0; i < n; i++)                         /* t (24 bits), note, on */
+            ses_out(&lp->ev[i], 4u);
     }
+}
+static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
+{
     memset(h, 0, sizeof *h);
     h->magic = SES_MAGIC;
     h->num = (uint16_t)num;
-    h->format = SES_FORMAT;
-    h->len = (uint32_t)(p - ses_buf);
+    h->format = (uint16_t)format;
+    h->len = len;
     h->seq = ++ses.seq;
     h->fm_size = sizeof(fm_patch_t);
     h->an_size = sizeof(an_design_t);
     h->cal_size = sizeof(cal_design_t);
-    h->body_crc = ses_crc(ses_buf + sizeof *h, h->len - sizeof *h, 0);
-    h->head_crc = ses_crc(ses_buf, 30u, 0);
-    return h->len;
+    h->body_crc = crc;
+    h->head_crc = ses_crc((const uint8_t *)h, 30u, 0);
 }
 
-/* the record in ses_buf (len bytes, its head filled) written as number num: into free sectors first, read back,
- * and only then the old copy of num killed (a power cut leaves the old, or both: never neither) */
-static int ses_write(uint32_t num, uint32_t len)
+/* room for a record of len bytes: free sectors, blank (erased now if they must be), marked dirty until it is
+ * written and read back; the first, or -SES_FULL / -SES_FAIL */
+static int ses_place(uint32_t len, uint32_t *nsect)
 {
-    uint32_t ns, k;
-    int s, old;
-    ns = (len + SES_SECT - 1u) / SES_SECT;
-    s = ses_alloc(ns);
+    uint32_t ns = (len + SES_SECT - 1u) / SES_SECT, k;
+    int s = ses_alloc(ns);
+    *nsect = ns;
     if (s < 0)
-        return SES_FULL;
+        return -SES_FULL;
     for (k = 0; k < ns; k++)
         if (!ses_is_clean((uint32_t)s + k)) {
             if (ses_flash_erase(SES_LO + ((uint32_t)s + k) * SES_SECT))
-                return SES_FAIL;
+                return -SES_FAIL;
             ses.dirty[(uint32_t)s + k] = 0;
         }
     for (k = 0; k < ns; k++)                            /* (any write marks them dirty if it fails) */
         ses.dirty[(uint32_t)s + k] = 1;
-    if (ses_flash_prog(SES_LO + (uint32_t)s * SES_SECT, ses_buf, len))
+    return s;
+}
+/* the record written at sector s is number num's now: its head read back, and only then the old copy of num
+ * killed (a power cut leaves the old, or both: never neither) */
+static int ses_commit(uint32_t num, int s, uint32_t ns, const ses_head_t *head)
+{
+    uint32_t k;
+    int old;
+    ses_head_t h;
+    ses_flash_read(SES_LO + (uint32_t)s * SES_SECT, &h, sizeof h);
+    if (memcmp(&h, head, sizeof h))
         return SES_FAIL;
-    {   /* read back */
-        ses_head_t h;
-        ses_flash_read(SES_LO + (uint32_t)s * SES_SECT, &h, sizeof h);
-        if (memcmp(&h, ses_buf, sizeof h))
-            return SES_FAIL;
-    }
     for (k = 0; k < ns; k++) {
         ses.used[(uint32_t)s + k] = 1;
         ses.dirty[(uint32_t)s + k] = 0;
@@ -380,26 +451,64 @@ static int ses_write(uint32_t num, uint32_t len)
         ses_list_add(num, (uint32_t)s, ns);
     return SES_OK;
 }
+/* a record made whole in ses_chunk (its head filled; at most a sector) written as number num */
+static int ses_write_chunk(uint32_t num, uint32_t len)
+{
+    ses_head_t h;
+    uint32_t ns;
+    int s = ses_place(len, &ns);
+    if (s < 0)
+        return -s;
+    memcpy(&h, ses_chunk, sizeof h);
+    if (ses_flash_prog(SES_LO + (uint32_t)s * SES_SECT, ses_chunk, len))
+        return SES_FAIL;
+    return ses_commit(num, s, ns, &h);
+}
 
-/* save the machine as session num (a new one, or over the one of that number); SES_OK (ui.c) = done */
+/* save the machine as session num (a new one, or over the one of that number); SES_OK (ui.c) = done. Counted,
+ * then written a sector at a time; should it change in between (a loop ending its recording), again */
 static int ses_save(uint32_t num)
 {
-    int rc;
+    uint32_t tries;
     if (!ses.ok)
         return SES_NOFLASH;
     if (num < 1u || num > SES_SLOTS)
         return SES_FAIL;
-    rc = ses_write(num, ses_pack(num));
-    if (rc == SES_OK)
-        ses.current = (uint16_t)num;
-    return rc;
+    for (tries = 0; tries < 2u; tries++) {
+        ses_head_t h;
+        uint32_t len, ns;
+        uint16_t crc;
+        int s;
+        ss_begin(SS_COUNT, 0);
+        ss.pos = sizeof h;
+        ses_emit();
+        len = ss.pos;
+        crc = ss.crc;
+        ses_head_fill(&h, num, SES_FORMAT, len, crc);
+        s = ses_place(len, &ns);
+        if (s < 0)
+            return -s;
+        ss_begin(SS_WRITE, SES_LO + (uint32_t)s * SES_SECT);
+        ses_out(&h, sizeof h);
+        ses_emit();
+        ss_end();
+        if (ss.err)
+            return SES_FAIL;
+        if (ss.pos == len && ss.crc == crc) {
+            int rc = ses_commit(num, s, ns, &h);
+            if (rc == SES_OK)
+                ses.current = (uint16_t)num;
+            return rc;
+        }                                               /* (changed: those sectors left dirty, blanked later) */
+    }
+    return SES_FAIL;
 }
 
 /* ------------------------------------------------------------- presets --- *
  * 64 a engine, P1 .. P64: each the sound as what draws it again bit for bit -- its seed, path and generation
  * (dsp.h GEN_NOW) and its measured level -- 12 bytes, so all 192 are one record of the store, number PRE_NUM,
  * written as a session is (a new copy, then the old one killed). Read a slot at a time from the flash; changed
- * in ses_buf. */
+ * in ses_chunk. */
 #define PRE_NUM 1000u
 #define PRE_SLOTS 64u
 #define PRE_FORMAT 2u            /* 2: EDIT's macros too (16 bytes a slot); 1: 12 bytes a slot, still read */
@@ -411,6 +520,7 @@ typedef struct {
 } pre_rec_t;
 typedef char pre_rec_is_16[sizeof(pre_rec_t) == 16u ? 1 : -1];
 #define PRE_LEN (32u + NENG * PRE_SLOTS * 16u)
+typedef char pre_fits_a_sector[PRE_LEN <= SES_SECT ? 1 : -1];
 static uint32_t pre_stride(uint32_t sect)            /* a slot's bytes in the table at sector sect */
 {
     ses_head_t h;
@@ -439,27 +549,28 @@ static int pre_kind(uint32_t e, uint32_t slot)
 /* layer l's sound on engine e into engine e's slot */
 static int pre_save(uint32_t l, uint32_t e, uint32_t slot)
 {
-    ses_head_t *h = (ses_head_t *)ses_buf;
+    ses_head_t *h = (ses_head_t *)ses_chunk;
     pre_rec_t rec;
     int i = ses_find(PRE_NUM);
     if (!ses.ok)
         return SES_NOFLASH;
     if (e >= NENG || slot < 1u || slot > PRE_SLOTS)
         return SES_FAIL;
-    memset(ses_buf, 0, PRE_LEN);                       /* the table as it is (or an empty one; format 1 widened) */
+    memset(ses_chunk, 0, PRE_LEN);                     /* the table as it is (or an empty one; format 1 widened) */
     if (i >= 0) {
-        ses_flash_read(SES_LO + ses.sect[i] * SES_SECT, ses_buf, 32u);
+        ses_flash_read(SES_LO + ses.sect[i] * SES_SECT, ses_chunk, 32u);
         if (h->format == PRE_FORMAT && h->len == PRE_LEN) {
-            ses_flash_read(SES_LO + ses.sect[i] * SES_SECT, ses_buf, PRE_LEN);
-            if (ses_crc(ses_buf + 32u, PRE_LEN - 32u, 0) != h->body_crc)
-                memset(ses_buf, 0, PRE_LEN);
+            ses_flash_read(SES_LO + ses.sect[i] * SES_SECT, ses_chunk, PRE_LEN);
+            if (ses_crc(ses_chunk + 32u, PRE_LEN - 32u, 0) != h->body_crc)
+                memset(ses_chunk, 0, PRE_LEN);
         } else if (h->format == 1u && h->len == 32u + NENG * PRE_SLOTS * 12u) {
             uint32_t k;
-            for (k = 0; k < NENG * PRE_SLOTS; k++) {
-                ses_flash_read(SES_LO + ses.sect[i] * SES_SECT + 32u + k * 12u, ses_buf + 32u + k * 16u, 12u);
-                memset(ses_buf + 32u + k * 16u + 12u, 0, 4u);
+            for (k = 0; k < NENG * PRE_SLOTS; k++) {   /* (each read from the flash: no overlap in place) */
+                ses_flash_read(SES_LO + ses.sect[i] * SES_SECT + 32u + k * 12u, ses_chunk + 32u + k * 16u, 12u);
+                memset(ses_chunk + 32u + k * 16u + 12u, 0, 4u);
             }
-        }
+        } else
+            memset(ses_chunk, 0, PRE_LEN);
     }
     memset(&rec, 0, sizeof rec);
     rec.used = 1;
@@ -474,16 +585,16 @@ static int pre_save(uint32_t l, uint32_t e, uint32_t slot)
         rec.seed = s_->seed, rec.word = ses_c2_word(s_->out, s_->gen, s_->path), rec.kind = s_->kind;
     }
     memcpy(rec.mac, ui.mac[l][e], NMAC);
-    memcpy(ses_buf + 32u + (e * PRE_SLOTS + slot - 1u) * 16u, &rec, 16u);
+    memcpy(ses_chunk + 32u + (e * PRE_SLOTS + slot - 1u) * 16u, &rec, 16u);
     memset(h, 0, sizeof *h);
     h->magic = SES_MAGIC;
     h->num = (uint16_t)PRE_NUM;
     h->format = PRE_FORMAT;
     h->len = PRE_LEN;
     h->seq = ++ses.seq;
-    h->body_crc = ses_crc(ses_buf + 32u, PRE_LEN - 32u, 0);
-    h->head_crc = ses_crc(ses_buf, 30u, 0);
-    return ses_write(PRE_NUM, PRE_LEN);
+    h->body_crc = ses_crc(ses_chunk + 32u, PRE_LEN - 32u, 0);
+    h->head_crc = ses_crc(ses_chunk, 30u, 0);
+    return ses_write_chunk(PRE_NUM, PRE_LEN);
 }
 /* engine e's slot drawn again into layer l (the layer crossfades to it, as to a new sound) */
 static int pre_load(uint32_t l, uint32_t e, uint32_t slot)
@@ -546,17 +657,17 @@ static void ses_events_drain(void)
 static int ses_load(uint32_t i)
 {
     ses_head_t h;
-    const uint8_t *p;
-    uint32_t l, k, len;
+    uint8_t g[8];
+    uint32_t l, k, base;
     if (i >= ses.n)
         return SES_FAIL;
-    ses_flash_read(SES_LO + ses.sect[i] * SES_SECT, &h, sizeof h);
+    base = SES_LO + ses.sect[i] * SES_SECT;
+    ses_flash_read(base, &h, sizeof h);
     if (!ses_head_ok(&h))
         return SES_FAIL;
-    len = h.len;
-    for (k = 0; k < len; k += 256u)
-        ses_flash_read(SES_LO + ses.sect[i] * SES_SECT + k, ses_buf + k, len - k > 256u ? 256u : len - k);
-    if (ses_crc(ses_buf + sizeof h, len - sizeof h, 0) != h.body_crc)
+    ss_begin(SS_READ, base);                            /* the whole of it read once: its CRC */
+    ses_in(0, h.len);
+    if (ss.crc != h.body_crc)
         return SES_FAIL;
     for (l = 0; l < NLAYER; l++) {                      /* silence, the loops emptied, the latches let go */
         ui.latch[l] = 0;
@@ -564,24 +675,23 @@ static int ses_load(uint32_t i)
         ev_post(EV_LOOP_CLEAR, l, 0, 0);
     }
     ses_events_drain();
-    p = ses_buf + sizeof h;
-    ui.sel = (uint8_t)(p[0] < NLAYER ? p[0] : 0);
+    ss_begin(SS_READ, base);                            /* then read again, field by field */
+    ses_in(0, sizeof h);
+    ses_in(g, sizeof g);
+    ui.sel = (uint8_t)(g[0] < NLAYER ? g[0] : 0);
     for (k = 0; k < 4u; k++)
-        ui.rvp[k] = (int8_t)clampi(p[1u + k], 0, 100);
+        ui.rvp[k] = (int8_t)clampi(g[1u + k], 0, 100);
     rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
-    ui.scale = (uint8_t)(p[5] < NSCALE ? p[5] : 0);  /* (sessions before the scales: C major) */
-    ui.root = (uint8_t)(p[6] < 12u ? p[6] : 0);
-    p += 8;
+    ui.scale = (uint8_t)(g[5] < NSCALE ? g[5] : 0);  /* (sessions before the scales: C major) */
+    ui.root = (uint8_t)(g[6] < 12u ? g[6] : 0);
     for (l = 0; l < NLAYER; l++) {
         ses_layer_t y;
         looper_t *lp = &loop[l];
         uint32_t fk, ak, ck;
-        memcpy(&y, p, sizeof y);
-        p += sizeof y;
+        ses_in(&y, sizeof y);
         if (h.format >= 6u) {
             uint32_t j;
-            memcpy(ui.mac[l], p, NENG * NMAC);
-            p += NENG * NMAC;
+            ses_in(ui.mac[l], NENG * NMAC);
             for (j = 0; j < NENG * NMAC; j++)
                 (&ui.mac[l][0][0])[j] = (int8_t)clampi((&ui.mac[l][0][0])[j], -MAC_MAX, MAC_MAX);
         } else
@@ -589,8 +699,7 @@ static int ses_load(uint32_t i)
         lp->mute = 0;
         if (h.format >= 7u) {                           /* (into the emptied looper: the ISR leaves it be) */
             uint16_t mu;
-            memcpy(&mu, p, 2u);
-            p += 2u;
+            ses_in(&mu, 2u);
             lp->mute = (uint16_t)(mu & 0x3FFu);
         }
         ui.engine[l] = (uint8_t)(y.engine < NENG ? y.engine : 0);
@@ -616,47 +725,46 @@ static int ses_load(uint32_t i)
         {
             uint32_t c2[2], full = h.format < 3u || ui.engine[l] == ENG_FM;
             if (full && h.fm_size == sizeof(fm_patch_t))
-                memcpy(&fm_buf[l][fk], p, sizeof(fm_patch_t));
-            else if (full) {
-                memcpy(c2, p + h.fm_size - 4u, 4u);
+                ses_in(&fm_buf[l][fk], sizeof(fm_patch_t));
+            else if (full) {                            /* (its seed: the last 4 bytes) */
+                ses_in(0, h.fm_size - 4u);
+                ses_in(c2, 4u);
                 fm_generate(&fm_buf[l][fk], -1, c2[0], ses_full_path(&h, y.loop_n), ses_full_gen(&h, y.loop_n));
                 fm_measure(&fm_buf[l][fk]);
             } else {
-                memcpy(c2, p, sizeof c2);
+                ses_in(c2, sizeof c2);
                 fm_generate(&fm_buf[l][fk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 fm_buf[l][fk].gain = ses_c2_level(&h, c2[1]);
             }
-            p += full ? h.fm_size : 8u;
             full = h.format < 3u || ui.engine[l] == ENG_ANIMA;
             if (full && h.an_size == sizeof(an_design_t))
-                memcpy(&an_buf[l][ak], p, sizeof(an_design_t));
-            else if (full) {
-                memcpy(c2, p, 4u);
+                ses_in(&an_buf[l][ak], sizeof(an_design_t));
+            else if (full) {                            /* (its seed: the first 4 bytes) */
+                ses_in(c2, 4u);
+                ses_in(0, h.an_size - 4u);
                 an_design(&an_buf[l][ak], -1, c2[0], ses_full_path(&h, y.loop_n), ses_full_gen(&h, y.loop_n));
                 an_measure(&an_buf[l][ak]);
             } else {
-                memcpy(c2, p, sizeof c2);
+                ses_in(c2, sizeof c2);
                 an_design(&an_buf[l][ak], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 an_buf[l][ak].out = ses_c2_level(&h, c2[1]);
             }
-            p += full ? h.an_size : 8u;
             if (h.format < 3u) {
                 cal_design(&cal_buf[l][ck], -1, ui.seed = ui.seed * 1664525u + 1013904223u + fm1_ticks(), ui.path[l], GEN_NOW);
                 cal_measure(&cal_buf[l][ck]);
             } else if (ui.engine[l] == ENG_CAL) {
                 if (h.cal_size == sizeof(cal_design_t))
-                    memcpy(&cal_buf[l][ck], p, sizeof(cal_design_t));
+                    ses_in(&cal_buf[l][ck], sizeof(cal_design_t));
                 else {
-                    memcpy(c2, p, 4u);
+                    ses_in(c2, 4u);
+                    ses_in(0, h.cal_size - 4u);
                     cal_design(&cal_buf[l][ck], -1, c2[0], ses_full_path(&h, y.loop_n), ses_full_gen(&h, y.loop_n));
                     cal_measure(&cal_buf[l][ck]);
                 }
-                p += h.cal_size;
             } else {
-                memcpy(c2, p, sizeof c2);
+                ses_in(c2, sizeof c2);
                 cal_design(&cal_buf[l][ck], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 cal_buf[l][ck].out = ses_c2_level(&h, c2[1]);
-                p += 8u;
             }
         }
         RING_PUBLISH();
@@ -682,17 +790,15 @@ static int ses_load(uint32_t i)
                 play = y.loop_state;
                 for (k = 0; k < y.loop_len; k++) {
                     uint32_t tl[2];
-                    memcpy(tl, p, sizeof tl);
-                    p += sizeof tl;
+                    ses_in(tl, sizeof tl);
                     if (k < nt) {
                         lp->trk[k].len = tl[0] ? tl[0] : 2u;
                         lp->trk[k].n = (uint16_t)tl[1];
                     }
                 }
             }
-            for (k = 0; k < n; k++, p += 4)
-                if (k < LOOP_N)
-                    memcpy(&lp->ev[k], p, 4u);
+            for (k = 0; k < n; k++)
+                ses_in(k < LOOP_N ? &lp->ev[k] : 0, 4u);
             for (k = 0; k < nt; k++) {                 /* each loop's events, after the one before's */
                 lp->trk[k].first = (uint16_t)first;
                 if (first + lp->trk[k].n > LOOP_N || first + lp->trk[k].n > n)

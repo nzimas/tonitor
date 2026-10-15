@@ -232,8 +232,8 @@ static int ses_flash_prog(uint32_t off, const void *p, uint32_t n)
 static void splash(void)
 {
     lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 84, 240, &FONT_L, "TONITOR", C_WHITE, 1);
-    draw_text_box(0, 140, 240, &FONT_M, TONITOR_VERSION, C_GREY, 1);
+    draw_text_box(0, 88, 240, &FONT_M, "TONITOR", C_WHITE, 1);   /* (the large size is wider than the screen) */
+    draw_text_box(0, 136, 240, &FONT_S, TONITOR_VERSION, C_GREY, 1);
 }
 
 static void enter_uboot(const char *why)

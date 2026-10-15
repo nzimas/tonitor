@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24
+
+- Sessions are written to and read from the flash a sector at a time: about 50 KB of RAM freed (more than half of
+  it), for more voices and a fourth engine to come. Nothing changes in use; every session saved before loads.
+- The start-up screen's name fits the screen.
+
 ## 0.23
 
 - **Overdubs in and out**: hold PLAY and the chosen layer's loops appear on the white keys (the first loop on
