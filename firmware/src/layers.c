@@ -29,8 +29,8 @@
 
 #define NLAYER 6
 #define NVOICE 12                /* the voices of all the layers (FM and ANIMA) */
-enum { ENG_FM, ENG_ANIMA, ENG_CAL, NENG };
-static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA"};
+enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, NENG };
+static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
 
 static fm_patch_t fm_buf[NLAYER][2];
 static an_design_t an_buf[NLAYER][2];
@@ -39,6 +39,12 @@ static volatile uint8_t fm_pub[NLAYER], fm_use[NLAYER], an_pub[NLAYER], an_use[N
 static cal_design_t cal_buf[NLAYER][2];
 static volatile uint8_t cal_pub[NLAYER], cal_use[NLAYER];
 static cal_t cal_rt[NLAYER];
+/* RUSSOLO (russolo.c): one organism a layer too */
+static rus_design_t rus_buf[NLAYER][2];
+static volatile uint8_t rus_pub[NLAYER], rus_use[NLAYER];
+static rus_t rus_rt[NLAYER];
+/* an organism engine (one for the layer, outside the voices' pool) */
+static int eng_organism(uint32_t e) { return e == ENG_CAL || e == ENG_RUS; }
 
 static an_voice_t an_vox[NVOICE] POOL;   /* the pool's ANIMA voices, ~4.8 KiB each: the resonator */
 
@@ -263,6 +269,13 @@ static uint32_t voice_pick(uint32_t l, int own)
 /* a note to CALIGULA, while the layer is (or is becoming) it; else to the voices */
 static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
 {
+    if (lay[l].want_engine == ENG_RUS) {
+        if (on)
+            rus_note_on(&rus_rt[l], &rus_buf[l][rus_use[l]], note);
+        else
+            rus_note_off(&rus_rt[l], note);
+        return 1;
+    }
     if (lay[l].want_engine != ENG_CAL)
         return 0;
     if (on)
@@ -322,6 +335,8 @@ static void loop_notes_off(uint32_t l)
 {
     uint32_t k;
     cal_release(&cal_rt[l], 2u);
+    if (lay[l].engine == ENG_RUS)
+        rus_release(&rus_rt[l]);                  /* (its notes are not told apart: all of them) */
     for (k = 0; k < NVOICE; k++)
         if (vox[k].gate && vox_owner(&vox[k]) == l && vox[k].src == SRC_LOOP)
             note_off(l, vox[k].note, SRC_LOOP);
@@ -338,10 +353,12 @@ static int change_due(uint32_t l)
         an_use[l] = an_pub[l];
     if (y->engine != ENG_CAL && y->want_engine != ENG_CAL)
         cal_use[l] = cal_pub[l];
+    if (y->engine != ENG_RUS && y->want_engine != ENG_RUS)
+        rus_use[l] = rus_pub[l];
     if (y->want_engine != y->engine)
         return 1;
     return y->engine == ENG_FM ? fm_pub[l] != fm_use[l] : y->engine == ENG_ANIMA ? an_pub[l] != an_use[l]
-                                                                                  : cal_pub[l] != cal_use[l];
+           : y->engine == ENG_CAL ? cal_pub[l] != cal_use[l] : rus_pub[l] != rus_use[l];
 }
 /* what was asked, now (the voices silent), and the notes still held played again with it */
 static void change_apply(uint32_t l)
@@ -381,14 +398,23 @@ static void change_apply(uint32_t l)
             nn[n] = c->note[j];
             ns[n++] = c->nsrc[j];
         }
+        for (j = 0; j < rus_rt[l].nheld && n < 8u; j++) {
+            nn[n] = rus_rt[l].note[j];
+            ns[n++] = 1u;
+        }
         cal_init(c, 0xC0u + l * 131u + lay_age);
+        rus_init(&rus_rt[l], 0x7A5u + l * 131u + lay_age);
         y->engine = y->want_engine;
         fm_use[l] = fm_pub[l];
         an_use[l] = an_pub[l];
         cal_use[l] = cal_pub[l];
+        rus_use[l] = rus_pub[l];
         if (y->engine == ENG_CAL)
             for (j = 0; j < n; j++)
                 cal_note_on(c, &cal_buf[l][cal_use[l]], nn[j], ns[j]);
+        else if (y->engine == ENG_RUS)
+            for (j = 0; j < n; j++)
+                rus_note_on(&rus_rt[l], &rus_buf[l][rus_use[l]], nn[j]);
         else
             for (j = 0; j < n; j++) {             /* (free voices only: none taken from the other layers) */
                 for (k = 0; k < NVOICE && (vox[k].sounding || vox[k].gate || vox[k].pend); k++)
@@ -580,6 +606,7 @@ static void events_take(void)        /* audio ISR, at a block start */
             break;
         case EV_STOP:
             cal_init(&cal_rt[e.layer], 0xC0u + e.layer);
+            rus_init(&rus_rt[e.layer], 0x7A5u + e.layer);
             for (k = 0; k < NVOICE; k++) {
                 voice_t *v = &vox[k];
                 if (vox_owner(v) == e.layer) {
@@ -627,6 +654,8 @@ static int layer_sounding(uint32_t l)
     uint32_t k;
     if (lay[l].engine == ENG_CAL)
         return cal_rt[l].live;
+    if (lay[l].engine == ENG_RUS)
+        return rus_rt[l].live;
     for (k = 0; k < NVOICE; k++)
         if (vox[k].layer == l && vox[k].sounding)
             return 1;
@@ -671,8 +700,12 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         memcpy(cal_rt[l].mac, mac, NMAC);
         if (cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], buf))
             any = 1;
+    } else if (y->engine == ENG_RUS) {
+        memcpy(rus_rt[l].mac, mac, NMAC);
+        if (rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], buf))
+            any = 1;
     }
-    for (k = 0; k < NVOICE && y->engine != ENG_CAL; k++) {
+    for (k = 0; k < NVOICE && !eng_organism(y->engine); k++) {
         voice_t *v = &vox[k];
         int alive;
         if (v->layer != l || !v->sounding)
@@ -858,6 +891,7 @@ static void layers_init(void)
         lay[l].lim_g = Q15;
         lay[l].engine = lay[l].want_engine = (uint8_t)(l & 1u ? ENG_ANIMA : ENG_FM);
         cal_init(&cal_rt[l], 0xC0u + l * 131u);
+        rus_init(&rus_rt[l], 0x7A5u + l * 131u);
     }
     rv_init();
     gran_init();
@@ -966,7 +1000,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         an_buf[l][k].out = level;
         RING_PUBLISH();
         an_pub[l] = (uint8_t)k;
-    } else {
+    } else if (e == ENG_CAL) {
         if (!sound_slot_free(&cal_pub[l], &cal_use[l]))
             return 0;
         k = cal_use[l] ^ 1u;
@@ -974,7 +1008,32 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         cal_buf[l][k].out = level;
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)k;
+    } else {
+        if (!sound_slot_free(&rus_pub[l], &rus_use[l]))
+            return 0;
+        k = rus_use[l] ^ 1u;
+        rus_design(&rus_buf[l][k], -1, seed, path, gen);
+        rus_buf[l][k].out = level;
+        RING_PUBLISH();
+        rus_pub[l] = (uint8_t)k;
     }
+    return 1;
+}
+static int new_rus(uint32_t l, uint32_t seed, uint32_t path)
+{
+    uint32_t k, tries;
+    int32_t was = rus_buf[l][rus_use[l]].kind;
+    if (!sound_slot_free(&rus_pub[l], &rus_use[l]))
+        return 0;
+    k = rus_use[l] ^ 1u;
+    for (tries = 0; tries < 4u; tries++) {
+        rus_design(&rus_buf[l][k], -1, seed + tries * 7919u, path, GEN_NOW);
+        if (rus_buf[l][k].kind != was)
+            break;
+    }
+    rus_measure(&rus_buf[l][k]);
+    RING_PUBLISH();
+    rus_pub[l] = (uint8_t)k;
     return 1;
 }
 /* the name of what layer l plays on engine e */
@@ -982,6 +1041,8 @@ static const char *sound_name(uint32_t l, uint32_t e)
 {
     if (e == ENG_CAL)
         return CS_NAME[cal_buf[l][cal_pub[l]].kind % CS_N];
+    if (e == ENG_RUS)
+        return RK_NAME[rus_buf[l][rus_pub[l]].kind % RK_N];
     if (e == ENG_FM)
         return FF_NAME[fm_buf[l][fm_pub[l]].family % FF_N];
     return AK_NAME[an_buf[l][an_pub[l]].kind % AK_N];

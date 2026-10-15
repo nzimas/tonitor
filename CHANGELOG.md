@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.26
+
+- **RUSSOLO**, a fourth engine: noise, logic and broken buffers, re-making the techniques of Robert Heel's
+  Noisferatu. Seventeen kinds — HOLD, DUST, GATES, CRACKLE (noise); NOR, XOR, RING, CASCADE, CLANG (oscillators
+  combined bit by bit); CHUNKS, JUMP, WANDER, BEND, QUAD (generated buffers read with their addresses bent);
+  BLIPS, WALK, CHORD (chance-driven tones) — at a third of the sample rate in 10 bits, crushed and sample-held
+  further as each sound says. A key gates it and sets its pitch; one organism a layer, as CALIGULA. Its macros:
+  the kind's two parameters, CRUSH and CHAOS. The paths lean it: AMBIENT to chords, dust, crackle, blips and
+  walks, clean and slow; EXPERIMENTAL to logic and bent buffers, crushed and abrupt. Presets: 64 for it too.
+- **Sessions are a fuller snapshot**: they now also keep each layer's granulator character and its latched
+  notes (which sound again on load). The master reverb was already kept. Sessions and presets saved before load
+  as they were.
 ## 0.25
 
 - **Voices from a shared pool**: twelve voices for all the layers instead of two fixed per layer. A layer takes as

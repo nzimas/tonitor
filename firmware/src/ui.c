@@ -381,7 +381,7 @@ static const char *mac_name(uint32_t l, uint32_t j)
 {
     uint32_t e = ui.engine[l];
     return e == ENG_FM ? fm_mac_name(&fm_buf[l][fm_pub[l]], j) : e == ENG_ANIMA ? an_mac_name(&an_buf[l][an_pub[l]], j)
-                                                                                : cal_mac_name(&cal_buf[l][cal_pub[l]], j);
+           : e == ENG_CAL ? cal_mac_name(&cal_buf[l][cal_pub[l]], j) : rus_mac_name(&rus_buf[l][rus_pub[l]], j);
 }
 
 /* HOME: a new sound for the layer chosen */
@@ -394,7 +394,8 @@ static void new_sound(void)
     ui_draw();                                   /* the message first: an FM patch takes ~30 ms to measure */
     ok = ui.engine[l] == ENG_FM      ? new_fm(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_ANIMA ? new_anima(l, next_seed(), ui.path[l])
-                                     : new_cal(l, next_seed(), ui.path[l]);
+         : ui.engine[l] == ENG_CAL   ? new_cal(l, next_seed(), ui.path[l])
+                                     : new_rus(l, next_seed(), ui.path[l]);
     if (!ok)
         say("BUSY", 900);
     else {                                       /* a new sound: as drawn, no macros */
@@ -1124,7 +1125,8 @@ static void cv_text_in(int32_t x, int32_t w, int32_t band_h, const char *t, uint
 }
 static const char *kind_name(uint32_t e, int32_t k)
 {
-    return e == ENG_FM ? FF_NAME[k % FF_N] : e == ENG_ANIMA ? AK_NAME[k % AK_N] : CS_NAME[k % CS_N];
+    return e == ENG_FM ? FF_NAME[k % FF_N] : e == ENG_ANIMA ? AK_NAME[k % AK_N] : e == ENG_CAL ? CS_NAME[k % CS_N]
+                                                                                                : RK_NAME[k % RK_N];
 }
 /* the PRESETS page: the engine's name over four slots (the page of the one chosen), the chosen one in white; a
  * full slot's number in red with its sound's name, an empty one grey. Or, asked: OVERWRITE?, the slot, NO | YES */
@@ -1367,8 +1369,10 @@ static void sounds_init(void)
         an_measure(&an_buf[l][0]);
         cal_design(&cal_buf[l][0], -1, s * 13u + 5u, PATH_OPEN, GEN_NOW);
         cal_measure(&cal_buf[l][0]);
+        rus_design(&rus_buf[l][0], -1, s * 17u + 9u, PATH_OPEN, GEN_NOW);
+        rus_measure(&rus_buf[l][0]);
         fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
-        cal_pub[l] = cal_use[l] = 0;
+        cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = 0;
         gran_profile(l, next_seed());            /* the granulator's character, drawn */
     }
 }

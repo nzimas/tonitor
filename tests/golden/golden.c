@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * TONITOR: the sounds of each past generation of the generators -- 0 (up to 0.20), 1 (0.21), 2 (0.22) -- fingerprinted, so
+ * TONITOR: the sounds of each past generation of the generators -- 0 (up to 0.20), 1 (0.21), 2 (0.22, and RUSSOLO from 0.26) -- fingerprinted, so
  * that every later firmware draws them again bit for bit from their seeds: the sessions and presets that keep only
  * seeds depend on it. `golden G` prints one line per (engine, kind, path): an FNV-1a hash over many seeds of the
  * design's fields as generation G had them. Built with the host harness (tests/run_tests.sh). */
@@ -60,5 +60,19 @@ int main(int argc, char **argv)
             printf("cal %d %u %08x\n", k, pa, h);
         }
     }
+    if (gen >= 2)                /* RUSSOLO came with generation 2: its lines go after, the earlier ones unchanged */
+        for (pa = 0; pa < PATH_N; pa++)
+            for (k = -1; k < RK_N; k++) {
+                static rus_design_t rd;
+                uint32_t h = 2166136261u;
+                for (s = 0; s < (k < 0 ? 400u : 40u); s++) {
+                    memset(&rd, 0, sizeof rd);
+                    rus_design(&rd, k, 1234u + s * 7919u, pa, gen);
+                    if (s < 4u)
+                        rus_measure(&rd);                  /* (and the level a few of them are given) */
+                    h = fnv(h, &rd, sizeof rd);
+                }
+                printf("rus %d %u %08x\n", k, pa, h);
+            }
     return 0;
 }

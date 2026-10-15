@@ -12,8 +12,8 @@
   <dd>Each with its own engine, sound, octave, level and pan.</dd>
   <dt>Voices</dt>
   <dd>Twelve voices shared by all layers: each layer takes as many as its notes need.</dd>
-  <dt>Three engines</dt>
-  <dd>FM, ANIMA and CALIGULA, chosen per layer (described <a href="#engines">below</a>).</dd>
+  <dt>Four engines</dt>
+  <dd>FM, ANIMA, CALIGULA and RUSSOLO, chosen per layer (described <a href="#engines">below</a>).</dd>
   <dt>Sound generation</dt>
   <dd>HOME generates a new sound for the layer from the engine's families of sounds.</dd>
   <dt>Generative paths</dt>
@@ -33,7 +33,7 @@
   <dt>Presets</dt>
   <dd>64 per engine; a stored sound can be loaded on any layer.</dd>
   <dt>Sessions</dt>
-  <dd>64 slots holding every layer, sound, loop and setting.</dd>
+  <dd>64 slots holding every layer, sound, loop, latched note and setting, the reverb included.</dd>
   <dt>Low vision</dt>
   <dd>Few words, very large type, high contrast, a colour per layer.</dd>
 </dl>
@@ -75,6 +75,19 @@
 <p>Macros: <b>EDGE</b> (triangle to square), <b>DEPTH</b> (modulation depth), <b>CHAOS</b> or <b>ECHO</b> (total
   feedback and drive, or the delay), <b>HAND</b> or <b>PULSE</b> (how often the hand touches, or the speed of
   the gating).</p>
+
+<h3>RUSSOLO</h3>
+<p>Noise, logic operations and generated buffers, after the techniques of Robert Heel's Noisferatu. It runs at a
+  third of the sample rate in 10-bit values, then reduces bits and holds samples further. Seventeen kinds in four
+  groups: noise (sample-and-hold noise, random clicks through a low-pass, noise gated by two triangles, clicks
+  ringing on short pitched decays); oscillators combined by NOR, XOR or multiplication, squares modulating
+  squares, and triangles at an inharmonic ratio redrawn on a clock; a generated buffer of noise, saw and silent
+  chunks, read at the key's speed, with random jumps, a wandering window, or its address bits forced, flipped or
+  held; and tones fired by chance on the key's harmonics, a random walk over a scale, and slowly beating chords.
+  The key opens an envelope and sets the pitch or read speed. One voice per layer.</p>
+<p>Macros: two parameters specific to the kind (for example <b>RATIO</b> and <b>DRIFT</b>, or <b>DENSITY</b> and
+  <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>CHAOS</b> (how much chance drives it; above the
+  middle it also stutters).</p>
 
 <h2>Install</h2>
 <p>The installer runs in a desktop Chrome, Edge or Opera and talks to the FM-1 over USB MIDI. Nothing to

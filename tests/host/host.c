@@ -84,6 +84,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 #include "fm.c"
 #include "anima.c"
 #include "cal.c"
+#include "russolo.c"
 #include "reverb.c"
 #define MQ 64u
 static uint32_t midi_in_q[MQ];
@@ -2313,6 +2314,8 @@ static void mac_render(uint32_t e, int32_t kind, uint32_t seed, const int8_t *m)
     static an_voice_t av;
     static cal_design_t cd;
     static cal_t c;
+    static rus_design_t rd;
+    static rus_t rc;
     fm_voice_t fv;
     int32_t out[CTL];
     uint32_t b, i, n = 0;
@@ -2327,16 +2330,22 @@ static void mac_render(uint32_t e, int32_t kind, uint32_t seed, const int8_t *m)
         an_init(&av, seed);
         memcpy(av.mac, m, NMAC);
         an_note_on(&av, &ad, pitch_inc(57 * 16), 1);
-    } else {
+    } else if (e == ENG_CAL) {
         cal_design(&cd, kind, seed, PATH_OPEN, GEN_NOW);
         cal_measure(&cd);
         cal_init(&c, seed);
         memcpy(c.mac, m, NMAC);
         cal_note_on(&c, &cd, 57, 1u);
+    } else {
+        rus_design(&rd, kind, seed, PATH_OPEN, GEN_NOW);
+        rus_measure(&rd);
+        rus_init(&rc, seed);
+        memcpy(rc.mac, m, NMAC);
+        rus_note_on(&rc, &rd, 57);
     }
     for (b = 0; b < 1378u * 7u / 2u; b++) {
         int alive = e == ENG_FM ? fm_render(&fv, &fp, out, m) : e == ENG_ANIMA ? an_render(&av, &ad, out, CTL)
-                                                                             : cal_render(&c, &cd, out);
+                    : e == ENG_CAL ? cal_render(&c, &cd, out) : rus_render(&rc, &rd, out);
         if (!alive)
             memset(out, 0, sizeof out);
         for (i = 0; i < CTL && n < MAC_N; i++)     /* (the attack too: a macro is heard as notes are played) */
@@ -2345,8 +2354,8 @@ static void mac_render(uint32_t e, int32_t kind, uint32_t seed, const int8_t *m)
 }
 static int cmd_macros(const char *dir)
 {
-    static const uint32_t NK[3] = {FF_N, AK_N, CS_N};
-    static const char *const EN[3] = {"FM", "ANIMA", "CALIGULA"};
+    static const uint32_t NK[4] = {FF_N, AK_N, CS_N, RK_N};
+    static const char *const EN[4] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
     uint32_t fail = 0, e, j, kind, s;
     char path[512];
     /* none: bit for bit */
@@ -2371,7 +2380,7 @@ static int cmd_macros(const char *dir)
         }
     }
     /* each macro moves each engine's sounds; the brightening ones brighten; none silences or blows up */
-    for (e = 0; e < 3u; e++)
+    for (e = 0; e < 4u; e++)
         for (j = 0; j < NMAC; j++) {
             uint32_t moved = 0, tried = 0, wrong = 0, bad = 0;
             for (kind = 0; kind < NK[e]; kind++)
@@ -2399,16 +2408,21 @@ static int cmd_macros(const char *dir)
                         moved++;
                     else if (getenv("MACDBG"))
                         printf("  still: %s %s seed %u: %.1f dB, am %.3f/%.3f\n", EN[e],
-                               e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : CS_NAME[kind],
+                               e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : e == ENG_CAL ? CS_NAME[kind] : RK_NAME[kind],
                                4000u + kind * 31u + s * 7919u, ch, fl.am, fh.am);
                     if (j == 0u && fh.bright <= fl.bright && getenv("MACDBG"))
                         printf("  darker: %s %s: %.0f / %.0f / %.0f Hz\n", EN[e],
-                               e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : CS_NAME[kind],
+                               e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : e == ENG_CAL ? CS_NAME[kind] : RK_NAME[kind],
                                fl.bright, f0.bright, fh.bright);
-                    if (j == 0u && fh.bright <= fl.bright)    /* BRIGHT, TONE, EDGE: brighter turned up */
+                    if (j == 0u && e != ENG_RUS && fh.bright <= fl.bright)   /* BRIGHT, TONE, EDGE: brighter turned up */
                         wrong++;
-                    if (fl.peak > 8.0 * 32768 || fh.peak > 8.0 * 32768 || fl.rms < f0.rms * 0.02 || fh.rms < f0.rms * 0.02)
+                    if (fl.peak > 8.0 * 32768 || fh.peak > 8.0 * 32768 || fl.rms < f0.rms * 0.02 || fh.rms < f0.rms * 0.02) {
                         bad++;
+                        if (getenv("MACDBG"))
+                            printf("  bad: %s macro %u %s: rms %.0f / %.0f / %.0f, peak %.0f / %.0f\n", EN[e],
+                                   j + 1, e == ENG_FM ? FF_NAME[kind] : e == ENG_ANIMA ? AK_NAME[kind] : e == ENG_CAL ? CS_NAME[kind] : RK_NAME[kind],
+                                   fl.rms, f0.rms, fh.rms, fl.peak, fh.peak);
+                    }
                 }
             printf("macros %-8s %u: moves %u of %u sounds%s%s\n", EN[e], j + 1, moved, tried,
                    wrong ? " (darker turned up on some)" : "", bad ? " (silent or wild at an end on some)" : "");
@@ -2475,7 +2489,7 @@ static int cmd_macros(const char *dir)
         printf("FAIL macros: EDIT off does not give KNOB 1 back to the filter\n"), fail++;
     {   /* 0.21's presets (12 bytes a slot, no macros) still load, and are widened when one is saved */
         ses_head_t *h = (ses_head_t *)ses_chunk;
-        uint32_t len = 32u + NENG * PRE_SLOTS * 12u;
+        uint32_t len = 32u + 3u * PRE_SLOTS * 12u;      /* (0.21's: three engines) */
         pre_rec_t old;
         memset(ses_chunk, 0, len);
         memset(&old, 0, sizeof old);
@@ -2679,6 +2693,200 @@ static int cmd_voices(void)
     return fail ? 1 : 0;
 }
 
+/* what an older Tonitor saved loads here: a session of 0.25 (format 8, three engines) and its presets (format 2) --
+ * every layer's engine, level, sounds (by their seeds), macros, the reverb, the loop, the granulator; the presets
+ * found and loaded; then a preset saved over them, the old ones kept */
+#include "../compat/expected_025.h"
+static uint32_t file_into_flash(const char *path, uint32_t sect)
+{
+    FILE *f = fopen(path, "rb");
+    uint32_t n;
+    if (!f)
+        return 0;
+    n = (uint32_t)fread(host_flash + SES_LO + sect * SES_SECT, 1, 65536, f);
+    fclose(f);
+    return n;
+}
+static int cmd_compat(void)
+{
+    uint32_t fail = 0, l;
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    if (!file_into_flash("tests/compat/ses_025_f8.bin", 3) || !file_into_flash("tests/compat/pre_025_f2.bin", 20)) {
+        printf("FAIL compat: the 0.25 files are missing\n");
+        return 1;
+    }
+    ses_scan(1);
+    run_blocks(20, 0);
+    if (ses_load_slot(5) != SES_OK)
+        printf("FAIL compat: 0.25's session does not load\n"), fail++;
+    run_blocks(100, 0);
+    for (l = 0; l < NLAYER; l++) {
+        if (ui.engine[l] != C25_ENGINE[l] || ui.level[l] != C25_LEVEL[l] || ui.mac[l][ui.engine[l]][1] != C25_MAC1[l])
+            printf("FAIL compat: layer %u's engine, level or macro\n", l + 1), fail++;
+        if (fm_buf[l][fm_pub[l]].seed != C25_FM[l] || an_buf[l][an_pub[l]].seed != C25_AN[l] ||
+            cal_buf[l][cal_pub[l]].seed != C25_CAL[l])
+            printf("FAIL compat: layer %u's sounds\n", l + 1), fail++;
+        if (ui.mac[l][ENG_RUS][0] || ui.mac[l][ENG_RUS][3])
+            printf("FAIL compat: layer %u: RUSSOLO's macros not in the middle\n", l + 1), fail++;
+    }
+    for (l = 0; l < 4u; l++)
+        if (ui.rvp[l] != C25_RVP[l])
+            printf("FAIL compat: the reverb\n"), fail++, l = 4u;
+    if (loop[0].ntrk != C25_LOOP0 || gran[0].seed != C25_GRAN0)
+        printf("FAIL compat: the loop or the granulator\n"), fail++;
+    if (pre_kind(ENG_FM, 3) != C25_PRE_FM3_KIND || pre_kind(ENG_CAL, 10) != C25_PRE_CAL10_KIND || pre_kind(ENG_RUS, 1) >= 0)
+        printf("FAIL compat: 0.25's presets are not found as they were\n"), fail++;
+    if (pre_load(1, ENG_CAL, 10) != SES_OK || cal_buf[1][cal_pub[1]].seed != C25_PRE_CAL10_SEED)
+        printf("FAIL compat: 0.25's CALIGULA P10 does not load\n"), fail++;
+    if (pre_save(0, ENG_RUS, 2) != SES_OK || pre_kind(ENG_FM, 3) != C25_PRE_FM3_KIND ||
+        pre_kind(ENG_CAL, 10) != C25_PRE_CAL10_KIND || pre_kind(ENG_RUS, 2) < 0)
+        printf("FAIL compat: a preset saved over 0.25's loses them\n"), fail++;
+    printf("compat: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* RUSSOLO: every kind sounds while a key is held and only then, falls silent after, never clips; the pitched kinds
+ * follow the key (an octave up: twice the crossings); a WAV of each; six layers' cost */
+static double rus_crossings(uint32_t kind, uint32_t note, uint32_t seed)
+{
+    static rus_design_t d;
+    static rus_t c;
+    int32_t out[CTL], prev = 0;
+    uint32_t b, i, n = 0;
+    rus_design(&d, (int32_t)kind, seed, PATH_OPEN, GEN_NOW);
+    d.bits = 10, d.hold = 1, d.p2 = kind == RK_HOLD ? Q15 : 0, d.chaos = kind == RK_HOLD ? Q15 : 0;   /* (the pitch alone) */
+    rus_measure(&d);
+    rus_init(&c, seed);
+    rus_note_on(&c, &d, note);
+    for (b = 0; b < 1378u; b++) {
+        rus_render(&c, &d, out);
+        if (b >= 400u)
+            for (i = 0; i < CTL; i++) {
+                if ((prev < 0) != (out[i] < 0))
+                    n++;
+                prev = out[i];
+            }
+    }
+    return n;
+}
+static int cmd_russolo(const char *dir)
+{
+    static rus_design_t d;
+    static rus_t c;
+    uint32_t fail = 0, k, b, i, s;
+    char path[512];
+    wav_ch = 1;
+    for (k = 0; k < RK_N; k++)
+        for (s = 0; s < 3u; s++) {
+            int32_t out[CTL];
+            double held = 0, peak = 0, after = 0, before = 0;
+            rus_design(&d, (int32_t)k, 900u + s * 7919u + k * 31u, s == 1u ? PATH_AMBIENT : s == 2u ? PATH_EXP : PATH_OPEN, GEN_NOW);
+            rus_measure(&d);
+            rus_init(&c, 77u + k);
+            wav_n = 0;
+            for (b = 0; b < 1378u * 14u; b++) {
+                if (b == 1378u)
+                    rus_note_on(&c, &d, s == 2u ? 60 : 48);
+                if (b == 1378u * 5u)
+                    rus_note_off(&c, s == 2u ? 60 : 48);
+                if (!rus_render(&c, &d, out))
+                    memset(out, 0, sizeof out);
+                for (i = 0; i < CTL; i++) {
+                    double a = fabs((double)mulq12(out[i], LAYER_GAIN));
+                    wav_put(mulq12(out[i], LAYER_GAIN));
+                    if (fabs((double)out[i]) >= 32767.0)   /* (the engine's own output: a layer's limiter follows) */
+                        peak = 32767.0;
+                    if (a > peak && peak < 32767.0)
+                        peak = a < 32766.0 ? a : 32766.0;
+                    if (b < 1378u)
+                        before += a;
+                    else if (b < 1378u * 5u)
+                        held += a * a;
+                    else if (b >= 1378u * 13u)       /* (8 s after: the longest release, 5 s, and its tail) */
+                        after += a;
+                }
+            }
+            if (s == 0u) {
+                snprintf(path, sizeof path, "%s/russolo-%s.wav", dir, RK_NAME[k]);
+                wav_write(path);
+            }
+            held = 10 * log10(held / (1378.0 * 4 * CTL) / 1073741824.0 + 1e-12);
+            printf("russolo %-8s %u: %.1f dB held, peak %.1f dB\n", RK_NAME[k], s + 1, held, dbp(peak));
+            if (before > 0)
+                printf("FAIL russolo: %s sounds with no key\n", RK_NAME[k]), fail++;
+            if (held < -45.0)
+                printf("FAIL russolo: %s %u is silent\n", RK_NAME[k], s + 1), fail++;
+            if (after > 0 || c.live)
+                printf("FAIL russolo: %s %u still sounds 8 s after the key\n", RK_NAME[k], s + 1), fail++;
+            if (peak >= 32767.0)
+                printf("FAIL russolo: %s %u clips\n", RK_NAME[k], s + 1), fail++;
+        }
+    {   /* the key's pitch, where the kind has one */
+        static const uint8_t PITCHED[] = {RK_NOR, RK_XOR, RK_RING, RK_CASCADE, RK_CHORD, RK_HOLD};
+        for (k = 0; k < sizeof PITCHED; k++) {
+            double lo = rus_crossings(PITCHED[k], 48, 31u + k), hi = rus_crossings(PITCHED[k], 60, 31u + k);
+            printf("russolo %-8s crossings at C3 %.0f, at C4 %.0f (x%.2f)\n", RK_NAME[PITCHED[k]], lo, hi, hi / (lo + 1));
+            if (hi < lo * 1.6 || hi > lo * 2.5)
+                printf("FAIL russolo: %s does not follow the key\n", RK_NAME[PITCHED[k]]), fail++;
+        }
+    }
+    {   /* six layers of it: the cost */
+        clock_t t0;
+        static rus_t six[NLAYER];
+        static rus_design_t ds[NLAYER];
+        int32_t out[CTL];
+        for (k = 0; k < NLAYER; k++) {
+            rus_design(&ds[k], (int32_t)(RK_CHUNKS + (k % 5u)), 5u + k, PATH_EXP, GEN_NOW);
+            rus_init(&six[k], k);
+            rus_note_on(&six[k], &ds[k], 48 + k);
+        }
+        t0 = clock();
+        for (b = 0; b < 1378u * 3u; b++)
+            for (k = 0; k < NLAYER; k++)
+                rus_render(&six[k], &ds[k], out);
+        printf("russolo: six layers: %.2f us a block on the host\n", (double)(clock() - t0) / CLOCKS_PER_SEC * 1e6 / (1378 * 3));
+    }
+    {   /* the flow: layer 4 to it on PRESETS, a key, a loop of it, a session, back */
+        grain_reset();
+        memset(host_flash, 0xFF, sizeof host_flash);
+        ses_scan(1);
+        press_btn(B_LFO);
+        while (ui.engine[3] != ENG_RUS) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(40, 0);
+        if (lay[3].engine != ENG_RUS)
+            printf("FAIL russolo: PRESETS does not reach it\n"), fail++;
+        ui.force = 1;
+        ui_draw();
+        ppm("build/screens/screen-33-russolo.ppm");
+        press_btn(B_REC);
+        press_key(2, 1);
+        run_blocks(300, 0);
+        if (!rus_rt[3].nheld || !rus_rt[3].live)
+            printf("FAIL russolo: a key does not play it\n"), fail++;
+        press_key(2, 0);
+        run_blocks(200, 0);
+        press_btn(B_REC);
+        run_blocks(1000, 0);
+        if (loop[3].ntrk != 1u)
+            printf("FAIL russolo: its loop was not kept\n"), fail++;
+        {
+            rus_design_t keep = rus_buf[3][rus_pub[3]];
+            ses_save(1);
+            new_rus(3, 999u, PATH_OPEN);
+            run_blocks(40, 0);
+            ses_load_slot(1);
+            if (memcmp(&keep, &rus_buf[3][rus_pub[3]], sizeof keep) || ui.engine[3] != ENG_RUS)
+                printf("FAIL russolo: a session does not keep its sound\n"), fail++;
+        }
+    }
+    printf("russolo: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -2695,6 +2903,10 @@ int main(int argc, char **argv)
         return cmd_reverb(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "paths"))
         return cmd_paths(argv[2]);
+    if (argc >= 3 && !strcmp(argv[1], "russolo"))
+        return cmd_russolo(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "compat"))
+        return cmd_compat();
     if (argc >= 2 && !strcmp(argv[1], "voices"))
         return cmd_voices();
     if (argc >= 3 && !strcmp(argv[1], "overdubs"))

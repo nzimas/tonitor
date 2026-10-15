@@ -25,12 +25,14 @@ build/host presets build/screens
 build/host macros build/screens
 build/host overdubs build/screens
 build/host voices
+build/host compat
 build/host paths build/sounds
 build/host reverb build/sounds
 build/host sessions build/screens
 build/host filter build/screens
 build/host crush build/screens
 build/host caligula build/sounds
+build/host russolo build/sounds
 build/host grain build/sounds && mv build/sounds/screen-*.ppm build/screens/
 build/host render build/sounds 3 > build/sounds/stats.txt
 build/host mix build/sounds

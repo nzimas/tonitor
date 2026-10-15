@@ -21,6 +21,7 @@ headers; changes are noted in each file.
 | msfa (Google Inc., Pascal Gauthier), from Dexed, ported to integer C by Leo Kuroshita for Felucca; for TONITOR the modulation buses moved to the stack | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | The ANIMA engine: a fixed-point port of the anima opcode (`AnimaCore.h`, `AnimaDesign.h`) of Vascular, Copyright (C) Nuno Zimas, contributed by its author to this firmware | GPL-3.0-only (in this firmware) | `firmware/src/anima.c`, `tools/gen_tables.py` |
 | CALIGULA follows the architecture of LIRA-8 (Copyright (C) Miguel Moreno), a Pure Data emulation of SOMA's LYRA-8; rebuilt in fixed-point C, no Pd code copied | BSD 3-clause (LIRA-8's) | `firmware/src/cal.c`, `LICENSES/BSD-LIRA-8.txt` |
+| RUSSOLO re-makes the techniques of Noisferatu (Copyright (C) Robert Heel, rob-scape/noisferatu) in fixed-point C for the FM-1 | GPL-3.0 (Noisferatu's, as the firmware's) | `firmware/src/russolo.c` |
 | Terminus Bold 8x16 (the screen's fallback font) | SIL OFL 1.1 | `assets/fonts/ter-u16b.bdf`, `assets/fonts/Terminus-LICENSE.txt` |
 | Atkinson Hyperlegible Bold (the screen's type) | SIL OFL 1.1 | `assets/fonts/AtkinsonHyperlegible-Bold.ttf`, `assets/fonts/AtkinsonHyperlegible-OFL.txt` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK file is in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |

@@ -38,13 +38,16 @@ layer in its own colour.
 
 ### Highlights
 
-- **Three sound engines**, chosen per layer:
+- **Four sound engines**, chosen per layer:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
     folding, a phaser and a resonator), all moved by the hand's gestures.
   - **CALIGULA** — a restless eight-oscillator organism after the architecture of the LYRA-8, with
     cross-modulation, a hyper-LFO, bursts and surges, and a simulated hand on its plates.
+  - **RUSSOLO** — noise, logic and broken buffers: sample-and-hold and dusty noise, oscillators combined
+    bit by bit, generated buffers read with their address bits bent, chance-driven tones; crushed and
+    sample-held like a small DAC.
 - **Generative paths** — lean each layer's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
 - **Six free loopers**, one per layer, with up to ten overdubs each, every loop with its own length.
@@ -84,10 +87,10 @@ sessions overwrites SLOOP projects** stored there.
 | Control | What it does |
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose layer **1 2 3 4 5 6**. The chosen layer's button is lit; the others glow while they sound. |
-| **PRESETS** knob | the chosen layer's engine: **FM**, **ANIMA** or **CALIGULA**, left to right. Each layer keeps a sound of each engine, so turning back finds the sound it had. |
+| **PRESETS** knob | the chosen layer's engine: **FM**, **ANIMA**, **CALIGULA** or **RUSSOLO**, left to right. Each layer keeps a sound of each engine, so turning back finds the sound it had. |
 | **HOME** | a **new sound** for the chosen layer, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **OCT− / OCT+** | the chosen layer's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
-| the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the layers**: a note takes a free voice, so a layer has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any layer), else the oldest note held on its own layer, else the oldest held anywhere. (CALIGULA is one organism a layer, outside the pool.) A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
+| the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the layers**: a note takes a free voice, so a layer has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any layer), else the oldest note held on its own layer, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a layer, outside the pool.) A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
 | the rightmost black key | **SHIFT** (lit while held; each press shows the audio's load in % of the time it has, now / at most since the last press, e.g. `LOAD 62/91`). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen layer's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen layer's sound. See [Macros](#macros). |
@@ -116,8 +119,8 @@ playing: it shapes the next sounds drawn on that layer. The path's key is lit wh
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR and BOWL, never GRIT, SHARDS or MACHINE, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand |
-| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts and iterations, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS and MACHINE, never HAZE, TIDE or CHOIR, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand |
+| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC; then softer attacks, long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR and BOWL, never GRIT, SHARDS or MACHINE, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
+| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts and iterations, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS and MACHINE, never HAZE, TIDE or CHOIR, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
 | **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every layer starts here |
 
 Sessions keep each layer's path, and the path each of its sounds was drawn on.
@@ -137,8 +140,9 @@ The macros are chosen for each engine, and for some by the kind of sound:
 | **FM** | **BRIGHT**: the modulation index, and the carriers tilted (the higher partials up) | **DETUNE** (the carriers pulled apart: beating, chorus) — or **SKEW** for metallic and noisy families (every partial off its ratio: clangour) | **GRIT**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
 | **ANIMA** | **TONE**: every filter up or down | what the kind is about: **GRAINS**, **AIR** (the noise), **FM** (the index), **VOWEL** (the formant) or **DRIVE** | **SPACE**: the resonator wetter and ringing longer (brought in if the sound had none), or drier | **MOTION**: the hand's pace, its LFOs and the tremolo |
 | **CALIGULA** | **EDGE**: triangles to squares | **DEPTH**: how deeply the pairs modulate each other | **CHAOS** (total feedback and drive) — or **ECHO** (the delay) for SPORE, VEIL, LITANY and MOTH | **HAND**: how busy the hand is, its touches and bursts — or **PULSE** (the gates' speed) for HIVE, MOTH and WIRE |
+| **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **CHAOS**: how much chance drives it; above the middle, stutters too |
 
-Each layer keeps the macros of each of its three sounds. **HOME** draws a new sound as it comes (its macros
+Each layer keeps the macros of each of its four sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.
 
 ### Latched keys
@@ -220,17 +224,17 @@ empty one EMPTY in grey.
   playing.
 
 A preset keeps what draws the sound again, exactly — its seed, its path and the generation of the
-generators that drew it — and its level: all 192 take one sector of flash, beside the sessions. Saving
+generators that drew it — and its level: all 256 take one sector of flash, beside the sessions. Saving
 erases flash, which silences the audio for a moment, as a session save does.
 
 ### Sessions
 
 The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–64.
 
-A session stores in full the sound of the engine each layer is on, and the other two as the seed that
+A session stores in full the sound of the engine each layer is on, and the other three as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
-sector of flash. A session is the whole machine: every layer's engine and its three sounds, its path, octave, level, pan,
-reverb send, filter, granulator, crush and loops (playing or stopped); the scale and root, the reverb, and
+sector of flash. A session is the whole machine: every layer's engine and its four sounds, its path, octave, level, pan,
+reverb send, filter, granulator (and the character it was drawn with), crush, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the layer chosen. They are kept in the
 FM-1's flash, in the area SLOOP uses for its projects (**saving overwrites any SLOOP projects, presets and
 samples left on the device**): dozens of typical sessions, at least ten even with six full loops.
@@ -374,6 +378,39 @@ harmonics, unisons, tritones, fourths, a minor seventh, open fifths, a quarter-t
 | **MOTH** | soft triangles fluttering through the gates, on a pulse |
 
 
+### RUSSOLO — noise, logic and broken buffers
+
+The fourth engine re-makes the techniques of Robert Heel's Noisferatu (GPL-3.0) in fixed point, for the
+keys. It runs at a third of the sample rate (about 14.7 kHz) in 10-bit values, each held until the next —
+the grit of a small DAC — then reduces its bits and holds its samples further as the sound says.
+
+A RUSSOLO layer is **played like the others** and is **silent until a key is down**: the key opens an
+envelope and sets the pitch (the oscillators' frequency, the speed a buffer is read at, the rate noise is
+sampled at); a second key on top moves it there at once; letting go of the last key lets it fade. Like
+CALIGULA it is one organism a layer, outside the pool of voices. **HOME** draws one of seventeen kinds:
+
+| Kind | |
+| --- | --- |
+| **HOLD** | sample-and-hold noise, its rate from the key |
+| **DUST** | random clicks through a low-pass that follows the key |
+| **GATES** | noise opened and closed by two triangles, one wandering off the other |
+| **CRACKLE** | sparse clicks ringing on short pitched decays, over hiss |
+| **NOR**, **XOR** | two oscillators combined bit by bit |
+| **RING** | two oscillators multiplied |
+| **CASCADE** | squares modulating squares, a sub-octave below |
+| **CLANG** | two triangles at an inharmonic ratio, XOR'd; the ratio redrawn when two clocks meet |
+| **CHUNKS** | a generated buffer of noise, saw and silent chunks, read at the key's speed and rebuilt in parts |
+| **JUMP** | the buffer read with jumps at random |
+| **WANDER** | a window wandering through the buffer |
+| **BEND** | an address bit of the buffer forced to 0 or 1, flipped or held; which and how change on a clock |
+| **QUAD** | four such bendings at once, each switched on and off by chance |
+| **BLIPS** | decaying triangles fired by chance on the key's harmonics |
+| **WALK** | a random walk over a scale's steps from the key |
+| **CHORD** | triangles on the key (minor, major, open fifths or suspended), slowly beating and swelling |
+
+Each kind has two parameters of its own, the first two macros; **CRUSH** and **CHAOS** are the other two.
+Its level is measured when it is drawn, and never raised so far that its loudest click could clip.
+
 # Building from source
 
 Once:
@@ -414,7 +451,7 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 ## How it is built
 
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
-`anima.c` (ANIMA), `cal.c` (CALIGULA), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six layers,
+`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six layers,
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). From SLOOP / Felucca, unchanged or nearly: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
@@ -428,7 +465,7 @@ browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` 
 - **The website, the logo and the documentation** written for Tonitor (`docs/` except `docs/js/fm1ota.js`
   and the firmware package, and this README's text) are under the **MIT licence**
   ([`LICENSES/MIT.txt`](LICENSES/MIT.txt)).
-- Third-party parts keep their own licences: msfa (Apache-2.0), the LIRA-8 architecture (BSD 3-clause), the
+- Third-party parts keep their own licences: msfa (Apache-2.0), the LIRA-8 architecture (BSD 3-clause), Noisferatu's techniques (GPL-3.0), the
   fonts (SIL OFL 1.1), the JieLi SDK files placed in the package (Apache-2.0).
 
 [`LICENSING.md`](LICENSING.md) lists every file and its licence.
@@ -444,6 +481,8 @@ Tonitor is by Nuno Zimas. It stands on the work of others:
 - **ANIMA** is ported from the anima opcode of Vascular.
 - **CALIGULA** follows the architecture of [**LIRA-8**](https://github.com/MikeMorenoDSP/LIRA-8) by Miguel
   Moreno (BSD), an emulation of SOMA Laboratory's LYRA-8.
+- **RUSSOLO** re-makes, in fixed point, the techniques of
+  [**Noisferatu**](https://github.com/rob-scape/noisferatu) by Robert Heel (GPL-3.0).
 - **Atkinson Hyperlegible** by the Braille Institute (SIL OFL 1.1) and **Terminus** (SIL OFL 1.1).
 
 M-VAVE and FM-1 are trademarks of their owner, used here only to say which device Tonitor runs on.
