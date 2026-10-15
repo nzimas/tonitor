@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 12u           /* 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 13u           /* 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -29,7 +29,7 @@
 /* the largest session: the head, the globals, six layers with their sounds and full loopers (~54 KiB) */
 #define SES_BUF (32u + 8u + NLAYER * (16u + NENG * NMAC + 2u + 36u + sizeof(fm_patch_t) + sizeof(an_design_t) + sizeof(cal_design_t) + \
                                       sizeof(rus_design_t) + \
-                                      8u * LOOP_TRK + 4u * LOOP_N))
+                                      8u * LOOP_TRK + 4u * LOOP_N) + 4u + NLAYER)
 
 /* the flash, for the target (main.c) or the host test (host.c); offsets from the flash's start */
 static int ses_flash_read(uint32_t off, void *p, uint32_t n);
@@ -410,6 +410,8 @@ static void ses_emit(void)
         for (i = 0; i < n; i++)                         /* t (24 bits), note, on */
             ses_out(&lp->ev[i], 4u);
     }
+    ses_out(ui.dlp, 4u);                                /* (format 13: the delay, and each track's send to it) */
+    ses_out(ui.dsend, NLAYER);
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -696,9 +698,13 @@ static void ses_fresh(uint32_t num)
     ui.lx = 0;
     memset(ui.lxt, 0, sizeof ui.lxt);
     lx_post();
-    for (k = 0; k < 4u; k++)
+    for (k = 0; k < 4u; k++) {
         ui.rvp[k] = RV_DEF[k];
+        ui.dlp[k] = DL_DEF[k];
+    }
     rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+    memset(ui.dsend, 0, sizeof ui.dsend);
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed(), fk, ak, ck, rk;
         loop[l].mute = 0;
@@ -747,7 +753,7 @@ static void ses_fresh(uint32_t num)
  * Level and pan stay with the track pasted onto (its place in the mix) */
 static struct {
     uint8_t full, from, engine, path, play;
-    int8_t oct, send, flt, gr, cr, lxt;
+    int8_t oct, send, flt, gr, cr, lxt, dsend;
     uint8_t dmode, rate;
     uint32_t gseed;
     int8_t mac[NENG][NMAC];
@@ -771,6 +777,7 @@ static void clip_copy(uint32_t l)
     clip.path = ui.path[l];
     clip.oct = ui.oct[l];
     clip.send = ui.send[l];
+    clip.dsend = ui.dsend[l];
     clip.flt = ui.flt[l];
     clip.gr = ui.gr[l];
     clip.cr = ui.cr[l];
@@ -803,6 +810,7 @@ static void clip_paste(uint32_t l)
     ui.path[l] = clip.path;
     ui.oct[l] = clip.oct;
     ui.send[l] = clip.send;
+    ui.dsend[l] = clip.dsend;
     ui.flt[l] = clip.flt;
     ui.gr[l] = clip.gr;
     ui.cr[l] = clip.cr;
@@ -1078,6 +1086,20 @@ static int ses_load(uint32_t i)
         }
         ses_events_drain();
     }
+    for (k = 0; k < 4u; k++)                            /* the delay (before format 13: as at start, the sends at 0) */
+        ui.dlp[k] = DL_DEF[k];
+    memset(ui.dsend, 0, sizeof ui.dsend);
+    if (h.format >= 13u) {
+        ses_in(ui.dlp, 4u);
+        ses_in(ui.dsend, NLAYER);
+        for (k = 0; k < 4u; k++)
+            ui.dlp[k] = (int8_t)clampi(ui.dlp[k], 0, 100);
+        for (l = 0; l < NLAYER; l++)
+            ui.dsend[l] = (int8_t)clampi(ui.dsend[l], 0, 100);
+    }
+    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+    for (l = 0; l < NLAYER; l++)
+        level_pan_apply(l);
     ses.current = ses.num[i];
     return SES_OK;
 }

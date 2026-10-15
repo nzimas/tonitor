@@ -17,9 +17,11 @@
 #ifdef HOST
 #define POOL
 #define FAST                     /* (the host: no RAM code) */
+#define DLYMEM
 #else
 #define POOL __attribute__((section(".pool")))
 #define FAST __attribute__((section(".fast_text"), noinline))   /* run from RAM (app.ld): the audio's hottest code */
+#define DLYMEM __attribute__((section(".dly_mem")))   /* data in the RAM beside the code (app.ld .dly): the delay's */
 #endif
 
 #define Q15 32768

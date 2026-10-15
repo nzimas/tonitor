@@ -91,7 +91,7 @@ typedef struct {
     uint8_t xfade;               /* blocks of the layer's fade left (a change of engine or sound) */
     int32_t meter;               /* |output| peak, decaying (Q15): the screen's */
     int32_t lim_env, lim_g;      /* the limiter: the peak it follows, the gain of the last block (Q15) */
-    int32_t g, pl, pr, sd;       /* the level, the pan and the send as the last block ended (they glide) */
+    int32_t g, pl, pr, sd, dsd;  /* the level, the pan and the sends as the last block ended (they glide) */
     svf_t flt;                   /* the DJ filter (KNOB 1) */
     int32_t f_oct, f_q, f_amt;   /* its cutoff (log2 Hz, Q16), Q (Q12) and wet share (Q15) as they glide */
     uint8_t f_hp;                /* high-pass (else low-pass) */
@@ -218,6 +218,7 @@ static uint32_t lx_map(uint32_t n, int32_t k, uint32_t mask)
  * (1.0 = 16384) and the two sides of an equal-power pan, Q15. The ISR glides to them over a block. */
 static volatile int32_t lay_gain[NLAYER], lay_pl[NLAYER], lay_pr[NLAYER];
 static volatile int32_t lay_send[NLAYER];   /* the send to the reverb, after the level, Q15 (KNOB 4) */
+static volatile int32_t lay_dsend[NLAYER];  /* .. to the delay (SHIFT + KNOB 4) */
 /* each layer's DJ filter (KNOB 1), -FLT_MAX .. FLT_MAX: 0 off; left a low-pass coming down from 20 kHz to
  * ~35 Hz, right a high-pass going up from 16 Hz to ~12 kHz, more resonant the further from the middle. A
  * state-variable filter: its pass band stays at full level whatever the resonance (no thinning of the body as
@@ -991,6 +992,7 @@ static int layer_sounding(uint32_t l)
 }
 
 #include "gran.c"
+#include "delay.c"
 
 /* voice k's fade over: the note it waited for, on the layer it goes to (unless that layer is fading for a change:
  * then its change plays it) */
@@ -1008,7 +1010,7 @@ static void voice_take(uint32_t k)
         voice_off(to, k);
 }
 
-static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
+static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin, int32_t *dlin)
 {
     layer_t *y = &lay[l];
     int32_t buf[CTL], vb[CTL], pk = 0;
@@ -1103,6 +1105,7 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         y->pl = lay_pl[l];
         y->pr = lay_pr[l];
         y->sd = lay_send[l];
+        y->dsd = lay_dsend[l];
         return;
     }
     {   /* the DJ filter */
@@ -1137,15 +1140,16 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         buf[i] = mulq12(buf[i], LAYER_GAIN);
     lim_block(&y->lim_env, &y->lim_g, buf, CTL);
     {   /* the layer's level, then its pan, gliding from the last block's to the knobs' */
-        int32_t g1 = lay_gain[l], pl1 = lay_pl[l], pr1 = lay_pr[l], sd1 = lay_send[l];
+        int32_t g1 = lay_gain[l], pl1 = lay_pl[l], pr1 = lay_pr[l], sd1 = lay_send[l], dd1 = lay_dsend[l];
         int32_t dg = (g1 - y->g) / CTL, dl = (pl1 - y->pl) / CTL, dr = (pr1 - y->pr) / CTL, ds = (sd1 - y->sd) / CTL;
-        int32_t g = y->g, pl = y->pl, pr = y->pr, sd = y->sd;
+        int32_t dds = (dd1 - y->dsd) / CTL, g = y->g, pl = y->pl, pr = y->pr, sd = y->sd, dsd = y->dsd;
         for (i = 0; i < CTL; i++) {
             int32_t x, a;
             g += dg;
             pl += dl;
             pr += dr;
             sd += ds;
+            dsd += dds;
             x = (int32_t)(((int64_t)buf[i] * g) >> 14);
             a = absi(x);
             if (a > pk)
@@ -1153,11 +1157,13 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
             mixl[i] += mulq15(x, pl);
             mixr[i] += mulq15(x, pr);
             rvin[i] += mulq15(x, sd);
+            dlin[i] += mulq15(x, dsd);
         }
         y->g = g1;
         y->pl = pl1;
         y->pr = pr1;
         y->sd = sd1;
+        y->dsd = dd1;
     }
     y->meter = pk > y->meter ? pk : y->meter - (y->meter >> 5);
 }
@@ -1248,7 +1254,7 @@ static void budget_guard(void)
 /* one block: the events, the loops, the layers, the reverb, the master (Q15 stereo, interleaved) */
 static void mix_block(int32_t *out)
 {
-    int32_t l_[CTL], r_[CTL], rvin[CTL];
+    int32_t l_[CTL], r_[CTL], rvin[CTL], dlin[CTL];
     uint32_t i, l;
     uint32_t c0 = COST_NOW();
     an_cache_now = blk_clock + 1u;                /* (ANIMA's wavetables from RAM while the ISR renders) */
@@ -1261,9 +1267,10 @@ static void mix_block(int32_t *out)
         shed_req = 0;
     }
     for (i = 0; i < CTL; i++)
-        l_[i] = r_[i] = rvin[i] = 0;
+        l_[i] = r_[i] = rvin[i] = dlin[i] = 0;
     for (l = 0; l < NLAYER; l++)
-        layer_block(l, l_, r_, rvin);
+        layer_block(l, l_, r_, rvin, dlin);
+    dl_block(dlin, l_, r_, rvin);                 /* the master delay, before the reverb (its echoes into it too) */
     rv_block(rvin, l_, r_, CTL);                  /* the master reverb (its tail goes on with no layer sounding) */
     for (i = 0; i < CTL; i++) {
         out[2u * i] = ceiling(mulq12(l_[i], master_q12));
@@ -1300,6 +1307,7 @@ static void layers_init(void)
     }
     rv_init();
     gran_init();
+    dl_init();
 }
 
 /* the ISR has taken the last sound published for this layer and engine (or waits ~20 ms for it) */

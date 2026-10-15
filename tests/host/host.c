@@ -3785,6 +3785,193 @@ static int cmd_loopmodes(void)
     return fail ? 1 : 0;
 }
 
+/* the master delay: an echo at TIME (20 ms, 200 ms, 2 s); each repeat FEEDBACK x the one before; DAMP darkens
+ * them; bounded at the most feedback, and dying away; a track's send through the mix (none at 0); the DELAY page
+ * (SHIFT + SEQ), its knobs, SHIFT + KNOB 4 the send; sessions keep it; a fresh one resets it */
+static int32_t dl_buf[44100 * 6];
+static uint32_t dl_run(uint32_t samples, int impulse, int noise)  /* the delay alone: an impulse or noise, out to dl_buf */
+{
+    int32_t in[CTL], l[CTL], r[CTL], rv[CTL];
+    uint32_t b, i, n = 0;
+    static rnd_t rr;
+    for (b = 0; n < samples; b++) {
+        for (i = 0; i < CTL; i++) {
+            in[i] = (impulse && b == 0 && i == 0) ? 20000 : (noise && n + i < (uint32_t)noise) ? rnd_bi(&rr) : 0;
+            l[i] = r[i] = rv[i] = 0;
+        }
+        dl_block(in, l, r, rv);
+        for (i = 0; i < CTL && n < samples; i++)
+            dl_buf[n++] = l[i];
+    }
+    return n;
+}
+static int cmd_delay(const char *dir)
+{
+    uint32_t fail = 0, i;
+    static const int32_t TIMES[3] = {0, 50, 100};
+    char path[512];
+    for (i = 0; i < 3u; i++) {                       /* the echo where TIME puts it */
+        uint32_t n, k, at = 0;
+        int32_t pk = 0, ms = dl_ms(TIMES[i]);
+        dl_init();
+        dl_param(TIMES[i], 0, 0, 100);
+        dl.t = dl_t_want;
+        n = dl_run(44100u * 5u / 2u, 1, 0);
+        for (k = 0; k < n; k++)
+            if (absi(dl_buf[k]) > pk) {
+                pk = absi(dl_buf[k]);
+                at = k;
+            }
+        printf("delay: TIME %3d = %4d ms, the echo at %.1f ms (%d)\n", TIMES[i], ms, at / 44.1, pk);
+        if (fabs(at / 44.1 - ms) > 1.5 || pk < 5000)
+            printf("FAIL delay: TIME %d's echo is not at %d ms\n", TIMES[i], ms), fail++;
+    }
+    {   /* FEEDBACK: each repeat the one before x 0.95 x fb (no damping) */
+        uint32_t n, k, e;
+        double pkk[3] = {0, 0, 0};
+        dl_init();
+        dl_param(30, 60, 0, 100);
+        dl.t = dl_t_want;
+        n = dl_run(44100u * 1u, 1, 0);
+        for (e = 0; e < 3u; e++) {
+            uint32_t c = (uint32_t)(dl_ms(30) * 44.1 * (e + 1));
+            for (k = c - 40u; k < c + 40u && k < n; k++)
+                if (fabs((double)dl_buf[k]) > pkk[e])
+                    pkk[e] = fabs((double)dl_buf[k]);
+        }
+        printf("delay: FEEDBACK 60: repeats %.0f, %.0f, %.0f (ratio %.2f, %.2f)\n", pkk[0], pkk[1], pkk[2], pkk[1] / pkk[0], pkk[2] / pkk[1]);
+        if (fabs(pkk[1] / pkk[0] - 0.57) > 0.06 || fabs(pkk[2] / pkk[1] - 0.57) > 0.06)
+            printf("FAIL delay: the repeats do not fall by FEEDBACK\n"), fail++;
+    }
+    {   /* DAMP: the repeats of a noise burst darker */
+        double hf[2];
+        uint32_t d;
+        for (d = 0; d < 2u; d++) {
+            uint32_t n, k, c = (uint32_t)(dl_ms(30) * 44.1);
+            double h = 0, a = 0;
+            dl_init();
+            dl_param(30, 0, d ? 90 : 0, 100);
+            dl.t = dl_t_want;
+            n = dl_run(c + 2000u, 0, 1500);
+            for (k = c + 50u; k < c + 1400u && k + 1u < n; k++) {
+                h += fabs((double)dl_buf[k + 1] - dl_buf[k]);
+                a += fabs((double)dl_buf[k]);
+            }
+            hf[d] = h / (a + 1);
+        }
+        printf("delay: DAMP 0 / 90: the repeat's roughness %.3f / %.3f\n", hf[0], hf[1]);
+        if (hf[1] > hf[0] * 0.6)
+            printf("FAIL delay: DAMP does not darken the repeats\n"), fail++;
+    }
+    {   /* the most feedback, loud noise: bounded, and dying away */
+        uint32_t n, k;
+        int32_t pk = 0, tail = 0;
+        dl_init();
+        dl_param(20, 100, 0, 100);
+        dl.t = dl_t_want;
+        n = dl_run(44100u * 6u, 0, 44100);
+        for (k = 0; k < n; k++) {
+            if (absi(dl_buf[k]) > pk)
+                pk = absi(dl_buf[k]);
+            if (k > 44100u * 5u && absi(dl_buf[k]) > tail)
+                tail = absi(dl_buf[k]);
+        }
+        printf("delay: the most feedback: peak %d, 4 s after the noise %d\n", pk, tail);
+        if (pk > 40000 || tail > pk / 4)
+            printf("FAIL delay: the most feedback is not bounded or does not die away\n"), fail++;
+    }
+    /* through the mix: track 1's send, a note let go: echoes after it; none at send 0 */
+    {
+        uint32_t s2, b;
+        double after[2];
+        for (s2 = 0; s2 < 2u; s2++) {
+            double a = 0;
+            grain_reset();
+            ui.send[0] = 0;
+            ui.dsend[0] = (int8_t)(s2 ? 80 : 0);
+            ui.dlp[0] = 60;
+            ui.dlp[1] = 50;
+            ui.dlp[3] = 100;
+            dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+            level_pan_apply(0);
+            press_btn(B_FX);
+            press_key(0, 1);
+            run_blocks(30, 0);
+            press_key(0, 0);
+            for (b = 0; b < 44100u * 3u / CTL; b++) {
+                uint32_t k;
+                run_blocks(1, 0);
+                if (b > 44100u / CTL)                 /* (from 1 s after: the note's own tail gone) */
+                    for (k = 0; k < 2u * CTL; k++)
+                        a += fabs((double)mix_out[k]);
+            }
+            {   /* (what went into its line: the echoes kept there) */
+                uint32_t k;
+                double line = 0;
+                for (k = 0; k < DL_N; k++)
+                    line += fabs((double)dl_get(k));
+                after[s2] = line;
+            }
+            (void)a;
+        }
+        printf("delay: through the mix, in its line: send 0 %.0f, send 80 %.0f\n", after[0], after[1]);
+        if (after[0] > 0 || after[1] < 1e5)
+            printf("FAIL delay: a track's send does not reach the delay\n"), fail++;
+    }
+    /* the panel */
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_SEQ);
+    press_phys(KEY_SHIFT, 0);
+    if (!ui.rv_page || ui.fx != 1u)
+        printf("FAIL delay: SHIFT + SEQ does not open the DELAY page\n"), fail++;
+    host_enc[PANEL_ENC[EN_K1]] = -5;
+    host_enc[PANEL_ENC[EN_K2]] = 10;
+    ui_input();
+    if (ui.dlp[0] != DL_DEF[0] - 10 || ui.dlp[1] != DL_DEF[1] + 20 || dl_fb != (DL_DEF[1] + 20) * (LV(0.95) / 100))
+        printf("FAIL delay: the DELAY page's knobs do not set it (%d %d)\n", ui.dlp[0], ui.dlp[1]), fail++;
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-36-delay.ppm", dir);
+    ppm(path);
+    press_btn(B_SEQ);
+    if (!ui.rv_page || ui.fx != 0u)
+        printf("FAIL delay: SEQ does not go to the REVERB page\n"), fail++;
+    press_btn(B_SEQ);
+    press_btn(B_FX);
+    {
+        int8_t sd = ui.send[0];
+        press_phys(KEY_SHIFT, 1);
+        host_enc[PANEL_ENC[EN_K4]] = 15;
+        ui_input();
+        press_phys(KEY_SHIFT, 0);
+        if (ui.dsend[0] != 30 || ui.send[0] != sd || ui.dial != DIAL_DSEND || lay_dsend[0] != 30 * 32767 / 100)
+            printf("FAIL delay: SHIFT + KNOB 4 does not set the track's delay send (%d)\n", ui.dsend[0]), fail++;
+        ui.force = 1;
+        ui_draw();
+        snprintf(path, sizeof path, "%s/screen-37-delay-send.ppm", dir);
+        ppm(path);
+        host_enc[PANEL_ENC[EN_K4]] = 2;
+        ui_input();
+        if (ui.dsend[0] != 30 || ui.send[0] != sd + 4)
+            printf("FAIL delay: KNOB 4 alone is no longer the reverb send\n"), fail++;
+    }
+    if (ses_save(1) != SES_OK)
+        printf("FAIL delay: not saved\n"), fail++;
+    ui.dlp[0] = 0;
+    ui.dsend[0] = 0;
+    ses_load_slot(1);
+    if (ui.dlp[0] != DL_DEF[0] - 10 || ui.dsend[0] != 30 || lay_dsend[0] != 30 * 32767 / 100)
+        printf("FAIL delay: a session does not keep it (%d, %d)\n", ui.dlp[0], ui.dsend[0]), fail++;
+    ses_fresh(9);
+    if (ui.dlp[0] != DL_DEF[0] || ui.dsend[0])
+        printf("FAIL delay: a fresh session does not reset it\n"), fail++;
+    printf("delay: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -4172,6 +4359,8 @@ int main(int argc, char **argv)
         return cmd_ties();
     if (argc >= 2 && !strcmp(argv[1], "clicks"))
         return cmd_clicks();
+    if (argc >= 3 && !strcmp(argv[1], "delay"))
+        return cmd_delay(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))
         return cmd_loopmodes();
     if (argc >= 2 && !strcmp(argv[1], "tracktransp"))

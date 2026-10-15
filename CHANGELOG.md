@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.32
+
+Added
+- Master delay, mono, before the reverb. Per-track send on SHIFT + KNOB 4 (default 0). DELAY page on
+  SHIFT + SEQ with TIME (20 ms – 2 s, logarithmic), FEEDBACK (0–0.95), DAMP (one-pole low-pass in the feedback
+  path) and MIX. Delay line: 2 s at 22.05 kHz, 8-bit μ-law (44 100 bytes, split between the buffer pool and
+  unused code RAM). Echoes go to both master channels and, at half level, to the reverb input. TIME changes glide
+  over about 0.1 s. Stored in sessions (format 13); the send is copied with the track.
+
+Changed
+- The screen is drawn in bands of at most 56 rows (was 112), freeing 27 KB of buffer memory; the display is
+  unchanged.
+
 ## 0.31
 
 Added

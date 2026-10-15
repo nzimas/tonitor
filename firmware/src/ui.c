@@ -127,7 +127,10 @@ static struct {
     uint32_t dial_until, dial_drawn_at;   /* it shows until then; when it was last drawn */
     int16_t shown_dial;          /* (the value last drawn, + the kind x 256) */
     int8_t rvp[4];               /* the reverb: SIZE DECAY DAMP MIX, 0 .. 100 */
-    uint8_t rv_page;             /* the REVERB page is up */
+    int8_t dlp[4];               /* the delay: TIME FEEDBACK DAMP MIX, 0 .. 100 */
+    int8_t dsend[NLAYER];        /* each track's send to the delay, 0 .. 100 (SHIFT + KNOB 4) */
+    uint8_t rv_page;             /* the REVERB page is up -- or the DELAY page, fx 1 (SEQ; SHIFT + SEQ) */
+    uint8_t fx;
     int8_t rv_touched;           /* the row just turned (-1 none), until rv_touch_until */
     uint32_t rv_touch_until;
     int8_t shown_rvp[4], shown_touch;
@@ -153,7 +156,7 @@ static void say(const char *s, uint32_t ms)
 #define PAN_MAX 20
 static const int8_t PAN_DEF[NLAYER] = {-10, 10, -5, 5, -2, 2};
 #define SEND_DEF 40
-enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
+enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_DSEND, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
 
 /* the scales: the white keys play their degrees, from the root, up */
 #define NSCALE 9
@@ -205,6 +208,8 @@ static void lx_post(void)
 }
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
+static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
+static const char *const DL_NAME[4] = {"TIME", "FEEDBACK", "DAMP", "MIX"};
 
 /* the layer's level and pan, to the ISR */
 static void level_pan_apply(uint32_t l)
@@ -217,6 +222,7 @@ static void level_pan_apply(uint32_t l)
     lay_pl[l] = sin_ph((uint32_t)ph + 0x40000000u);
     lay_pr[l] = sin_ph((uint32_t)ph);
     lay_send[l] = ui.send[l] * 32767 / 100;
+    lay_dsend[l] = ui.dsend[l] * 32767 / 100;
     lay_flt[l] = ui.flt[l];
     lay_gr[l] = ui.gr[l];
     lay_cr[l] = ui.cr[l];
@@ -505,8 +511,10 @@ static void ui_input(void)
             }
         }
     }
-    if (btn_bit(press, B_SEQ)) {
-        ui.rv_page = (uint8_t)!ui.rv_page;
+    if (btn_bit(press, B_SEQ)) {                 /* the REVERB page; with SHIFT, the DELAY page (again: back) */
+        uint8_t fx = (uint8_t)((fm1_in.notes >> KEY_SHIFT) & 1u);
+        ui.rv_page = (uint8_t)!(ui.rv_page && ui.fx == fx);
+        ui.fx = fx;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.sc_page = 0;
@@ -545,14 +553,24 @@ static void ui_input(void)
             save_long();
         }
     }
-    if (ui.rv_page) {                            /* KNOB 1..4: the reverb */
+    if ((fm1_in.notes >> KEY_SHIFT) & 1u && (s = enc_take(EN_K4)) != 0) {   /* SHIFT + KNOB 4: the track's delay send */
+        ui.dsend[ui.sel] = (int8_t)clampi(ui.dsend[ui.sel] + 2 * s, 0, 100);
+        level_pan_apply(ui.sel);
+        ui.dial = DIAL_DSEND;
+        ui.dial_until = fm1_ms + 1000u;
+    }
+    if (ui.rv_page) {                            /* KNOB 1..4: the reverb, or the delay */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
+        int8_t *pv = ui.fx ? ui.dlp : ui.rvp;
         for (j = 0; j < 4u; j++) {
             s = enc_take(K[j]);
             if (s) {
-                ui.rvp[j] = (int8_t)clampi(ui.rvp[j] + 2 * s, 0, 100);
-                rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+                pv[j] = (int8_t)clampi(pv[j] + 2 * s, 0, 100);
+                if (ui.fx)
+                    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+                else
+                    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
                 ui.rv_touched = (int8_t)j;
                 ui.rv_touch_until = fm1_ms + 1500u;
             }
@@ -884,9 +902,8 @@ static void ui_leds(void)
 static void draw_number(void)
 {
     char d[2] = {(char)('1' + ui.sel), 0};
-    cv_begin(240, BAND_B - BAND_A, C_BLACK);
-    cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
-    cv_blit(0, BAND_A);
+    CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK)
+        cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
 }
 static void draw_engine(void)
 {
@@ -961,24 +978,39 @@ static void draw_pan(void)
 }
 
 /* the REVERB page: a title, then a row a parameter: its name, its value, a bar under them */
+#define C_DELAY RGB(255, 170, 90)
 static void draw_rv_title(void)
 {
     cv_begin(240, 52, C_BLACK);
-    cv_text_c(3, &FONT_L, "REVERB", C_SEND);
+    cv_text_c(3, &FONT_L, ui.fx ? "DELAY" : "REVERB", ui.fx ? C_DELAY : C_SEND);
     cv_blit(0, 0);
 }
 static void draw_rv_row(uint32_t j, int touched)
 {
-    char v[8];
+    char v[12];
+    const int8_t *pv = ui.fx ? ui.dlp : ui.rvp;
     uint16_t bg = touched ? C_WHITE : C_BLACK, fg = touched ? C_BLACK : C_WHITE;
     cv_begin(240, 47, bg);
-    cv_text(6, 1, &FONT_M, RV_NAME[j], fg);
-    fmt_int(v, ui.rvp[j]);
-    cv_text(234 - text_w(&FONT_M, v), 1, &FONT_M, v, fg);
+    {
+        const char *name = ui.fx ? DL_NAME[j] : RV_NAME[j];
+        const font_t *f = &FONT_M;
+        int32_t y = 1;
+        if (ui.fx && j == 0u) {                  /* (the delay's TIME in ms) */
+            fmt_int(v, dl_ms(pv[0]));
+            str_cpy(v + str_len(v), " MS", 4);
+        } else
+            fmt_int(v, pv[j]);
+        if (text_w(f, name) + text_w(f, v) > 220) {   /* (FEEDBACK 60, TIME 400 MS: a size smaller) */
+            f = &FONT_S;
+            y = 1 + (FONT_M.h - FONT_S.h) / 2;
+        }
+        cv_text(6, y, f, name, fg);
+        cv_text(234 - text_w(f, v), y, f, v, fg);
+    }
     cv_rect(6, 38, 228, 6, touched ? C_GREY : RGB(60, 60, 60));
-    cv_rect(6, 38, ui.rvp[j] * 228 / 100, 6, touched ? C_BLACK : C_SEND);
+    cv_rect(6, 38, pv[j] * 228 / 100, 6, touched ? C_BLACK : ui.fx ? C_DELAY : C_SEND);
     cv_blit(0, 52 + 47 * j);
-    ui.shown_rvp[j] = ui.rvp[j];
+    ui.shown_rvp[j] = pv[j];
 }
 static void draw_rv_page(void)
 {
@@ -988,13 +1020,13 @@ static void draw_rv_page(void)
         draw_rv_title();
         for (j = 0; j < 4u; j++)
             draw_rv_row(j, (int32_t)j == t);
-        ui.shown_page = 1;
+        ui.shown_page = (uint8_t)(1 + ui.fx * 10);
         ui.shown_touch = (int8_t)t;
         ui.force = 0;
         return;
     }
     for (j = 0; j < 4u; j++)
-        if (ui.shown_rvp[j] != ui.rvp[j] || (((int32_t)j == t) != ((int32_t)j == ui.shown_touch)))
+        if (ui.shown_rvp[j] != (ui.fx ? ui.dlp : ui.rvp)[j] || (((int32_t)j == t) != ((int32_t)j == ui.shown_touch)))
             draw_rv_row(j, (int32_t)j == t);
     ui.shown_touch = (int8_t)t;
 }
@@ -1013,18 +1045,17 @@ static void draw_sc_page(void)
     cv_blit(0, 0);
     bg = t == 0 ? C_WHITE : C_BLACK;
     fg = t == 0 ? C_BLACK : C_WHITE;
-    cv_begin(240, 100, bg);
-    cv_text_c(4, &FONT_XL, NOTE_NAME[ui.root], fg);
-    cv_blit(0, 50);
+    CV_AREA(0, 50, 240, 100, bg)
+        cv_text_c(4, &FONT_XL, NOTE_NAME[ui.root], fg);
     bg = t == 1 ? C_WHITE : C_BLACK;
     fg = t == 1 ? C_BLACK : C_SCALE;
-    cv_begin(240, 90, bg);
-    if (SCALE_L2[ui.scale][0]) {
-        cv_text_fit(4, &FONT_M, SCALE_L1[ui.scale], fg);
-        cv_text_fit(46, &FONT_M, SCALE_L2[ui.scale], fg);
-    } else
-        cv_text_fit(26, &FONT_M, SCALE_L1[ui.scale], fg);
-    cv_blit(0, 150);
+    CV_AREA(0, 150, 240, 90, bg) {
+        if (SCALE_L2[ui.scale][0]) {
+            cv_text_fit(4, &FONT_M, SCALE_L1[ui.scale], fg);
+            cv_text_fit(46, &FONT_M, SCALE_L2[ui.scale], fg);
+        } else
+            cv_text_fit(26, &FONT_M, SCALE_L1[ui.scale], fg);
+    }
     ui.shown_scale = ui.scale;
     ui.shown_root = ui.root;
     ui.shown_sc_touch = (int8_t)t;
@@ -1064,12 +1095,12 @@ static int32_t dial_value(void)
     if (ui.dial >= DIAL_MAC)
         return ui.mac[ui.sel][ui.engine[ui.sel]][(ui.dial - DIAL_MAC) & 3u];
     return ui.dial == DIAL_FLT ? ui.flt[ui.sel] : ui.dial == DIAL_GR ? ui.gr[ui.sel] : ui.dial == DIAL_CR ? ui.cr[ui.sel]
-                                                                                                       : ui.send[ui.sel];
+           : ui.dial == DIAL_DSEND ? ui.dsend[ui.sel] : ui.send[ui.sel];
 }
 static void draw_dial(void)
 {
     static const int32_t BAND[3][2] = {{0, 112}, {112, 112}, {224, 16}};
-    static const char *const NAME[4] = {"FILTER  ", "GRAIN  ", "REVERB  ", "CRUSH  "};
+    static const char *const NAME[5] = {"FILTER  ", "GRAIN  ", "REVERB  ", "CRUSH  ", "DELAY  "};
     int32_t v = dial_value(), b, k, from, to;    /* the arc lit, in steps of 3 degrees from 12 o'clock */
     uint32_t av;
     char t[16], m[16];
@@ -1082,7 +1113,7 @@ static void draw_dial(void)
         str_cpy(t, NAME[ui.dial], sizeof t);
     t[str_len(t) - 1] = (char)('1' + ui.sel);
     tf = text_w(&FONT_M, t) <= 236 ? &FONT_M : &FONT_S;   /* (a long name, SATURATION 1: a size smaller) */
-    if (ui.dial == DIAL_SEND) {                  /* 0 .. 100: from 7 o'clock round */
+    if (ui.dial == DIAL_SEND || ui.dial == DIAL_DSEND) {   /* 0 .. 100: from 7 o'clock round */
         from = -45;
         to = -45 + v * 90 / 100;
         av = 0xA0000000u + (0xC0000000u / 100u) * (uint32_t)v;   /* -135 degrees, + 270 x v / 100 */
@@ -1131,7 +1162,7 @@ static void draw_dial(void)
     }
     for (b = 0; b < 3; b++) {
         int32_t oy = BAND[b][0], x, y;
-        cv_begin(240, (uint32_t)BAND[b][1], C_BLACK);
+        CV_AREA(0, (uint32_t)oy, 240, (uint32_t)BAND[b][1], C_BLACK) {
         cv_text(((int32_t)cv_w - text_w(tf, t)) / 2, 2 + ((int32_t)FONT_M.h - (int32_t)tf->h) / 2 - oy, tf, t, col);
         for (k = -45; k <= 45; k++) {            /* the track, every 3 degrees */
             dial_at((uint32_t)(k * 35791394), DIAL_R, &x, &y);
@@ -1149,7 +1180,7 @@ static void draw_dial(void)
         dial_dot(oy, DIAL_CX, DIAL_CY, 10, C_WHITE);
         if (b >= 1)
             cv_text_fit(200 - oy, &FONT_M, m, v ? C_WHITE : C_GREY);
-        cv_blit(0, (uint32_t)oy);
+        }
     }
     ui.shown_dial = (int16_t)(v + ui.dial * 256);
     ui.dial_drawn_at = fm1_ms;
@@ -1182,15 +1213,14 @@ static int draw_flash(void)
     on = !(ph & 1u);
     bg = on ? ui.flash_col : C_BLACK;
     fg = on ? C_BLACK : ui.flash_col;
-    cv_begin(240, 100, bg);
-    cv_text_c(ui.flash_l2[0] ? 40 : 52, &FONT_L, ui.flash_l1, fg);
-    cv_blit(0, 0);
-    cv_begin(240, 112, bg);
-    if (all_digits(ui.flash_l2))
-        cv_text_c(4, &FONT_XL, ui.flash_l2, fg);
-    else
-        cv_text_fit(10, &FONT_L, ui.flash_l2, fg);   /* (squeezed a little rather than cut at the edge) */
-    cv_blit(0, 100);
+    CV_AREA(0, 0, 240, 100, bg)
+        cv_text_c(ui.flash_l2[0] ? 40 : 52, &FONT_L, ui.flash_l1, fg);
+    CV_AREA(0, 100, 240, 112, bg) {
+        if (all_digits(ui.flash_l2))
+            cv_text_c(4, &FONT_XL, ui.flash_l2, fg);
+        else
+            cv_text_fit(10, &FONT_L, ui.flash_l2, fg);   /* (squeezed a little rather than cut at the edge) */
+    }
     cv_begin(240, 28, bg);
     cv_blit(0, 212);
     return 1;
@@ -1248,14 +1278,12 @@ static void draw_pre_page(void)
         cv_begin(240, 52, C_BLACK);
         cv_text_fit((52 - f->h) / 2, f, "OVERWRITE?", C_FULL);
         cv_blit(0, 0);
-        cv_begin(240, 112, C_BLACK);
         n[0] = 'P';
         fmt_int(n + 1, ui.pre_ix);
-        cv_text_c(8, &FONT_XL, n + 1, C_FULL);
-        cv_blit(0, 52);
-        cv_begin(240, 76, C_BLACK);
-        draw_noyes(ui.pre_yes);
-        cv_blit(0, 164);
+        CV_AREA(0, 52, 240, 112, C_BLACK)
+            cv_text_c(8, &FONT_XL, n + 1, C_FULL);
+        CV_AREA(0, 164, 240, 76, C_BLACK)
+            draw_noyes(ui.pre_yes);
         return;
     }
     str_cpy(t, ENG_NAME[ui.pre_eng], sizeof t);
@@ -1293,8 +1321,8 @@ static void draw_ovd_page(void)
     cv_begin(240, 52, C_BLACK);
     cv_text_c((52 - FONT_M.h) / 2, &FONT_M, p->ntrk ? t : "NO LOOPS", LAYER_COL[ui.sel]);
     cv_blit(0, 0);
-    for (r = 0; r < 2u; r++) {
-        cv_begin(240, 94, C_BLACK);
+    for (r = 0; r < 2u; r++)
+        CV_AREA(0, 52 + 94 * r, 240, 94, C_BLACK)
         for (c = 0; c < 5u; c++) {
             uint32_t k = r * 5u + c;
             int32_t x = 4 + (int32_t)c * 47;
@@ -1313,8 +1341,6 @@ static void draw_ovd_page(void)
                 cv_text(x + (43 - text_w(f, n)) / 2, 6 + (82 - f->h) / 2, f, n, C_GREY);
             }
         }
-        cv_blit(0, 52 + 94 * r);
-    }
 }
 
 static void draw_ses_page(void)
@@ -1330,23 +1356,17 @@ static void draw_ses_page(void)
         cv_text_fit((52 - f->h) / 2, f, t, ui.ses_page == SP_ASK && ui.ses_over ? C_FULL : C_SES);
         cv_blit(0, 0);
     }
-    cv_begin(240, 112, C_BLACK);
-    if (ui.ses_page == SP_ASK) {
-        fmt_int(n, ui.ses_new);
-        cv_text_c(8, &FONT_XL, n, ui.ses_over ? C_FULL : C_WHITE);
-    } else {                                     /* a slot with a session in it: its number in red; empty, grey */
-        fmt_int(n, ui.ses_ix);
-        cv_text_c(8, &FONT_XL, n, has ? C_FULL : C_GREY);
+    fmt_int(n, ui.ses_page == SP_ASK ? ui.ses_new : ui.ses_ix);
+    CV_AREA(0, 52, 240, 112, C_BLACK)            /* a slot with a session in it: its number in red; empty, grey */
+        cv_text_c(8, &FONT_XL, n, ui.ses_page == SP_ASK ? (ui.ses_over ? C_FULL : C_WHITE) : has ? C_FULL : C_GREY);
+    CV_AREA(0, 164, 240, 76, C_BLACK) {
+        if (ui.ses_page == SP_ASK)
+            draw_noyes(ui.ses_yes);
+        else if (ui.ses_ix == ses_current())
+            cv_text_c(20, &FONT_M, has ? "LOADED" : "CHOSEN", C_OK);
+        else if (!has)
+            cv_text_c(20, &FONT_M, "EMPTY", C_GREY); /* (a full one: its red number says it) */
     }
-    cv_blit(0, 52);
-    cv_begin(240, 76, C_BLACK);
-    if (ui.ses_page == SP_ASK)
-        draw_noyes(ui.ses_yes);
-    else if (ui.ses_ix == ses_current())
-        cv_text_c(20, &FONT_M, has ? "LOADED" : "CHOSEN", C_OK);
-    else if (!has)
-        cv_text_c(20, &FONT_M, "EMPTY", C_GREY); /* (a full one: its red number says it) */
-    cv_blit(0, 164);
     ui.shown_ses = (int8_t)ui.ses_page;
     ui.shown_ses_ix = (int16_t)(ui.ses_page == SP_ASK ? ui.ses_yes : ui.ses_ix);
 }
@@ -1401,7 +1421,7 @@ static void ui_draw(void)
         return;
     }
     if (ui.rv_page) {
-        if (ui.shown_page != 1)
+        if (ui.shown_page != 1 + ui.fx * 10)
             ui.force = 1;                        /* from another page or the dial: all of it */
         draw_rv_page();
         return;
@@ -1456,6 +1476,9 @@ static void ui_init(void)
     for (l = 0; l < 4u; l++)
         ui.rvp[l] = RV_DEF[l];
     rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+    for (l = 0; l < 4u; l++)
+        ui.dlp[l] = DL_DEF[l];
+    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
     ui.rv_touched = -1;
     ui.shown_sel = ui.shown_eng = ui.shown_msg = -1;
 #if TELEMETRY

@@ -16,9 +16,10 @@ typedef struct {
 #define C_WHITE 0xFFFFu
 #define C_GREY RGB(110, 110, 110)
 
-#define CV_MAX (240u * 112u)
+#define CV_MAX (240u * 56u)     /* (a quarter of the screen: taller areas are drawn a band at a time, CV_AREA) */
 static uint16_t cv_px[CV_MAX] POOL;
 static uint32_t cv_w, cv_h;
+static int32_t cv_oy;            /* the band's top within the area being drawn (CV_AREA): drawing is placed by the area */
 static uint16_t cv_bg;
 
 static inline uint16_t swap16(uint32_t c) { return (uint16_t)(((c >> 8) & 0xFFu) | ((c & 0xFFu) << 8)); }
@@ -38,12 +39,45 @@ static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
 }
 /* the colour text blends onto, where it is not the canvas's own (a box drawn on it) */
 static void cv_bg_set(uint16_t bg) { cv_bg = bg; }
+/* an area taller than the canvas, drawn a band at a time: CV_AREA(x, y, w, h, bg) { the drawing, in the area's
+ * coordinates } -- run once a band (the canvas holds 56 rows), each band sent as it is done. The drawing must not
+ * begin or send a canvas itself */
+static struct { uint32_t x, y, w, h; uint16_t bg; } cva;
+static void cv_area_start(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t bg)
+{
+    cva.x = x;
+    cva.y = y;
+    cva.w = w;
+    cva.h = h;
+    cva.bg = bg;
+    cv_oy = 0;
+}
+static void cv_begin(uint32_t w, uint32_t h, uint16_t bg);
+static int cv_area_left(void)
+{
+    uint32_t rows = CV_MAX / cva.w;
+    if ((uint32_t)cv_oy >= cva.h) {
+        cv_oy = 0;
+        return 0;
+    }
+    cv_begin(cva.w, cva.h - (uint32_t)cv_oy < rows ? cva.h - (uint32_t)cv_oy : rows, cva.bg);
+    return 1;
+}
+static void cv_blit(uint32_t x, uint32_t y);
+static void cv_area_next(void)
+{
+    cv_blit(cva.x, cva.y + (uint32_t)cv_oy);
+    cv_oy += (int32_t)cv_h;
+}
+#define CV_AREA(x, y, w, h, bg) for (cv_area_start(x, y, w, h, bg); cv_area_left(); cv_area_next())
 static void cv_blit(uint32_t x, uint32_t y) { lcd_blit(x, y, cv_w, cv_h, cv_px); }
 
 static void cv_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c)
 {
     int32_t x1 = x + w, y1 = y + h, i;
     uint16_t sc = swap16(c);
+    y -= cv_oy;
+    y1 -= cv_oy;
     if (x < 0)
         x = 0;
     if (y < 0)
@@ -100,7 +134,7 @@ static int32_t cv_text(int32_t x, int32_t y, const font_t *f, const char *s, uin
         int32_t gi = glyph(f, (uint8_t)*s), gx, gy, w = f->bw[gi], bpr = (w + 1) / 2;
         const uint8_t *gd = f->data + f->off[gi];
         for (gy = 0; gy < f->h; gy++) {
-            int32_t py = y + gy;
+            int32_t py = y + gy - cv_oy;
             if ((uint32_t)py >= cv_h)
                 continue;
             for (gx = 0; gx < w; gx++) {

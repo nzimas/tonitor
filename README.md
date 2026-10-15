@@ -112,6 +112,8 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SHIFT + SAVE** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)); SHIFT + SAVE again, or a track button, goes back. |
 | **SAVE held** (0.8 s) | **save** into the session loaded or chosen, at once; the whole screen flashes SAVED and the number. With none loaded or chosen yet (just after switching on), the first empty slot is offered: **PRESETS** chooses **NO** / **YES**, **SAVE** answers. **On the SESSIONS page**, SAVE held saves into the slot shown, whatever is loaded: an empty one asks SAVE NEW; one holding a session asks **OVERWRITE?** in red, on **NO** until PRESETS turns it to YES; SAVE answers. |
 | **SEQ** | the **REVERB page** (SEQ lit). There **KNOB 1–4** are **SIZE**, **DECAY**, **DAMP**, **MIX**. SEQ again, or a track button, goes back. |
+| **SHIFT + SEQ** | the **DELAY page** (SEQ lit). There **KNOB 1–4** are **TIME** (20 ms – 2 s), **FEEDBACK**, **DAMP**, **MIX**. SHIFT + SEQ again, SEQ (to the REVERB page) or a track button goes back. See [The delay](#the-delay). |
+| **SHIFT + KNOB 4** | the chosen track's **delay send**, 0–100 (0 at the start); its dial reads DELAY n / SEND. |
 | **ALGORITHM** knob | the chosen track's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Tracks start spread out: 1 and 2 half left and right, 3 and 4 a quarter, 5 and 6 near the middle. |
 | USB MIDI in | notes play the chosen track, as the keys do. |
 | **MASTER** | the level. |
@@ -308,6 +310,22 @@ drawn at random when the FM-1 starts and every time a session is loaded: the int
 pitched to, how often they reverse, stutter, drop out or freeze, the shape of its scattered grains, how far
 its feedback and darkening go, how it drifts. The knob's position is saved with the session; the character
 is drawn anew. When the track's notes end, its grains ring on for about two seconds.
+
+### The delay
+
+A master delay, mono, placed before the reverb: each track's delay send (SHIFT + KNOB 4) feeds it, its echoes
+go to both sides of the master, and half of their level also goes into the reverb, so the echoes are
+reverberated. Its line holds 2 seconds at 22.05 kHz in 8 bits (μ-law, as the granulator's), so the repeats are
+slightly dark and grainy.
+
+| Parameter | |
+| --- | --- |
+| **TIME** | 20 ms to 2 s, on a logarithmic scale (shown in ms). Turning it glides the delay over about 0.1 s, so the repeats bend in pitch rather than click |
+| **FEEDBACK** | how much of each repeat comes back: 0 (one repeat) to 0.95 |
+| **DAMP** | a low-pass in the feedback path: each repeat darker than the one before |
+| **MIX** | the level of the echoes |
+
+The delay's parameters and every track's send are kept in sessions; copying a track copies its send.
 
 ### The reverb
 
