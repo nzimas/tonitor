@@ -2697,7 +2697,8 @@ static int cmd_transpose(void)
     n = loop_sounding(0, &lo, &hi);
     if (n != 1u || lo != c3 - 2u)
         printf("FAIL transpose: a new scale is not walked (%u notes, %u)\n", n, lo), fail++;
-    press_btn(B_REC);                                 /* an overdub while moved: G3 (key 3 of the pentatonic) */
+    press_btn(B_REC);                                 /* an overdub while moved: key 3 of the pentatonic, moved down a
+                                                       * step with the loops (F3), and played back as played */
     loop_to(0, 0);
     press_key(3, 1);
     run_blocks(200, 0);
@@ -2705,7 +2706,7 @@ static int cmd_transpose(void)
     press_key(3, 0);
     loop_to(0, 100);
     n = loop_sounding(0, &lo, &hi);
-    if (loop[0].ntrk != 2u || n != 2u || lo != c3 - 2u || hi != scale_note(3, 0))
+    if (loop[0].ntrk != 2u || n != 2u || lo != c3 - 2u || hi != scale_note(3 - 1, 0))
         printf("FAIL transpose: an overdub made while moved does not play as played (%u loops, %u notes, %u %u)\n",
                loop[0].ntrk, n, lo, hi), fail++;
     {   /* a session keeps it all */
@@ -2719,7 +2720,7 @@ static int cmd_transpose(void)
         ses_load_slot(1);
         loop_to(0, 100);
         n = loop_sounding(0, &lo, &hi);
-        if (ui.lx != -1 || ui.scale != 5u || loop[0].trk[1].xb != xb || xb != -1 || n != 2u || lo != c3 - 2u || hi != scale_note(3, 0))
+        if (ui.lx != -1 || ui.scale != 5u || loop[0].trk[1].xb != xb || xb != -1 || n != 2u || lo != c3 - 2u || hi != scale_note(3 - 1, 0))
             printf("FAIL transpose: a session does not keep it (lx %d, xb %d/%d, %u notes, %u %u)\n", ui.lx, loop[0].trk[1].xb, xb,
                    n, lo, hi), fail++;
     }
@@ -3451,7 +3452,8 @@ static int cmd_tracktransp(void)
     loop_sounding(1, &lo, &hi);
     if (n != scale_note(1, 0) || lo != scale_note(4, 0))
         printf("FAIL tracktransp: every loop's move is not added (%u %u)\n", n, lo), fail++;
-    press_btn(B_SEL);                                 /* an overdub on track 2 while moved: plays as played (G3) */
+    press_btn(B_SEL);                                 /* an overdub on track 2 while moved: its key moved with the loops
+                                                       * (two steps: key 4, G3, plays B3) and played back as played */
     press_btn(B_REC);
     loop_to(1, 0);
     press_key(4, 1);
@@ -3460,7 +3462,7 @@ static int cmd_tracktransp(void)
     press_key(4, 0);
     loop_to(1, 100);
     loop_sounding(1, &lo, &hi);
-    if (loop[1].ntrk != 2u || hi != scale_note(4, 0) || lo != scale_note(4, 0))
+    if (loop[1].ntrk != 2u || lo != scale_note(4, 0) || hi != scale_note(6, 0))
         printf("FAIL tracktransp: an overdub made while moved does not play as played (%u %u)\n", lo, hi), fail++;
     if (ses_save(1) != SES_OK)
         printf("FAIL tracktransp: not saved\n"), fail++;
@@ -3471,7 +3473,8 @@ static int cmd_tracktransp(void)
     ses_load_slot(1);
     loop_to(1, 100);
     loop_sounding(1, &lo, &hi);
-    if (ui.lxt[1] != 1 || ui.lx != 1 || lo != scale_note(4, 0))
+    loop_sounding(1, &lo, &hi);
+    if (ui.lxt[1] != 1 || ui.lx != 1 || lo != scale_note(4, 0) || hi != scale_note(6, 0))
         printf("FAIL tracktransp: a session does not keep it (lxt %d, lx %d, %u)\n", ui.lxt[1], ui.lx, lo), fail++;
     {   /* REC held: emptied, its own move gone */
         uint32_t t;
@@ -3489,7 +3492,27 @@ static int cmd_tracktransp(void)
         if (loop[1].ntrk || ui.lxt[1])
             printf("FAIL tracktransp: emptied, track 2 keeps its move (%d)\n", ui.lxt[1]), fail++;
     }
-    (void)e3;
+    {   /* the keys follow the track's move: on track 2, moved two steps (one its own, one all the loops'), white key
+         * 0 plays E3; on track 1, moved one, D3 */
+        uint32_t k0;
+        int sounding = 0;
+        for (k0 = 0; k0 < NKEY && white_ix(k0) != 0; k0++)
+            ;
+        ui.lxt[1] = 1;
+        ui.lx = 1;
+        lx_post();
+        press_btn(B_SEL);
+        press_phys(k0, 1);
+        run_blocks(3, 0);
+        sounding = ui.key_note[k0] == e3;
+        press_phys(k0, 0);
+        press_btn(B_FX);
+        press_phys(k0, 1);
+        run_blocks(3, 0);
+        if (!sounding || ui.key_note[k0] != scale_note(1, 0))
+            printf("FAIL tracktransp: the keys do not follow the tracks' moves (%u)\n", ui.key_note[k0]), fail++;
+        press_phys(k0, 0);
+    }
     printf("tracktransp: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }

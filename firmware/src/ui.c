@@ -182,8 +182,8 @@ static int32_t white_ix(uint32_t k)
 /* the note white key w plays, in the scale, on a layer at octave oct */
 static uint32_t scale_note(int32_t w, int32_t oct)
 {
-    int32_t n = SCALE_N[ui.scale];
-    return (uint32_t)clampi(SCALE_BASE + ui.root + 12 * oct + 12 * (w / n) + SCALE_STEP[ui.scale][w % n], 12, 120);
+    int32_t n = SCALE_N[ui.scale], q = w >= 0 ? w / n : -((n - 1 - w) / n);   /* (below the root too: a step moved) */
+    return (uint32_t)clampi(SCALE_BASE + ui.root + 12 * oct + 12 * q + SCALE_STEP[ui.scale][w - q * n], 12, 120);
 }
 /* the loops' transposition and the scale it walks, to the ISR (which moves the notes sounding) */
 static void lx_post(void)
@@ -782,7 +782,8 @@ static void ui_input(void)
                 ev_post(EV_LOOP_TRK, ui.sel, w, (p->mute >> w) & 1u);
             ui.force = 1;
         } else if ((keys >> k) & 1u) {
-            uint32_t note = scale_note(white_ix(k), ui.oct[ui.sel]), bit = 1u << k;
+            /* (moved as the track's loops are -- all of them, and its own -- so what is added fits them) */
+            uint32_t note = scale_note(white_ix(k) + ui.lx + ui.lxt[ui.sel], ui.oct[ui.sel]), bit = 1u << k;
             ui.key_layer[k] = KEY_NONE;
             if (ui.latch[ui.sel] & bit) {        /* a latched key: SHIFT held lets go of it; alone, nothing */
                 if ((keys >> KEY_SHIFT) & 1u) {

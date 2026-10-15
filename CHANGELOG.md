@@ -5,6 +5,8 @@
 - **One track's loops along the scale**: hold SHIFT, hold a track's button, press OCT+ or OCT−: that track's
   loops and overdubs move a step of the scale, the others not (TRANSP T3 +2), on top of the move of all the
   loops. An overdub made meanwhile plays as played; sessions and copies keep it; emptying the track resets it.
+- **The keys move with the loops**: on a track, the white keys play the scale moved as far as that track's
+  loops (all the loops' move and its own), so new material and overdubs fit what is there.
 - SHIFT no longer shows the audio's load.
 - **FM's macros heard**: BRIGHTNESS (was BRIGHT) moves the modulators about 27 dB either way and the feedback with
   them; DETUNE pulls the carriers ±40 cents apart and the modulators ±25 cents off them, so even a patch of one

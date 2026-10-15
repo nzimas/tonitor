@@ -195,12 +195,14 @@ moves one step of the chosen scale up or down — from C to D in C major, from C
 so each loop keeps its shape within the scale. The notes sounding move at once; the screen shows how far the
 loops are moved (TRANSP +2, TRANSP -1, TRANSP 0), up to two octaves of the scale either way. Choosing another scale
 or root while they are moved walks the new one. A note outside the scale keeps its distance from the scale note
-below it. The keys are not moved, and **an overdub recorded while the loops are moved plays back as you played
-it**, the others staying where they are. Sessions keep how far the loops are moved.
+below it. **The white keys move with them**: on a track, they play the scale moved as far as that track's loops are
+(all the loops' move and its own), so what you add fits what is there — and **an overdub recorded while the
+loops are moved plays back as you played it**, the others staying where they are. (USB MIDI notes are not
+moved.) Sessions keep how far the loops are moved.
 
 **One track's loops along the scale.** Hold **SHIFT**, hold a track's button, and press **OCT+** or **OCT−**:
 only that track's loops move (every overdub with them), a step of the scale at a time; the screen says
-TRANSP T3 +2. It adds to the move of all the loops. Holding the track's button with SHIFT down never copies
+TRANSP T3 +2. It adds to the move of all the loops, and that track's white keys move with it. Holding the track's button with SHIFT down never copies
 it. Emptying a track's loops (REC held) takes its own move away; copying a track takes it along; sessions keep
 it.
 
