@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25
+
+- **Voices from a shared pool**: twelve voices for all the layers instead of two fixed per layer. A layer takes as
+  many as its notes need — a twelve-note chord on one layer, single notes on others. With all twelve busy, a new
+  note takes the oldest release (any layer), else its own layer's oldest held note, else the oldest held anywhere.
+
 ## 0.24
 
 - Sessions are written to and read from the flash a sector at a time: about 50 KB of RAM freed (more than half of

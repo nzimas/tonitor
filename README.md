@@ -28,7 +28,7 @@ music** — sound heard for itself, its texture, its grain and its movement — 
 dark ambient above all.
 
 **It is not a groovebox.** There is no tempo, no step sequencer, no pattern, no drum kit. Instead there
-are six layers of *sound objects*: each layer has its own engine, its own sound, two voices and its own free
+are six layers of *sound objects*: each layer has its own engine, its own sound, voices drawn from a shared pool as it needs them, and its own free
 loop recorder, and every sound is drawn by algorithms that aim for surprise rather than for a preset that
 sounds nice. You play textures, drones, gestures and their slow transformations, layer them, loop them
 freely out of time with each other, and shape them while they play.
@@ -87,7 +87,7 @@ sessions overwrites SLOOP projects** stored there.
 | **PRESETS** knob | the chosen layer's engine: **FM**, **ANIMA** or **CALIGULA**, left to right. Each layer keeps a sound of each engine, so turning back finds the sound it had. |
 | **HOME** | a **new sound** for the chosen layer, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **OCT− / OCT+** | the chosen layer's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
-| the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. Two voices per layer: **a new note never cuts the release of the one before it** — a third note takes the voice that has rung longest. A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
+| the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the layers**: a note takes a free voice, so a layer has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any layer), else the oldest note held on its own layer, else the oldest held anywhere. (CALIGULA is one organism a layer, outside the pool.) A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
 | the rightmost black key | **SHIFT** (lit while held; each press shows the audio's load in % of the time it has, now / at most since the last press, e.g. `LOAD 62/91`). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen layer's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen layer's sound. See [Macros](#macros). |
@@ -148,7 +148,7 @@ you let go, and they stay lit. A key pressed while SHIFT is already held plays a
 layer is chosen, and on another layer the same keys play as usual, so a drone can be left on one layer
 while you play another. Pressing a latched key without SHIFT does nothing (it sounds already); **SHIFT and
 the lit key** lets go of it, and its note ends as a lifted key's would. Loading a session lets go of every
-latch. A layer has two voices, so a third note takes one of them, even a latched one's.
+latch. Latched notes hold voices of the shared pool: with all twelve busy, a new note can take one, even a latched one's.
 
 ### The loopers
 
@@ -156,8 +156,8 @@ Every layer has its own looper of up to **ten loops**, and they are all **free**
 quantising — not even between a layer's own loops. Each overdub is a loop of its own, as long as you made
 it (from its first note to REC), going round in its own length over the others, so they drift in and out of
 phase. Each plays back exactly what was played, to 0.73 ms. The keys go on playing the layer over its loops,
-and the loops' notes and the keys' never cut each other's notes off — but all of them share the layer's two
-voices, so many loops at once take voices from each other. A layer's loops hold about 1000 notes between
+and the loops' notes and the keys' never cut each other's notes off — but all of them share the pool's twelve
+voices with the other layers, so many loops and layers at once take voices from each other. A layer's loops hold about 1000 notes between
 them; nothing is lost when the FM-1 is switched off if the session is saved.
 
 **Bringing loops in and out.** Hold **PLAY** (it does not start or stop anything held): the chosen layer's

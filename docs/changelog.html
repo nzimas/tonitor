@@ -28,6 +28,10 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="025">0.25</h2>
+<ul>
+<li><b>Voices from a shared pool</b>: twelve voices for all the layers instead of two fixed per layer. A layer takes as many as its notes need — a twelve-note chord on one layer, single notes on others. With all twelve busy, a new note takes the oldest release (any layer), else its own layer's oldest held note, else the oldest held anywhere.</li>
+</ul>
 <h2 id="024">0.24</h2>
 <ul>
 <li>Sessions are written to and read from the flash a sector at a time: about 50 KB of RAM freed (more than half of it), for more voices and a fourth engine to come. Nothing changes in use; every session saved before loads.</li>

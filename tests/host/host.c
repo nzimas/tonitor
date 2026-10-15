@@ -479,7 +479,7 @@ static int lgate(uint32_t l)
 {
     uint32_t k;
     for (k = 0; k < NVOICE; k++)
-        if (lay[l].v[k].gate)
+        if (vox[k].gate && vox_owner(&vox[k]) == l)
             return 1;
     return 0;
 }
@@ -487,7 +487,7 @@ static uint32_t nsounding(uint32_t l)
 {
     uint32_t k, n = 0;
     for (k = 0; k < NVOICE; k++)
-        n += lay[l].v[k].sounding;
+        n += vox[k].sounding && vox[k].layer == l;
     return n;
 }
 
@@ -667,7 +667,7 @@ static int cmd_flows(void)
     run_blocks(44100u * 120u / CTL, 0);       /* 2 min: a DRONE's release is long */
     for (l = 0; l < NLAYER; l++)
         if (lsound(l) || lgate(l)) {
-            printf("FAIL flows: layer %u still sounding after every key is up (gate %d %d, sounding %d %d, engine %d, meter %d)\n", l + 1, lay[l].v[0].gate, lay[l].v[1].gate, lay[l].v[0].sounding, lay[l].v[1].sounding, lay[l].engine, lay[l].meter);
+            printf("FAIL flows: layer %u still sounding after every key is up (gate %d, sounding %u, engine %d, meter %d)\n", l + 1, lgate(l), nsounding(l), lay[l].engine, lay[l].meter);
             fail++;
         }
     if (ev_w - ev_r) {
@@ -1374,10 +1374,9 @@ static int cmd_grain(const char *dir)
         }
         run_blocks(200, 0);
         {
-            uint32_t nv = 0, k;
+            uint32_t nv = 0;
             for (l = 0; l < NLAYER; l++)
-                for (k = 0; k < NVOICE; k++)
-                    nv += lay[l].v[k].sounding && lay[l].engine == ENG_ANIMA;
+                nv += lay[l].engine == ENG_ANIMA ? nsounding(l) : 0;
             if (nv != 12u)
                 printf("grain: (only %u ANIMA voices sounding)\n", nv);
         }
@@ -1698,7 +1697,7 @@ static int cmd_caligula(const char *dir)
             shed_req = 1;
             run_blocks(30, 0);
             for (k2 = 0; k2 < NVOICE; k2++)
-                if (lay[1].v[k2].gate && (!lay[1].v[k2].sounding || lay[1].v[k2].fade))
+                if (vox[k2].gate && vox_owner(&vox[k2]) == 1u && (!vox[k2].sounding || vox[k2].fade || vox[k2].layer != 1u))
                     held_ok = 0;
             if (!lgate(1))
                 held_ok = 0;
@@ -2506,7 +2505,7 @@ static int loop_note_on(uint32_t l, uint32_t note)   /* a voice of layer l holds
 {
     uint32_t k;
     for (k = 0; k < NVOICE; k++)
-        if (lay[l].v[k].gate && lay[l].v[k].src == SRC_LOOP && lay[l].v[k].note == note)
+        if (vox[k].gate && vox_owner(&vox[k]) == l && vox[k].src == SRC_LOOP && vox[k].note == note)
             return 1;
     return 0;
 }
@@ -2585,6 +2584,84 @@ static int cmd_overdubs(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* the pool: NVOICE voices for all the layers. A chord on one layer takes as many as it needs; the pool full, a note
+ * takes the oldest tail, else its layer's oldest held note, else the oldest held of all; a voice taken from another
+ * layer sounds with its new layer's engine, and the old layer's key lifted does not end it; a layer changing its
+ * engine leaves the other layers' voices be (one handed over in its fade too); nothing stuck at the end */
+static uint32_t owned(uint32_t l)               /* voices with a note of layer l held, or ringing on it */
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NVOICE; k++)
+        n += (vox[k].gate && vox_owner(&vox[k]) == l) || (vox[k].sounding && vox[k].layer == l);
+    return n;
+}
+static int cmd_voices(void)
+{
+    uint32_t fail = 0, i, k, n;
+    grain_reset();
+    run_blocks(40, 0);
+    press_btn(B_FX);                                 /* layer 1: FM; a six-note chord */
+    for (i = 0; i < 6u; i++)
+        press_key(i, 1);
+    run_blocks(50, 0);
+    if (nsounding(0) != 6u)
+        printf("FAIL voices: a six-note chord sounds on %u voices\n", nsounding(0)), fail++;
+    for (i = 6; i < 12u; i++)                        /* twelve held: the pool full */
+        press_key(i, 1);
+    run_blocks(50, 0);
+    if (nsounding(0) != 12u)
+        printf("FAIL voices: twelve notes on one layer sound on %u voices\n", nsounding(0)), fail++;
+    press_key(12, 1);                                /* a thirteenth: the layer's oldest held note (key 0) goes */
+    run_blocks(50, 0);
+    for (k = 0, n = 0; k < NVOICE; k++)
+        n += vox[k].gate && vox[k].note == scale_note(0, 0);
+    if (n || nsounding(0) != 12u)
+        printf("FAIL voices: the thirteenth note did not take the oldest held (%u)\n", n), fail++;
+    press_btn(B_SEL);                                /* layer 2: ANIMA; a note: layer 1's oldest held goes */
+    press_key(15, 1);
+    run_blocks(60, 0);
+    if (nsounding(1) != 1u || nsounding(0) != 11u)
+        printf("FAIL voices: layer 2's note did not take a voice from layer 1 (%u, %u)\n", nsounding(1), nsounding(0)), fail++;
+    for (k = 0; k < NVOICE; k++)                     /* .. and sounds as ANIMA */
+        if (vox[k].layer == 1u && vox[k].sounding && !an_vox[k].live)
+            printf("FAIL voices: the voice layer 2 took does not sound as ANIMA\n"), fail++;
+    press_btn(B_FX);                                 /* layer 1's keys up: their tails ring; layer 2 keeps its note */
+    for (i = 0; i <= 12u; i++)
+        press_key(i, 0);
+    run_blocks(20, 0);
+    if (nsounding(1) != 1u || !lgate(1))
+        printf("FAIL voices: lifting layer 1's keys touched layer 2's note\n"), fail++;
+    press_btn(B_SEL);                                /* layer 2: four more notes take layer 1's tails, not each other */
+    for (i = 0; i < 4u; i++)
+        press_key(i, 1);
+    run_blocks(60, 0);
+    if (nsounding(1) != 5u)
+        printf("FAIL voices: layer 2's chord over layer 1's tails sounds on %u voices\n", nsounding(1)), fail++;
+    /* layer 1 changes its engine while one of its tails fades to be layer 2's: layer 2 keeps all it plays */
+    press_btn(B_FX);
+    press_key(14, 1);
+    run_blocks(3, 0);
+    press_key(14, 0);
+    press_btn(B_SEL);
+    press_key(5, 1);                                 /* (takes a tail of layer 1: it fades) */
+    press_btn(B_FX);
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;              /* layer 1 to ANIMA, now */
+    ui_input();
+    run_blocks(60, 0);
+    if (owned(1) != 6u || nsounding(1) != 6u)
+        printf("FAIL voices: layer 1's engine change cost layer 2 its notes (%u held, %u sounding)\n", owned(1), nsounding(1)), fail++;
+    press_btn(B_SEL);                                /* every key up: nothing stuck */
+    for (i = 0; i < 16u; i++)
+        press_key(i, 0);
+    run_blocks(1378u * 12u, 0);
+    for (k = 0, n = 0; k < NVOICE; k++)
+        n += vox[k].sounding || vox[k].gate || vox[k].pend;
+    if (n)
+        printf("FAIL voices: %u voices still busy once every key is up\n", n), fail++;
+    printf("voices: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -2601,6 +2678,8 @@ int main(int argc, char **argv)
         return cmd_reverb(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "paths"))
         return cmd_paths(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "voices"))
+        return cmd_voices();
     if (argc >= 3 && !strcmp(argv[1], "overdubs"))
         return cmd_overdubs(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "macros"))

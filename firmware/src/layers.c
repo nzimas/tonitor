@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * TONITOR: the six layers, and their loopers.
  *
- * A layer plays one engine (FM or ANIMA), with a sound of each engine of its own, so turning the engine back
- * finds the sound it had. It has NVOICE voices: a note takes a voice of its own and lets the others ring, so
- * a note never cuts the release of the one before it. A third note takes the voice that has been ringing
- * longest -- one already released before one still held -- fading it out over FADE blocks (~9 ms) first.
+ * A layer plays one engine (FM, ANIMA or CALIGULA), with a sound of each engine of its own, so turning the
+ * engine back finds the sound it had. FM and ANIMA play on voices drawn from one pool of NVOICE for all the
+ * layers: a note takes a free voice, whichever layer it is on, and lets the others ring, so a layer has as many
+ * voices as its notes need (a chord on one, a single line on another). With none free, a note takes the tail
+ * that has been ringing longest (any layer's), else the layer's own oldest held note, else the oldest held note
+ * of all -- faded out over FADE blocks (~9 ms) first. CALIGULA is one organism a layer, outside the pool.
  *
  * The main loop owns the choices (which engine, which sounds); the audio ISR owns the voices. Between them:
  *   - events (a ring, main loop -> ISR): a note on or off, an engine change, a stop, the looper's commands;
@@ -26,7 +28,7 @@
  * note the loop is playing, nor the loop a note a key holds. The keys go on playing the layer over its loop. */
 
 #define NLAYER 6
-#define NVOICE 2
+#define NVOICE 12                /* the voices of all the layers (FM and ANIMA) */
 enum { ENG_FM, ENG_ANIMA, ENG_CAL, NENG };
 static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA"};
 
@@ -38,7 +40,7 @@ static cal_design_t cal_buf[NLAYER][2];
 static volatile uint8_t cal_pub[NLAYER], cal_use[NLAYER];
 static cal_t cal_rt[NLAYER];
 
-static an_voice_t an_voice[NLAYER][NVOICE] POOL;   /* ~4.6 KiB each: the resonator */
+static an_voice_t an_vox[NVOICE] POOL;   /* the pool's ANIMA voices, ~4.8 KiB each: the resonator */
 
 #define FADE 12u                 /* blocks of a fade (~9 ms) */
 enum { SRC_KEY, SRC_LOOP };      /* who plays a note: the keys (and MIDI), or the looper */
@@ -47,15 +49,19 @@ typedef struct {
     uint8_t sounding;            /* the voice renders */
     uint8_t fade;                /* blocks of a steal's fade left, 0 = none */
     uint8_t pend;                /* the fade ends in a note-on: note / gate / src are the new note's */
+    uint8_t layer;               /* whose it is: it renders on that layer, with its engine */
+    uint8_t pend_layer;          /* (pend: whose the new note is -- the layer it goes to once faded) */
     uint32_t age;                /* note-on order */
     uint32_t born;               /* blk_clock at its note-on */
     fm_voice_t fm;
 } voice_t;
+static voice_t vox[NVOICE];
+/* the layer a voice's note (note, gate, src) is of: while it fades to be taken, the one it goes to */
+static uint32_t vox_owner(const voice_t *v) { return v->pend ? v->pend_layer : v->layer; }
 typedef struct {
     uint8_t engine;              /* what sounds */
     uint8_t want_engine;
     uint8_t xfade;               /* blocks of the layer's fade left (a change of engine or sound) */
-    voice_t v[NVOICE];
     int32_t meter;               /* |output| peak, decaying (Q15): the screen's */
     int32_t lim_env, lim_g;      /* the limiter: the peak it follows, the gain of the last block (Q15) */
     int32_t g, pl, pr, sd;       /* the level, the pan and the send as the last block ended (they glide) */
@@ -206,30 +212,52 @@ static void ev_post(uint32_t type, uint32_t layer, uint32_t note, uint32_t val) 
 static uint32_t lay_age;
 static void voice_on(uint32_t l, uint32_t k, int fresh)
 {
-    voice_t *v = &lay[l].v[k];
+    voice_t *v = &vox[k];
+    if (v->layer != l)
+        fresh = 1;                                /* (another layer's voice: from silence) */
+    v->layer = (uint8_t)l;
     v->age = ++lay_age;
     v->born = blk_clock;
     if (lay[l].engine == ENG_FM)
         fm_note_on(&v->fm, &fm_buf[l][fm_use[l]], v->note, fresh || !v->sounding);
     else
-        an_note_on(&an_voice[l][k], &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
+        an_note_on(&an_vox[k], &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
     v->sounding = 1;
 }
 static void voice_off(uint32_t l, uint32_t k)
 {
-    voice_t *v = &lay[l].v[k];
+    voice_t *v = &vox[k];
     if (lay[l].engine == ENG_FM)
         fm_note_off(&v->fm, &fm_buf[l][fm_use[l]]);
     else
-        an_note_off(&an_voice[l][k]);
+        an_note_off(&an_vox[k]);
 }
-static void voice_silence(uint32_t l, uint32_t k)
+static void voice_silence(uint32_t k)
 {
-    voice_t *v = &lay[l].v[k];
+    voice_t *v = &vox[k];
     v->sounding = 0;
     v->fade = 0;
     v->fm.live = 0;
-    an_voice[l][k].live = 0;
+    an_vox[k].live = 0;
+}
+/* a voice for a note on layer l: a free one; else the oldest tail (any layer's); else the layer's own oldest held
+ * note; else the oldest held of all. own: only free ones or the layer's own (it is fading for a change) */
+static uint32_t voice_pick(uint32_t l, int own)
+{
+    uint32_t k, best = NVOICE, pass;
+    for (k = 0; k < NVOICE; k++)
+        if (!vox[k].sounding && !vox[k].gate && !vox[k].pend)
+            return k;
+    for (pass = 0; pass < 3u && best == NVOICE; pass++)
+        for (k = 0; k < NVOICE; k++) {
+            const voice_t *v = &vox[k];
+            uint32_t o = vox_owner(v);
+            if (v->pend || (own && o != l) || (pass == 0u ? v->gate : pass == 1u ? o != l : 0))
+                continue;
+            if (best == NVOICE || v->age < vox[best].age)
+                best = k;
+        }
+    return best;
 }
 
 /* a note to CALIGULA, while the layer is (or is becoming) it; else to the voices */
@@ -248,32 +276,28 @@ static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
 static void note_on(uint32_t l, uint32_t note, uint32_t src)
 {
     layer_t *y = &lay[l];
-    uint32_t k, best = NVOICE;
+    uint32_t best;
     if (cal_note(l, note, 1, src))
         return;
-    for (k = 0; k < NVOICE && best == NVOICE; k++)
-        if (!y->v[k].sounding && !y->v[k].gate && !y->v[k].pend)
-            best = k;
-    for (k = 0; k < NVOICE && best == NVOICE; k++)
-        if (!y->v[k].gate && !y->v[k].pend && (best == NVOICE || y->v[k].age < y->v[best].age))
-            best = k;
-    if (best == NVOICE) {
-        for (k = 0; k < NVOICE; k++)
-            if (best == NVOICE || y->v[k].age < y->v[best].age)
-                best = k;
-    }
+    best = voice_pick(l, y->xfade != 0);
+    if (best == NVOICE)
+        return;                                  /* (the layer fading for a change, every voice another's) */
     {
-        voice_t *v = &y->v[best];
+        voice_t *v = &vox[best];
         v->note = (uint8_t)note;
         v->gate = 1;
         v->src = (uint8_t)src;
         v->age = ++lay_age;
-        if (y->xfade)
-            return;                              /* played when the layer's change is made */
+        if (y->xfade) {                          /* played when the layer's change is made */
+            if (!v->sounding)
+                v->layer = (uint8_t)l;
+            return;
+        }
         if (v->sounding) {
-            v->fade = FADE;                      /* out first, then this note */
+            v->fade = FADE;                      /* out first (on the layer it sounds on), then this note */
             v->pend = 1;
-        } else if (!v->pend)
+            v->pend_layer = (uint8_t)l;
+        } else
             voice_on(l, best, 1);
     }
 }
@@ -284,8 +308,8 @@ static void note_off(uint32_t l, uint32_t note, uint32_t src)
     if (cal_note(l, note, 0, src))
         return;
     for (k = 0; k < NVOICE; k++) {
-        voice_t *v = &y->v[k];
-        if (v->gate && v->note == note && v->src == src) {
+        voice_t *v = &vox[k];
+        if (v->gate && vox_owner(v) == l && v->note == note && v->src == src) {
             v->gate = 0;
             if (!v->pend && !y->xfade)
                 voice_off(l, k);                  /* (a pending note sounds briefly, then lets go) */
@@ -299,8 +323,8 @@ static void loop_notes_off(uint32_t l)
     uint32_t k;
     cal_release(&cal_rt[l], 2u);
     for (k = 0; k < NVOICE; k++)
-        if (lay[l].v[k].gate && lay[l].v[k].src == SRC_LOOP)
-            note_off(l, lay[l].v[k].note, SRC_LOOP);
+        if (vox[k].gate && vox_owner(&vox[k]) == l && vox[k].src == SRC_LOOP)
+            note_off(l, vox[k].note, SRC_LOOP);
 }
 
 /* a change the sounding voices must fade out for: another engine, or a new sound on its own. A new sound
@@ -324,26 +348,40 @@ static void change_apply(uint32_t l)
 {
     layer_t *y = &lay[l];
     uint32_t k;
-    for (k = 0; k < NVOICE; k++) {
-        voice_silence(l, k);
-        y->v[k].pend = 0;
-    }
     {   /* the organism, made anew (a new design, or the layer coming to it or leaving it); the notes held go
-         * across: to it from the voices, from it to the voices (the last two) */
+         * across: to it from the voices, from it to the voices */
         cal_t *c = &cal_rt[l];
         uint8_t nn[8], ns[8], n = 0, j;
         for (k = 0; k < NVOICE; k++)              /* (the voices' first: the organism's are the newer) */
-            if (y->v[k].gate && n < 8u) {
-                nn[n] = y->v[k].note;
-                ns[n++] = (uint8_t)(y->v[k].src == SRC_LOOP ? 2u : 1u);
+            if (vox[k].gate && vox_owner(&vox[k]) == l && n < 8u) {
+                nn[n] = vox[k].note;
+                ns[n++] = (uint8_t)(vox[k].src == SRC_LOOP ? 2u : 1u);
             }
+        for (k = 0; k < NVOICE; k++) {            /* the layer's voices silent and free */
+            voice_t *v = &vox[k];
+            if (v->layer == l && (v->sounding || v->pend)) {
+                voice_silence(k);
+                if (v->pend && v->pend_layer != l) {   /* (fading to be another layer's note: that note now) */
+                    v->pend = 0;
+                    v->layer = v->pend_layer;
+                    if (!lay[v->layer].xfade) {
+                        voice_on(v->layer, k, 1);
+                        if (!v->gate)
+                            voice_off(v->layer, k);
+                    }
+                    continue;
+                }
+            }
+            if (vox_owner(v) == l) {
+                v->gate = 0;
+                v->pend = 0;
+            }
+        }
         for (j = 0; j < c->nheld && n < 8u; j++) {
             nn[n] = c->note[j];
             ns[n++] = c->nsrc[j];
         }
         cal_init(c, 0xC0u + l * 131u + lay_age);
-        for (k = 0; k < NVOICE; k++)
-            y->v[k].gate = 0;
         y->engine = y->want_engine;
         fm_use[l] = fm_pub[l];
         an_use[l] = an_pub[l];
@@ -352,15 +390,17 @@ static void change_apply(uint32_t l)
             for (j = 0; j < n; j++)
                 cal_note_on(c, &cal_buf[l][cal_use[l]], nn[j], ns[j]);
         else
-            for (j = n > NVOICE ? n - NVOICE : 0, k = 0; j < n; j++, k++) {
-                y->v[k].note = nn[j];
-                y->v[k].src = (uint8_t)(ns[j] == 2u ? SRC_LOOP : SRC_KEY);
-                y->v[k].gate = 1;
+            for (j = 0; j < n; j++) {             /* (free voices only: none taken from the other layers) */
+                for (k = 0; k < NVOICE && (vox[k].sounding || vox[k].gate || vox[k].pend); k++)
+                    ;
+                if (k == NVOICE)
+                    break;
+                vox[k].note = nn[j];
+                vox[k].src = (uint8_t)(ns[j] == 2u ? SRC_LOOP : SRC_KEY);
+                vox[k].gate = 1;
+                voice_on(l, k, 1);
             }
     }
-    for (k = 0; k < NVOICE; k++)
-        if (y->v[k].gate)
-            voice_on(l, k, 1);
 }
 
 /* ------------------------------------------------------ the loopers --- */
@@ -541,11 +581,16 @@ static void events_take(void)        /* audio ISR, at a block start */
         case EV_STOP:
             cal_init(&cal_rt[e.layer], 0xC0u + e.layer);
             for (k = 0; k < NVOICE; k++) {
-                y->v[k].gate = 0;
-                y->v[k].pend = 0;
-                if (y->v[k].sounding && !y->v[k].fade)
-                    y->v[k].fade = FADE;
+                voice_t *v = &vox[k];
+                if (vox_owner(v) == e.layer) {
+                    v->gate = 0;
+                    if (v->pend && v->pend_layer == e.layer)
+                        v->pend = 0;              /* (its fade goes on, to nothing) */
+                }
+                if (v->layer == e.layer && v->sounding && !v->fade)
+                    v->fade = FADE;
             }
+            (void)y;
             break;
         case EV_LOOP_SET:
             loop_set(e.layer, e.val);
@@ -583,12 +628,28 @@ static int layer_sounding(uint32_t l)
     if (lay[l].engine == ENG_CAL)
         return cal_rt[l].live;
     for (k = 0; k < NVOICE; k++)
-        if (lay[l].v[k].sounding)
+        if (vox[k].layer == l && vox[k].sounding)
             return 1;
     return 0;
 }
 
 #include "gran.c"
+
+/* voice k's fade over: the note it waited for, on the layer it goes to (unless that layer is fading for a change:
+ * then its change plays it) */
+static void voice_take(uint32_t k)
+{
+    voice_t *v = &vox[k];
+    uint32_t to = v->pend_layer;
+    voice_silence(k);
+    v->pend = 0;
+    v->layer = (uint8_t)to;
+    if (lay[to].xfade)
+        return;
+    voice_on(to, k, 1);
+    if (!v->gate)
+        voice_off(to, k);
+}
 
 static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
 {
@@ -612,25 +673,21 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
             any = 1;
     }
     for (k = 0; k < NVOICE && y->engine != ENG_CAL; k++) {
-        voice_t *v = &y->v[k];
+        voice_t *v = &vox[k];
         int alive;
-        if (!v->sounding)
+        if (v->layer != l || !v->sounding)
             continue;
         if (y->engine == ENG_FM)
             alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, mac);
         else {
-            memcpy(an_voice[l][k].mac, mac, NMAC);
-            alive = an_render(&an_voice[l][k], &an_buf[l][an_use[l]], vb, CTL);
+            memcpy(an_vox[k].mac, mac, NMAC);
+            alive = an_render(&an_vox[k], &an_buf[l][an_use[l]], vb, CTL);
         }
         if (!alive) {
             v->sounding = 0;
-            if (v->fade && v->pend) {             /* (it ended in its fade: the new note now) */
-                v->fade = 0;
-                v->pend = 0;
-                voice_on(l, k, 1);
-                if (!v->gate)
-                    voice_off(l, k);
-            } else
+            if (v->fade && v->pend)               /* (it ended in its fade: the new note now, where it goes) */
+                voice_take(k);
+            else
                 v->fade = 0;
             continue;
         }
@@ -640,14 +697,10 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
             for (i = 0; i < CTL; i++)
                 buf[i] += mulq15(vb[i], g0 + (((g1 - g0) * (int32_t)i) >> 5));
             if (--v->fade == 0) {
-                uint8_t pend = v->pend;
-                voice_silence(l, k);
-                v->pend = 0;
-                if (pend && !y->xfade) {
-                    voice_on(l, k, 1);
-                    if (!v->gate)
-                        voice_off(l, k);
-                }
+                if (v->pend)
+                    voice_take(k);
+                else
+                    voice_silence(k);
             }
         } else
             for (i = 0; i < CTL; i++)
@@ -743,18 +796,17 @@ static inline int32_t ceiling(int32_t x)
 #define SHED_HELD_BLOCKS 2067u   /* 1.5 s */
 static int shed_voice(int held)  /* the oldest released voice (held: the oldest held 1.5 s) faded; 0 if none */
 {
-    uint32_t l, k, ol = NLAYER, ok = 0;
-    for (l = 0; l < NLAYER; l++)
-        for (k = 0; k < NVOICE; k++) {
-            const voice_t *v = &lay[l].v[k];
-            if (!v->sounding || v->fade || (held ? !v->gate || blk_clock - v->born < SHED_HELD_BLOCKS : v->gate))
-                continue;
-            if (ol == NLAYER || v->age < lay[ol].v[ok].age)
-                ol = l, ok = k;
-        }
-    if (ol == NLAYER)
+    uint32_t k, ok = NVOICE;
+    for (k = 0; k < NVOICE; k++) {
+        const voice_t *v = &vox[k];
+        if (!v->sounding || v->fade || (held ? !v->gate || blk_clock - v->born < SHED_HELD_BLOCKS : v->gate))
+            continue;
+        if (ok == NVOICE || v->age < vox[ok].age)
+            ok = k;
+    }
+    if (ok == NVOICE)
         return 0;
-    lay[ol].v[ok].fade = FADE;                    /* (its key still held: it comes back with the next note) */
+    vox[ok].fade = FADE;                          /* (its key still held: it comes back with the next note) */
     return 1;
 }
 static void shed(void)
@@ -797,9 +849,12 @@ static void mix_block(int32_t *out)
 static void layers_init(void)
 {
     uint32_t l, k;
+    memset(vox, 0, sizeof vox);
+    for (k = 0; k < NVOICE; k++) {
+        an_init(&an_vox[k], 0xA11u + k * 131u);
+        vox[k].layer = (uint8_t)(k % NLAYER);
+    }
     for (l = 0; l < NLAYER; l++) {
-        for (k = 0; k < NVOICE; k++)
-            an_init(&an_voice[l][k], 0xA11u + l * 977u + k * 131u);
         lay[l].lim_g = Q15;
         lay[l].engine = lay[l].want_engine = (uint8_t)(l & 1u ? ENG_ANIMA : ENG_FM);
         cal_init(&cal_rt[l], 0xC0u + l * 131u);
