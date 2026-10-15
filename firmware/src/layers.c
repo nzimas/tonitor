@@ -848,19 +848,23 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         else
             change_apply(l);
     }
-    int8_t mac[NMAC];
-    for (i = 0; i < NMAC; i++)
-        mac[i] = lay_mac[l][i];
+    int8_t mac[NMAC], felt[NMAC];
+    for (i = 0; i < NMAC; i++) {
+        int32_t m = lay_mac[l][i], a = m < 0 ? -m : m, q = (int32_t)isqrt32((uint32_t)(a * MAC_MAX));
+        mac[i] = (int8_t)m;
+        felt[i] = (int8_t)(m < 0 ? -q : q);       /* (the organisms' macros felt early: the square root of the turn;
+                                                   * FM and ANIMA take theirs as turned, and feel them so themselves) */
+    }
     for (i = 0; i < CTL; i++)
         buf[i] = 0;
     org_cost[l] = 0;
     if (y->engine == ENG_CAL || y->engine == ENG_RUS) {   /* the organism: one for the layer */
         uint32_t c0 = COST_NOW(), live;
         if (y->engine == ENG_CAL) {
-            memcpy(cal_rt[l].mac, mac, NMAC);
+            memcpy(cal_rt[l].mac, felt, NMAC);
             live = (uint32_t)cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], buf);
         } else {
-            memcpy(rus_rt[l].mac, mac, NMAC);
+            memcpy(rus_rt[l].mac, felt, NMAC);
             live = (uint32_t)rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], buf);
         }
         if (live) {

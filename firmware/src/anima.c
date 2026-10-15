@@ -581,8 +581,8 @@ static uint32_t an_mac_role(const an_design_t *d)
 }
 static const char *an_mac_name(const an_design_t *d, uint32_t j)
 {
-    static const char *const ROLE[5] = {"GRAINS", "AIR", "FM", "VOWEL", "DRIVE"};
-    return j == 0u ? "TONE" : j == 1u ? ROLE[an_mac_role(d)] : j == 2u ? "SPACE" : "MOTION";
+    static const char *const ROLE[5] = {"GRAINS", "NOISE", "FM", "FORMANT", "DRIVE"};
+    return j == 0u ? "TONE" : j == 1u ? ROLE[an_mac_role(d)] : j == 2u ? "RESONATOR" : "MOTION";
 }
 /* 2^(m / MAC_MAX x oct), Q16 (oct in Q16 / MAC_MAX steps: the caller's) */
 static int32_t an_mac_exp(int32_t m, int32_t oct_q16) { return (int32_t)exp2_q16(m * (oct_q16 / MAC_MAX)); }

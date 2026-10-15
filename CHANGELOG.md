@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.30
+
+- **FM's macros heard**: BRIGHTNESS (was BRIGHT) moves the modulators about 27 dB either way and the feedback with
+  them; DETUNE pulls the carriers ±40 cents apart and the modulators ±25 cents off them, so even a patch of one
+  carrier beats and roughens. Every macro, on every engine, answers early in its turn: a quarter of the way gives
+  half the change.
+- **Macros named for what they do**: FM BRIGHTNESS, DETUNE or INHARMONIC (was SKEW), SATURATION (was GRIT),
+  MOTION; ANIMA NOISE (was AIR), FORMANT (was VOWEL), RESONATOR (was SPACE); CALIGULA WAVEFORM (was EDGE),
+  MOD DEPTH (was DEPTH), FEEDBACK (was CHAOS), DELAY (was ECHO), TOUCHES (was HAND), GATE RATE (was PULSE);
+  RUSSOLO RANDOMNESS (was CHAOS). A long name takes a smaller size on the dial.
+
 ## 0.29
 
 - **ANIMA, a lo-fi engine**: its voices are computed at half the sample rate (22.05 kHz: nothing above 11 kHz)

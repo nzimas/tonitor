@@ -468,7 +468,7 @@ static void rus_design(rus_design_t *d, int32_t kind, uint32_t seed, uint32_t pa
 
 static const char *rus_mac_name(const rus_design_t *d, uint32_t j)
 {
-    return j < 2u ? RK_P[d->kind % RK_N][j] : j == 2u ? "CRUSH" : "CHAOS";
+    return j < 2u ? RK_P[d->kind % RK_N][j] : j == 2u ? "CRUSH" : "RANDOMNESS";
 }
 
 /* the design's level from how loud it usually is: C3 held 1.5 s, the 75th percentile of 12 ms windows brought to

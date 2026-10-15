@@ -130,8 +130,7 @@ Sessions keep each track's path, and the path each of its sounds was drawn on.
 
 Press **EDIT** (the black key just left of SHIFT; lit while on) and the four knobs across the top stop being
 the filter, the granulator, the crush and the send: they become **four macros** that reshape the chosen
-track's sound, while it plays, under a held note. ANIMA's answer early in the turn (a quarter of the way, half the
-change), since its sound moves by itself. Each is turned from the middle, which is the sound as HOME
+track's sound, while it plays, under a held note. Every macro answers early in the turn (a quarter of the way, half the change). Each is turned from the middle, which is the sound as HOME
 drew it; either way transforms it. While a knob turns, the whole screen is its dial, with the macro's name
 for this sound and how far it is turned (+40 %, -25 %, AS DRAWN). Press EDIT again to give the knobs back.
 
@@ -139,10 +138,10 @@ The macros are chosen for each engine, and for some by the kind of sound:
 
 | | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| **FM** | **BRIGHT**: the modulation index, and the carriers tilted (the higher partials up) | **DETUNE** (the carriers pulled apart: beating, chorus) — or **SKEW** for metallic and noisy families (every partial off its ratio: clangour) | **GRIT**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
-| **ANIMA** | **TONE**: every filter four octaves up or down (sharper when up), the FM brighter or darker | what the kind is about, from nothing to far more: **GRAINS**, **AIR** (the noise), **FM** (the index), **VOWEL** (the formant, sharper when up) or **DRIVE** (folded hard; turned down, a pure tone: the second voice, FM, noise and grains drawn out) | **SPACE**: the resonator much wetter and ringing longer (brought in if the sound had none), or dry | **MOTION**: the hand four times quicker, a tremolo pulsing — or nearly still, no tremolo |
-| **CALIGULA** | **EDGE**: triangles to squares | **DEPTH**: how deeply the pairs modulate each other | **CHAOS** (total feedback and drive) — or **ECHO** (the delay) for SPORE, VEIL, LITANY and MOTH | **HAND**: how busy the hand is, its touches and bursts — or **PULSE** (the gates' speed) for HIVE, MOTH and WIRE |
-| **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **CHAOS**: how much chance drives it; above the middle, stutters too |
+| **FM** | **BRIGHTNESS**: the modulation index about 27 dB either way (down: towards pure sines; up: the feedback too), the carriers tilted (the higher partials up) | **DETUNE**: the carriers pulled apart ±40 cents and the modulators ±25 cents off them — beating, chorus, the partials off their places — or **INHARMONIC** for metallic and noisy families (every partial off its ratio: clangour) | **SATURATION**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
+| **ANIMA** | **TONE**: every filter four octaves up or down (sharper when up), the FM brighter or darker | what the kind is about, from nothing to far more: **GRAINS**, **NOISE**, **FM** (the index), **FORMANT** (sharper when up) or **DRIVE** (folded hard; turned down, a pure tone: the second voice, FM, noise and grains drawn out) | **RESONATOR**: much wetter and ringing longer (brought in if the sound had none), or dry | **MOTION**: the hand four times quicker, a tremolo pulsing — or nearly still, no tremolo |
+| **CALIGULA** | **WAVEFORM**: triangles to squares | **MOD DEPTH**: how deeply the pairs modulate each other | **FEEDBACK** (total feedback and drive) — or **DELAY** for SPORE, VEIL, LITANY and MOTH | **TOUCHES**: how busy the hand is, its touches and bursts — or **GATE RATE** (the gates' speed) for HIVE, MOTH and WIRE |
+| **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **RANDOMNESS**: how much chance drives it; above the middle, stutters too |
 
 Each track keeps the macros of each of its four sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.

@@ -1030,14 +1030,16 @@ static void draw_dial(void)
     static const char *const NAME[4] = {"FILTER  ", "GRAIN  ", "REVERB  ", "CRUSH  "};
     int32_t v = dial_value(), b, k, from, to;    /* the arc lit, in steps of 3 degrees from 12 o'clock */
     uint32_t av;
-    char t[12], m[16];
+    char t[16], m[16];
     uint16_t col = LAYER_COL[ui.sel];
+    const font_t *tf;
     if (ui.dial >= DIAL_MAC) {                   /* EDIT's macro: its name for this sound, and the layer */
         str_cpy(t, mac_name(ui.sel, (ui.dial - DIAL_MAC) & 3u), sizeof t - 2);
         str_cpy(t + str_len(t), "  ", 3);
     } else
         str_cpy(t, NAME[ui.dial], sizeof t);
     t[str_len(t) - 1] = (char)('1' + ui.sel);
+    tf = text_w(&FONT_M, t) <= 236 ? &FONT_M : &FONT_S;   /* (a long name, SATURATION 1: a size smaller) */
     if (ui.dial == DIAL_SEND) {                  /* 0 .. 100: from 7 o'clock round */
         from = -45;
         to = -45 + v * 90 / 100;
@@ -1088,7 +1090,7 @@ static void draw_dial(void)
     for (b = 0; b < 3; b++) {
         int32_t oy = BAND[b][0], x, y;
         cv_begin(240, (uint32_t)BAND[b][1], C_BLACK);
-        cv_text(((int32_t)cv_w - text_w(&FONT_M, t)) / 2, 2 - oy, &FONT_M, t, col);
+        cv_text(((int32_t)cv_w - text_w(tf, t)) / 2, 2 + ((int32_t)FONT_M.h - (int32_t)tf->h) / 2 - oy, tf, t, col);
         for (k = -45; k <= 45; k++) {            /* the track, every 3 degrees */
             dial_at((uint32_t)(k * 35791394), DIAL_R, &x, &y);
             dial_dot(oy, x, y, 4, C_GREY);

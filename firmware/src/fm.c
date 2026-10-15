@@ -86,7 +86,7 @@ typedef struct {
     fm6_note_t n;
     fm6_lfo_t lfo;
     int32_t note;                /* MIDI note, transposed */
-    int32_t lp;                  /* GRIT below the middle: its low-pass */
+    int32_t lp;                  /* SATURATION below the middle: its low-pass */
     uint32_t tph;                /* MOTION above the middle: its tremolo's phase */
     uint8_t live;
 } fm_voice_t;
@@ -136,13 +136,15 @@ static void fm_note_off(fm_voice_t *v, const fm_patch_t *pt)
 }
 
 static uint32_t fm_carriers_of(const uint8_t *p);
-/* EDIT's macros on FM, live under a held note: BRIGHT (the modulators' level -- the index -- and the carriers
- * tilted, the higher ones up: so a patch of carriers only brightens too), DETUNE (the carriers but the lowest
- * pulled apart, one way and the other: beating, chorus; the modulators a little: the timbre shimmers) or SKEW for
- * the metallic and noisy
- * families (every operator but the lowest carrier off its ratio: clangour), GRIT (the feedback, and above the
- * middle a saturation; below it, a low-pass: smoother), MOTION (the LFO's depths, and above the middle a tremolo
- * of its own, quicker and deeper as it turns). 0 everywhere: the patch as drawn, bit for bit */
+/* EDIT's macros on FM, live under a held note: BRIGHTNESS (the modulators' level -- the index -- about 27 dB either
+ * way, the feedback up with it, and the carriers tilted, the higher ones up: so a patch of carriers only brightens
+ * too), DETUNE (the carriers but the lowest pulled apart, +-40 cents one way and the other: beating, chorus; and
+ * every modulator +-25 cents off its carrier: the partials leave their harmonic places, so even a patch of one
+ * carrier beats and roughens) or INHARMONIC for the metallic and noisy families (every operator but the lowest
+ * carrier off its ratio: clangour), SATURATION (the feedback, and above the middle a saturation; below it, a
+ * low-pass: smoother), MOTION (the LFO's depths, and above the middle a tremolo of its own, quicker and deeper as it
+ * turns). Each felt early: the square root of the knob's turn (a quarter of the way: half the change). 0
+ * everywhere: the patch as drawn, bit for bit */
 static int fm_skews(uint32_t f)
 {
     return f == FF_METAL || f == FF_BRUIT || f == FF_IMPACT || f == FF_ITERATIF || f == FF_GLISSE || f == FF_FRICTION ||
@@ -150,8 +152,8 @@ static int fm_skews(uint32_t f)
 }
 static const char *fm_mac_name(const fm_patch_t *pt, uint32_t j)
 {
-    static const char *const N[4] = {"BRIGHT", "DETUNE", "GRIT", "MOTION"};
-    return j == 1u && fm_skews(pt->family) ? "SKEW" : N[j & 3u];
+    static const char *const N[4] = {"BRIGHTNESS", "DETUNE", "SATURATION", "MOTION"};
+    return j == 1u && fm_skews(pt->family) ? "INHARMONIC" : N[j & 3u];
 }
 /* an operator's frequency against the note's, x 100 (fixed ones: against middle C) */
 static int32_t fm_op_ratio100(const uint8_t *op)
@@ -178,20 +180,20 @@ static void fm_macros(const fm_patch_t *pt, const int8_t *mac, int32_t *dt, int3
     }
     for (k = 0; k < 6u; k++) {
         int carrier = (int)((car >> k) & 1u);
-        /* BRIGHT: +-26 output-level steps (about +-19 dB) on the modulators; the carriers tilted by +-16 */
+        /* BRIGHTNESS: +-36 output-level steps (about +-27 dB) on the modulators; the carriers tilted by +-16 */
         if (!carrier)
-            lvl[k] = mac[0] * 851968;
+            lvl[k] = mac[0] * 1179648;
         else if (rmax > rmin)
             lvl[k] = mac[0] * ((r[k] - rmin) * 128 / (rmax - rmin) - 64) * 8192;
-        if (fm_skews(pt->family)) {                      /* SKEW: up to 1 .. 2 semitones off, the lowest carrier kept */
+        if (fm_skews(pt->family)) {                      /* INHARMONIC: up to 1 .. 2 semitones off, the lowest carrier kept */
             if (k != lo)
                 dt[k] = mac[1] * 21845 * (int32_t)(1u + (k & 1u));
-        } else if (carrier && k != lo)                   /* DETUNE: the carriers +-30 cents, one way and the other */
-            dt[k] = mac[1] * 6554 * ((ci++ & 1u) ? -1 : 1);
-        else if (!carrier)                               /* .. their modulators +-12 cents: the timbre shimmers */
-            dt[k] = mac[1] * 2621 * ((mi++ & 1u) ? -1 : 1);
+        } else if (carrier && k != lo)                   /* DETUNE: the carriers +-40 cents, one way and the other */
+            dt[k] = mac[1] * 8738 * ((ci++ & 1u) ? -1 : 1);
+        else if (!carrier)                               /* .. the modulators +-25 cents: the partials off their places */
+            dt[k] = mac[1] * 5461 * ((mi++ & 1u) ? -1 : 1);
     }
-    *fb = clampi(*fb + (mac[2] * 8 + (mac[2] < 0 ? -32 : 32)) / 64, 0, 7);
+    *fb = clampi(*fb + (mac[2] * 8 + (mac[2] < 0 ? -32 : 32)) / 64 + (mac[0] > 0 ? mac[0] / 32 : 0), 0, 7);   /* (and with BRIGHTNESS up) */
     *lfoq8 = (uint32_t)clampi(256 + mac[3] * 4, 0, 512);
 }
 
@@ -212,6 +214,12 @@ static int fm_render(fm_voice_t *v, const fm_patch_t *pt, int32_t *out, const in
     ld = fm6_lfo_delay(&v->lfo);
     lf = fm6_note_logfreq(v->note * 16, 0);
     if (mac && (mac[0] | mac[1] | mac[2] | mac[3])) {
+        int8_t felt[NMAC];
+        for (i = 0; i < NMAC; i++) {                     /* (the knob's turn, felt early: its square root) */
+            int32_t m = mac[i], a = m < 0 ? -m : m, q = (int32_t)isqrt32((uint32_t)(a * MAC_MAX));
+            felt[i] = (int8_t)(m < 0 ? -q : q);
+        }
+        mac = felt;
         fm_macros(pt, mac, dt, lvl, &fb, &lfoq8);
         if (mac[3] > 0) {                                /* a tremolo of its own, 1.5 .. 6 Hz, deeper as it turns */
             v->tph += 4380000u + (uint32_t)mac[3] * 205000u;   /* (a block's step: Hz x 2^32 x 32 / FS) */
@@ -228,7 +236,7 @@ static int fm_render(fm_voice_t *v, const fm_patch_t *pt, int32_t *out, const in
         int32_t x = bus[i] - v->n.dc;              /* Q24 */
         v->n.dc += x >> 10;                        /* a one-pole high-pass, ~7 Hz: FM puts sidebands at 0 Hz */
         out[i] = (int32_t)(((int64_t)x * pt->gain) >> 21);   /* Q24 x Q12 -> Q15 */
-        if (grit > 0)                              /* GRIT: saturated, about as loud */
+        if (grit > 0)                              /* SATURATION: saturated, about as loud */
             out[i] = mulq15(tanh_q15(out[i] + mulq15(out[i], grit * (6 * Q15 / MAC_MAX))),
                             Q15 - grit * (Q15 / 2 / MAC_MAX));
         else if (grit < 0) {                       /* .. or smoothed: a low-pass from ~8 kHz down to ~300 Hz */

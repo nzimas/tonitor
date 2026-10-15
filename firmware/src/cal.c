@@ -190,8 +190,8 @@ static int cal_echoes(uint32_t kind)
 static int cal_pulses(uint32_t kind) { return kind == CS_HIVE || kind == CS_MOTH || kind == CS_WIRE; }
 static const char *cal_mac_name(const cal_design_t *d, uint32_t j)
 {
-    return j == 0u ? "EDGE" : j == 1u ? "DEPTH" : j == 2u ? (cal_echoes(d->kind) ? "ECHO" : "CHAOS")
-                                                          : (cal_pulses(d->kind) ? "PULSE" : "HAND");
+    return j == 0u ? "WAVEFORM" : j == 1u ? "MOD DEPTH" : j == 2u ? (cal_echoes(d->kind) ? "DELAY" : "FEEDBACK")
+                                                                  : (cal_pulses(d->kind) ? "GATE RATE" : "TOUCHES");
 }
 /* 2^(m / MAC_MAX x oct), Q16 */
 static int32_t cal_mac_exp(int32_t m, int32_t oct_q16) { return (int32_t)exp2_q16(m * (oct_q16 / MAC_MAX)); }
