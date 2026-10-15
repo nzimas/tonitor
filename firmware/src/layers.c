@@ -59,8 +59,29 @@ typedef struct {
     uint8_t pend_layer;          /* (pend: whose the new note is -- the layer it goes to once faded) */
     uint32_t age;                /* note-on order */
     uint32_t born;               /* blk_clock at its note-on */
+    uint16_t cost;               /* what a block of it took, last time (ticks) */
+    uint8_t fade_n;              /* the fade's length, when not FADE (the budget's quick one) */
     fm_voice_t fm;
 } voice_t;
+
+/* the budget: what the voices and organisms cost, measured as they render, so that a start that would overrun
+ * the block's time makes room first (the oldest release tails let go, quickly) instead of the audio arriving
+ * late -- a burst. On the host a model stands in for the clock (tests set it) */
+#ifdef HOST
+static uint32_t host_cost_clock, host_cost_model[4];
+#define COST_NOW() host_cost_clock
+#define COST_ADD(e) (host_cost_clock += host_cost_model[(e) & 3u])
+#define BLK_TICKS 1000u
+#else
+#define COST_NOW() fm1_ticks()
+#define COST_ADD(e) ((void)0)
+#define BLK_TICKS ((uint32_t)CTL * 1000000u / FS * FM1_TICKS_PER_US)   /* a block's time */
+#endif
+#define BUDGET (BLK_TICKS * 82u / 100u)  /* what a block may be expected to take (the rest: the panel, USB, the screen) */
+#define QUICK 3u                         /* blocks of the budget's fade (~2 ms) */
+static uint32_t eng_cost[4];             /* a voice (an organism) of each engine: its usual cost, ticks */
+static uint32_t org_cost[NLAYER];        /* each layer's organism, last block */
+static uint32_t blk_last, blk_new;       /* the last block's cost; what has just started since */
 static voice_t vox[NVOICE];
 /* the layer a voice's note (note, gate, src) is of: while it fades to be taken, the one it goes to */
 static uint32_t vox_owner(const voice_t *v) { return v->pend ? v->pend_layer : v->layer; }
@@ -108,6 +129,14 @@ typedef struct {
 } looper_t;
 static looper_t loop[NLAYER] POOL;
 static uint32_t blk_clock;
+#if TELEMETRY
+static uint32_t tele_ev;                 /* this half: the events taken (bit = type), loop notes (bit 20), wraps (21) */
+static uint32_t tele_non;                /* .. notes struck */
+static volatile uint32_t tele_trims;     /* tails the budget let go */
+#define TELE(b) (tele_ev |= 1u << (b))
+#else
+#define TELE(b) ((void)0)
+#endif
 /* a note tied over the loop's end: held from its first block to its last (held when the recording ended: ended
  * with the last block, REC's; a key let go is never later than the one before it). Going round, it is neither let
  * go at the end nor struck again at the start: a drone stays one note */
@@ -293,6 +322,8 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
     voice_t *v = &vox[k];
     if (v->layer != l)
         fresh = 1;                                /* (another layer's voice: from silence) */
+    if (!v->sounding || v->layer != l)
+        blk_new += eng_cost[lay[l].engine & 3u];   /* (a new voice: what it will cost, ahead) */
     v->layer = (uint8_t)l;
     v->age = ++lay_age;
     v->born = blk_clock;
@@ -315,6 +346,7 @@ static void voice_silence(uint32_t k)
     voice_t *v = &vox[k];
     v->sounding = 0;
     v->fade = 0;
+    v->fade_n = 0;
     v->fm.live = 0;
     an_vox[k].live = 0;
 }
@@ -341,6 +373,9 @@ static uint32_t voice_pick(uint32_t l, int own)
 /* a note to CALIGULA, while the layer is (or is becoming) it; else to the voices */
 static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
 {
+    if (on && lay[l].want_engine == lay[l].engine && eng_organism(lay[l].engine)
+        && !(lay[l].engine == ENG_CAL ? cal_rt[l].live : rus_rt[l].live))
+        blk_new += eng_cost[lay[l].engine & 3u];  /* (the organism wakes: what it will cost, ahead) */
     if (lay[l].want_engine == ENG_RUS) {
         if (on)
             rus_note_on(&rus_rt[l], &rus_buf[l][rus_use[l]], note);
@@ -379,7 +414,8 @@ static void note_on(uint32_t l, uint32_t note, uint32_t src)
             return;
         }
         if (v->sounding) {
-            v->fade = FADE;                      /* out first (on the layer it sounds on), then this note */
+            if (!v->fade)
+                v->fade = FADE;                  /* out first (on the layer it sounds on), then this note */
             v->pend = 1;
             v->pend_layer = (uint8_t)l;
         } else
@@ -644,8 +680,13 @@ static void loops_run(void)
             while (t->ix < t->n && LE_T(p->ev[t->first + t->ix]) <= t->pos) {
                 uint32_t e = p->ev[t->first + t->ix++], nt = lx_map(LE_NOTE(e), lx_steps - t->xb, lx_mask);
                 if (LE_ON(e)) {
-                    if (!(t->wrap && trk_tied(p, t, e)))   /* (tied: still sounding from the round before) */
+                    if (!(t->wrap && trk_tied(p, t, e))) {   /* (tied: still sounding from the round before) */
                         note_on(l, nt, SRC_LOOP);
+                        TELE(20);
+#if TELEMETRY
+                        tele_non++;
+#endif
+                    }
                 } else if (!trk_tied(p, t, e))
                     note_off(l, nt, SRC_LOOP);
             }
@@ -654,6 +695,7 @@ static void loops_run(void)
                 t->pos = 0;
                 t->ix = 0;
                 t->wrap = 1;
+                TELE(21);
             }
         }
     }
@@ -703,6 +745,7 @@ static void events_take(void)        /* audio ISR, at a block start */
         uint32_t k;
         RING_PUBLISH();
         ev_r++;
+        TELE(e.type);
         switch (e.type) {
         case EV_ON:
             loop_hear(e.layer, 1, e.note);
@@ -810,37 +853,54 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin)
         mac[i] = lay_mac[l][i];
     for (i = 0; i < CTL; i++)
         buf[i] = 0;
-    if (y->engine == ENG_CAL) {                   /* the organism: one for the layer */
-        memcpy(cal_rt[l].mac, mac, NMAC);
-        if (cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], buf))
+    org_cost[l] = 0;
+    if (y->engine == ENG_CAL || y->engine == ENG_RUS) {   /* the organism: one for the layer */
+        uint32_t c0 = COST_NOW(), live;
+        if (y->engine == ENG_CAL) {
+            memcpy(cal_rt[l].mac, mac, NMAC);
+            live = (uint32_t)cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], buf);
+        } else {
+            memcpy(rus_rt[l].mac, mac, NMAC);
+            live = (uint32_t)rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], buf);
+        }
+        if (live) {
             any = 1;
-    } else if (y->engine == ENG_RUS) {
-        memcpy(rus_rt[l].mac, mac, NMAC);
-        if (rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], buf))
-            any = 1;
+            COST_ADD(y->engine);
+            org_cost[l] = COST_NOW() - c0;
+            eng_cost[y->engine] = (eng_cost[y->engine] * 7u + org_cost[l] + 7u) / 8u;
+        }
     }
     for (k = 0; k < NVOICE && !eng_organism(y->engine); k++) {
         voice_t *v = &vox[k];
         int alive;
         if (v->layer != l || !v->sounding)
             continue;
-        if (y->engine == ENG_FM)
-            alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, mac);
-        else {
-            memcpy(an_vox[k].mac, mac, NMAC);
-            alive = an_render(&an_vox[k], &an_buf[l][an_use[l]], vb, CTL);
+        {
+            uint32_t c0 = COST_NOW(), c;
+            if (y->engine == ENG_FM)
+                alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, mac);
+            else {
+                memcpy(an_vox[k].mac, mac, NMAC);
+                alive = an_render(&an_vox[k], &an_buf[l][an_use[l]], vb, CTL);
+            }
+            COST_ADD(y->engine);
+            c = COST_NOW() - c0;
+            v->cost = (uint16_t)(c > 0xFFFFu ? 0xFFFFu : c);
+            if (alive)
+                eng_cost[y->engine & 3u] = (eng_cost[y->engine & 3u] * 7u + c + 7u) / 8u;
         }
         if (!alive) {
             v->sounding = 0;
             if (v->fade && v->pend)               /* (it ended in its fade: the new note now, where it goes) */
                 voice_take(k);
             else
-                v->fade = 0;
+                v->fade = v->fade_n = 0;
             continue;
         }
         any = 1;
         if (v->fade) {
-            int32_t g0 = (int32_t)(v->fade * (uint32_t)Q15 / FADE), g1 = (int32_t)((v->fade - 1u) * (uint32_t)Q15 / FADE);
+            uint32_t fn = v->fade_n ? v->fade_n : FADE;
+            int32_t g0 = (int32_t)(v->fade * (uint32_t)Q15 / fn), g1 = (int32_t)((v->fade - 1u) * (uint32_t)Q15 / fn);
             for (i = 0; i < CTL; i++)
                 buf[i] += mulq15(vb[i], g0 + (((g1 - g0) * (int32_t)i) >> 5));
             if (--v->fade == 0) {
@@ -971,13 +1031,54 @@ static void shed(uint32_t late)
         shed_voice(1);
 }
 
+/* ahead of the block: what it will take (the last one, and what has started since) over the budget -- the oldest
+ * release tails let go quickly (then CALIGULA's ring-out) until it fits. A held note is never let go here (the
+ * overload guard does that, when the audio is late after all) */
+static void budget_guard(void)
+{
+    uint32_t pred = blk_last + blk_new, l, k;
+    blk_new = 0;
+    for (k = 0; k < NVOICE; k++)                  /* (those already fading out are as good as gone) */
+        if (vox[k].sounding && vox[k].fade && !vox[k].pend)
+            pred -= pred < vox[k].cost ? pred : vox[k].cost;
+    for (l = 0; l < NLAYER; l++)
+        if (lay[l].engine == ENG_CAL && cal_rt[l].hush)
+            pred -= pred < org_cost[l] ? pred : org_cost[l];
+    while (pred > BUDGET) {
+        uint32_t ok = NVOICE;
+        for (k = 0; k < NVOICE; k++) {
+            const voice_t *v = &vox[k];
+            if (v->sounding && !v->gate && !v->fade && !v->pend && (ok == NVOICE || v->age < vox[ok].age))
+                ok = k;
+        }
+        if (ok < NVOICE) {
+#if TELEMETRY
+            tele_trims++;
+#endif
+            vox[ok].fade = QUICK;
+            vox[ok].fade_n = QUICK;
+            pred -= pred < vox[ok].cost ? pred : vox[ok].cost;
+            continue;
+        }
+        for (l = 0; l < NLAYER; l++)
+            if (lay[l].engine == ENG_CAL && cal_rt[l].live && !cal_rt[l].nheld && !cal_rt[l].hush)
+                break;
+        if (l == NLAYER)
+            return;                               /* (nothing more to let go: only what is held) */
+        cal_rt[l].hush = 1;
+        pred -= pred < org_cost[l] ? pred : org_cost[l];
+    }
+}
+
 /* one block: the events, the loops, the layers, the reverb, the master (Q15 stereo, interleaved) */
 static void mix_block(int32_t *out)
 {
     int32_t l_[CTL], r_[CTL], rvin[CTL];
     uint32_t i, l;
+    uint32_t c0 = COST_NOW();
     events_take();
     loops_run();
+    budget_guard();
     if (shed_req) {                               /* overload: something already heard goes */
         shed(shed_req > 1u);
         shed_req = 0;
@@ -991,6 +1092,7 @@ static void mix_block(int32_t *out)
         out[2u * i] = ceiling(mulq12(l_[i], master_q12));
         out[2u * i + 1u] = ceiling(mulq12(r_[i], master_q12));
     }
+    blk_last = COST_NOW() - c0;
     blk_clock++;
 }
 
@@ -999,6 +1101,15 @@ static void layers_init(void)
 {
     uint32_t l, k;
     memset(vox, 0, sizeof vox);
+#ifndef HOST
+    eng_cost[ENG_FM] = BLK_TICKS * 5u / 100u;     /* (first guesses, until they are measured) */
+    eng_cost[ENG_ANIMA] = BLK_TICKS * 9u / 100u;
+    eng_cost[ENG_CAL] = BLK_TICKS * 20u / 100u;
+    eng_cost[ENG_RUS] = BLK_TICKS * 4u / 100u;
+#else
+    memcpy(eng_cost, host_cost_model, sizeof eng_cost);
+#endif
+    blk_last = blk_new = 0;
     for (k = 0; k < NVOICE; k++) {
         an_init(&an_vox[k], 0xA11u + k * 131u);
         vox[k].layer = (uint8_t)(k % NLAYER);

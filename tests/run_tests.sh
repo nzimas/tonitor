@@ -26,6 +26,7 @@ build/host macros build/screens
 build/host overdubs build/screens
 build/host transpose
 build/host ties
+build/host budget
 build/host clicks
 build/host voices
 build/host compat

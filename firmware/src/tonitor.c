@@ -13,6 +13,9 @@
 #define TONITOR_VERSION "0.27"
 #endif
 #define FELUCCA_ID TONITOR_ID
+#ifndef TELEMETRY
+#define TELEMETRY 0              /* 1: the audio's timing reported over USB-MIDI SysEx (a diagnostic build) */
+#endif
 #define FELUCCA_OTA 1            /* the update entry (the installer), and the rescue mode */
 #define FELUCCA_OTA_DRYRUN 0
 #define FELUCCA_CDC 0

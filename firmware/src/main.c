@@ -17,6 +17,49 @@ static struct {
 } dbg;
 static volatile uint32_t t5_nested_ticks;
 
+#if TELEMETRY
+/* the audio's timing, for a diagnosis: each half near the edge or late is logged (its load, the gap since the
+ * half before, what the loops and the events did in it, the voices sounding), the main loop sends the log and
+ * the highest load of the last 0.2 s over USB-MIDI (SysEx F0 7D 54 ..), never waiting for the host */
+typedef struct { uint8_t pct, late, non, voices, sounding; uint16_t gap_10us; uint32_t ev; uint32_t half; } tele_t;
+static tele_t tele_log[16];
+static volatile uint32_t tele_w, tele_r, tele_halves;
+static volatile uint8_t tele_max, tele_lates;
+static volatile uint16_t tele_maxgap;
+static uint32_t tele_last_t0;
+static void tele_half(uint32_t pct, uint32_t late, uint32_t t0)
+{
+    uint32_t gap = tele_last_t0 ? (t0 - tele_last_t0) / FM1_TICKS_PER_US / 10u : 0u, k, nv = 0, snd = 0;
+    tele_last_t0 = t0;
+    tele_halves++;
+    if (pct > tele_max)
+        tele_max = (uint8_t)pct;
+    if (gap > tele_maxgap)
+        tele_maxgap = (uint16_t)(gap > 0xFFFFu ? 0xFFFFu : gap);
+    if (late && tele_lates < 127u)
+        tele_lates++;
+    if ((pct >= 88u || late || gap > 650u) && tele_w - tele_r < 16u) {
+        tele_t *g = &tele_log[tele_w % 16u];
+        for (k = 0; k < NVOICE; k++)
+            nv += vox[k].sounding;
+        for (k = 0; k < NLAYER; k++)
+            snd |= (uint32_t)layer_sounding(k) << k;
+        g->pct = (uint8_t)(pct > 255u ? 255u : pct);
+        g->late = (uint8_t)late;
+        g->non = (uint8_t)(tele_non > 127u ? 127u : tele_non);
+        g->voices = (uint8_t)nv;
+        g->sounding = (uint8_t)snd;
+        g->gap_10us = (uint16_t)(gap > 0xFFFFu ? 0xFFFFu : gap);
+        g->ev = tele_ev;
+        g->half = tele_halves;
+        RING_PUBLISH();
+        tele_w++;
+    }
+    tele_ev = 0;
+    tele_non = 0;
+}
+#endif
+
 void fm1_alnk0_irq(void)         /* via isr_alnk0 (hal/fm1_isr.S) */
 {
     uint8_t p;
@@ -46,6 +89,9 @@ void fm1_alnk0_irq(void)         /* via isr_alnk0 (hal/fm1_isr.S) */
                 shed_req = 1;                    /* two near the edge in a row: a tail goes */
             load_pct = (uint8_t)(pc > 255u ? 255u : pc);
         }
+#if TELEMETRY
+        tele_half(load_pct, fm1_audio_free_half() != half, t0);
+#endif
         dbg.cpu_q8 = (dbg.cpu_q8 * 15u + (us * 256u) / (HALF_FRAMES * 1000000u / FS)) / 16u;
         if (us > dbg.max_us)
             dbg.max_us = us;
@@ -314,6 +360,48 @@ static void fm1_main(void)
         ui_input();
         ui_leds();
         ui_draw();
+#if TELEMETRY
+        {
+            static uint32_t sent_at;
+            if ((uint32_t)(fm1_ms - sent_at) >= 200u && usb.config) {
+                uint8_t f[96];
+                uint32_t n = 0, e = 0;
+                sent_at = fm1_ms;
+                f[n++] = 0xF0; f[n++] = 0x7D; f[n++] = 0x54;
+                f[n++] = (uint8_t)(tele_max >> 7); f[n++] = (uint8_t)(tele_max & 0x7Fu);
+                f[n++] = tele_lates;
+                f[n++] = (uint8_t)(tele_maxgap >> 7 & 0x7Fu); f[n++] = (uint8_t)(tele_maxgap & 0x7Fu);
+                {
+                    uint32_t j;
+                    for (j = 0; j < 4u; j++) {              /* each engine's voice: % of a block */
+                        uint32_t c = eng_cost[j] * 100u / BLK_TICKS;
+                        f[n++] = (uint8_t)(c > 127u ? 127u : c);
+                    }
+                    f[n++] = (uint8_t)(tele_trims > 127u ? 127u : tele_trims);
+                    tele_trims = 0;
+                }
+                tele_max = 0;
+                tele_lates = 0;
+                tele_maxgap = 0;
+                while (tele_r != tele_w && e < 5u) {
+                    const tele_t *g = &tele_log[tele_r % 16u];
+                    f[n++] = (uint8_t)(g->pct >> 7); f[n++] = (uint8_t)(g->pct & 0x7Fu);
+                    f[n++] = g->late;
+                    f[n++] = (uint8_t)(g->gap_10us >> 7 & 0x7Fu); f[n++] = (uint8_t)(g->gap_10us & 0x7Fu);
+                    f[n++] = (uint8_t)(g->ev & 0x7Fu); f[n++] = (uint8_t)(g->ev >> 7 & 0x7Fu);
+                    f[n++] = (uint8_t)(g->ev >> 14 & 0x7Fu); f[n++] = (uint8_t)(g->ev >> 21 & 0x7Fu);
+                    f[n++] = g->non; f[n++] = g->voices; f[n++] = g->sounding;
+                    f[n++] = (uint8_t)(g->half & 0x7Fu); f[n++] = (uint8_t)(g->half >> 7 & 0x7Fu);
+                    RING_PUBLISH();
+                    tele_r++;
+                    e++;
+                }
+                f[n++] = 0xF7;
+                if (so_w - so_r + (n + 2u) / 3u < SXQ)  /* (room: else this report is dropped, never waited for) */
+                    ota_wire_send(f, n);
+            }
+        }
+#endif
         {   /* nothing sounding, no key down, no loop going: the sessions' flash may be blanked a sector */
             uint32_t l, quiet = !ui.keys && !ui.save_down;
             for (l = 0; l < NLAYER && quiet; l++)

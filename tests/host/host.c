@@ -2958,6 +2958,172 @@ static int cmd_ties(void)
     return fail ? 1 : 0;
 }
 
+/* the burst heard as a loop first plays (two FM loops going, a third layer's loop closed): the layer's loudness
+ * (12 ms RMS) as REC closes it and in its first round, against a later round and a start after a stop */
+static double bu_rms[200000];
+static uint32_t bu_n;
+static void bu_run(uint32_t nb)
+{
+    while (nb--) {
+        uint32_t i;
+        double a = 0;
+        host_pump();
+        for (i = 0; i < CTL; i++)
+            a += (double)mix_out[2u * i] * mix_out[2u * i];
+        if (bu_n < 200000u)
+            bu_rms[bu_n++] = a / CTL;
+    }
+}
+static double bu_peak(uint32_t from, uint32_t n)   /* the loudest 16-block window, RMS */
+{
+    uint32_t i, j;
+    double best = 0;
+    for (i = from; i + 16u <= from + n && i + 16u <= bu_n; i++) {
+        double a = 0;
+        for (j = 0; j < 16u; j++)
+            a += bu_rms[i + j];
+        a = sqrt(a / 16);
+        if (a > best)
+            best = a;
+    }
+    return best;
+}
+static int cmd_burst(void)
+{
+    static const char *const EN[4] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
+    uint32_t e, held, fail = 0, seed;
+    for (seed = 0; seed < 6u; seed++)
+    for (e = 1; e < 3u; e++)
+        for (held = 0; held < 2u; held++) {
+            uint32_t guard = 0, l, close, len, restart;
+            double first, later, again;
+            layers_init();
+            ui_init();
+            ui.seed = 0x1234u + seed * 7919u;
+            sounds_init();
+            grain_reset();
+            bu_n = 0;
+            for (l = 0; l < 2u; l++) {             /* two FM loops, playing (unheard: level 0) */
+                press_btn(l ? B_SEL : B_FX);
+                while (ui.engine[l] != ENG_FM && guard++ < 20u) {
+                    host_enc[PANEL_ENC[EN_PRESET]] = 1;
+                    ui_input();
+                }
+                ui.level[l] = 0;
+                level_pan_apply(l);
+                press_btn(B_REC);
+                press_key(l * 2u, 1);
+                press_key(l * 2u + 4u, 1);
+                bu_run(300 + l * 77u);
+                press_key(l * 2u, 0);
+                press_key(l * 2u + 4u, 0);
+                bu_run(40);
+                press_btn(B_REC);
+                bu_run(50);
+            }
+            press_btn(B_ENV);                      /* the third layer, CALIGULA or ANIMA: played, then looped */
+            guard = 0;
+            while (ui.engine[2] != e && guard++ < 20u) {
+                host_enc[PANEL_ENC[EN_PRESET]] = 1;
+                ui_input();
+            }
+            ui.send[2] = 0;
+            level_pan_apply(2);
+            bu_run(100);
+            press_btn(B_REC);
+            press_key(1, 1);
+            bu_run(250);
+            press_key(1, 0);
+            press_key(3, 1);
+            bu_run(250);
+            if (!held) {
+                press_key(3, 0);
+                bu_run(60);
+            }
+            close = bu_n;
+            press_btn(B_REC);
+            bu_run(20);
+            if (held)
+                press_key(3, 0);
+            len = loop[2].trk[0].len;
+            bu_run(len * 3u);
+            later = bu_peak(close + 2u * len, 200);
+            first = bu_peak(close, 200);
+            press_btn(B_PLAY);                     /* stopped, a while, started again */
+            bu_run(len);
+            restart = bu_n;
+            press_btn(B_PLAY);
+            bu_run(len * 2u);
+            again = bu_peak(restart, 200);
+            printf("burst %-8s %s seed %u: first round %6.0f, a later one %6.0f, after a restart %6.0f%s\n", EN[e],
+                   held ? "key held at REC" : "keys let go   ", seed, first, later, again,
+                   first > 1.6 * later && first > 1.6 * again ? "   <-- louder at first" : "");
+            if (first > 1.6 * later && first > 1.6 * again)
+                fail++;
+        }
+    printf("burst: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* the budget: with a cost model (a block's time 1000: an FM voice 100, ANIMA 150, CALIGULA 300), release tails
+ * piled up and held notes, then CALIGULA woken by a loop: no block over its time, release tails let go first,
+ * never a held note */
+static int cmd_budget(void)
+{
+    uint32_t fail = 0, b, k, n, worst = 0, tails0 = 0, tails1 = 0, held_lost = 0;
+    host_cost_model[ENG_FM] = 100;
+    host_cost_model[ENG_ANIMA] = 150;
+    host_cost_model[ENG_CAL] = 300;
+    host_cost_model[ENG_RUS] = 50;
+    layers_init();
+    ui_init();
+    sounds_init();
+    grain_reset();
+    for (k = 0; k < NLAYER; k++)                  /* long releases on the ANIMA layers */
+        an_buf[k][an_use[k]].rel = 8000;
+    lay[2].engine = lay[2].want_engine = ui.engine[2] = ENG_CAL;
+    ev_post(EV_ENGINE, 2, 0, ENG_CAL);
+    run_blocks(20, 0);
+    for (n = 0; n < 7u; n++) {                   /* ANIMA (layer 2): seven notes struck and let go */
+        note_on(1, 50u + 3u * n, SRC_KEY);
+        run_blocks(3, 0);
+        note_off(1, 50u + 3u * n, SRC_KEY);
+    }
+    note_on(0, 60, SRC_KEY);                     /* FM (layer 1): two held */
+    note_on(0, 64, SRC_KEY);
+    run_blocks(2, 0);
+    for (k = 0; k < NVOICE; k++)
+        tails0 += vox[k].sounding && !vox[k].gate;
+    for (b = 0; b < 400u; b++) {
+        if (b == 100u)
+            note_on(2, 48, SRC_LOOP);            /* CALIGULA wakes (a loop's note) */
+        if (b == 200u)
+            note_on(1, 70, SRC_KEY);             /* and a new ANIMA note on top */
+        run_blocks(1, 0);
+        if (b > 2u && blk_last > worst)
+            worst = blk_last;
+        for (k = 0; k < NVOICE; k++)
+            if (vox[k].gate && vox[k].fade && !vox[k].pend)
+                held_lost++;
+    }
+    for (k = 0; k < NVOICE; k++)
+        tails1 += vox[k].sounding && !vox[k].gate;
+    printf("budget: %u release tails before, %u after; the costliest block %u of 1000 (budget %u)\n", tails0, tails1, worst,
+           BUDGET);
+    if (worst > 1000u)
+        printf("FAIL budget: a block took more than its time (%u)\n", worst), fail++;
+    if (held_lost)
+        printf("FAIL budget: a held note was let go (%u blocks)\n", held_lost), fail++;
+    if (!cal_rt[2].live || !lgate(0))
+        printf("FAIL budget: CALIGULA or the held FM notes do not sound\n"), fail++;
+    if (tails0 < 3u)
+        printf("FAIL budget: the test did not pile up tails (%u)\n", tails0), fail++;
+    memset(host_cost_model, 0, sizeof host_cost_model);
+    layers_init();
+    printf("budget: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -3329,6 +3495,10 @@ int main(int argc, char **argv)
         return cmd_voices();
     if (argc >= 2 && !strcmp(argv[1], "evcost"))
         return cmd_evcost();
+    if (argc >= 2 && !strcmp(argv[1], "budget"))
+        return cmd_budget();
+    if (argc >= 2 && !strcmp(argv[1], "burst"))
+        return cmd_burst();
     if (argc >= 2 && !strcmp(argv[1], "ties"))
         return cmd_ties();
     if (argc >= 2 && !strcmp(argv[1], "clicks"))

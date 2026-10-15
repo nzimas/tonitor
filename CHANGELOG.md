@@ -16,8 +16,11 @@
 - **No click when ANIMA reuses a voice**: a voice taken over for a new note (loops going round, many notes at once)
   kept its comb resonator, phaser and sample hold from the note before, heard again at full level as the new note
   began. They now start empty.
-- **The overload guard waits longer**: a release tail goes only when the audio is past 90 % (was 85 %) twice in a
-  row; a held note only when it is actually late, past 100 %. SHIFT shows the load now, as one percentage.
+- **No more bursts when a loop starts**: with the machine busy (many release tails ringing), a loop starting —
+  CALIGULA above all — could make the audio late for a few milliseconds, heard as a burst. Tonitor now measures
+  what each voice and organism costs as it plays, and before anything new starts it makes room ahead, letting the
+  oldest release tails go quickly, so the audio is never late. A held note is let go only if the audio is late
+  after all (past 100 %). SHIFT shows the load now, as one percentage.
 
 ## 0.26
 
