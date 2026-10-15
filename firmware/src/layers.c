@@ -117,10 +117,12 @@ typedef struct {
                                   * before them (-1: none) */
     int8_t xb;                   /* the loops' transposition when it was recorded (it plays at lx_steps - xb) */
     uint8_t wrap;                /* it has just gone round (its notes tied over the end are still sounding) */
+    uint8_t rgo;                 /* RANDOM: a note has been struck since the last jump */
     int8_t dir;                  /* 1 forwards, -1 backwards (the looper's direction; PENDULUM turns it at the ends) */
     uint32_t snd[4];             /* the notes it sounds now (as recorded, before the transposition) */
 } loop_trk_t;
-enum { LD_FWD, LD_REV, LD_PEND };   /* the direction a looper plays its loops in */
+enum { LD_FWD, LD_REV, LD_PEND, LD_RAND };   /* the direction a looper plays its loops in (RANDOM: forwards, jumping
+                                              * to a note drawn at random each time the next is due) */
 enum { LS_NORMAL, LS_HALF, LS_DOUBLE };   /* .. and its speed */
 typedef struct {
     volatile uint8_t rec;        /* LR_*: the screen's and the LEDs' */
@@ -131,7 +133,8 @@ typedef struct {
     uint8_t held[16];            /* notes on in the recording, not yet off */
     uint32_t start;              /* the loop clock when the recording began */
     uint32_t lclk;               /* the loop clock: half blocks of loop time, 1 a block at half speed, 2, 4 at double */
-    uint8_t dmode, rate;         /* LD_*, LS_* (the 4th .. 7th black keys) */
+    uint8_t dmode, rate;         /* LD_*, LS_* (the 4th .. 8th black keys) */
+    uint32_t rnd;                /* RANDOM's draws */
     uint32_t nev;                /* events used, every loop's */
     loop_trk_t trk[LOOP_TRK];
     uint32_t ev[LOOP_N];
@@ -179,6 +182,7 @@ static void trk_start(const looper_t *p, loop_trk_t *t)
     t->pos = t->dir > 0 ? 0 : (int32_t)t->len - 1;
     t->ix = (int16_t)(t->dir > 0 ? 0 : (int32_t)t->n - 1);
     t->wrap = 0;
+    t->rgo = 0;
     memset(t->snd, 0, sizeof t->snd);
 }
 /* the loops' transposition (SHIFT + OCT): every loop moved by steps of the scale, its notes walked up or down the
@@ -698,10 +702,59 @@ static void trk_play(uint32_t l, loop_trk_t *t, const looper_t *p, uint32_t e, i
         t->snd[raw >> 5] &= ~(1u << (raw & 31u));
     }
 }
-/* one block of loop time of loop t, in its direction; at an end, round again -- or, PENDULUM, back the other way */
+/* RANDOM: the notes sounding let go, and on from a note of the loop drawn at random (with any struck at its time) */
+static void trk_jump(uint32_t l, looper_t *p, loop_trk_t *t)
+{
+    const uint32_t *ev = p->ev + t->first;
+    uint32_t n, j, k;
+    for (n = 0; n < 128u; n++)
+        if ((t->snd[n >> 5] >> (n & 31u)) & 1u)
+            note_off(l, lx_map(n, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
+    memset(t->snd, 0, sizeof t->snd);
+    t->rgo = 0;
+    t->wrap = 0;
+    if (!p->rnd)                                  /* (a session loaded in RANDOM: seeded at its first draw) */
+        p->rnd = 0x9E3779B9u ^ (blk_clock * 2654435761u) ^ (uint32_t)l;
+    p->rnd ^= p->rnd << 13;
+    p->rnd ^= p->rnd >> 17;
+    p->rnd ^= p->rnd << 5;
+    j = t->n ? (uint32_t)(((uint64_t)p->rnd * t->n) >> 32) : 0;
+    for (k = 0; k < t->n && !LE_ON(ev[(j + k) % t->n]); k++)
+        ;                                         /* (the next note's start from there) */
+    if (k == t->n) {                              /* (no notes: from the start) */
+        t->pos = 0;
+        t->ix = 0;
+        return;
+    }
+    j = (j + k) % t->n;
+    while (j > 0 && LE_T(ev[j - 1]) == LE_T(ev[j]))
+        j--;                                      /* (the first event at its time) */
+    t->pos = (int32_t)LE_T(ev[j]);
+    t->ix = (int16_t)j;
+}
+/* one block of loop time of loop t, in its direction; at an end, round again -- or, PENDULUM, back the other way;
+ * RANDOM: forwards, but when the next note is due (or the loop ends), a jump to a note drawn at random */
 static void trk_step(uint32_t l, looper_t *p, loop_trk_t *t)
 {
     const uint32_t *ev = p->ev + t->first;
+    if (p->dmode == LD_RAND && t->dir > 0) {
+        if (t->pos >= (int32_t)t->len || (t->rgo && t->ix < (int32_t)t->n && LE_ON(ev[t->ix]) && (int32_t)LE_T(ev[t->ix]) <= t->pos))
+            trk_jump(l, p, t);
+        while (t->ix < (int32_t)t->n && (int32_t)LE_T(ev[t->ix]) <= t->pos) {
+            uint32_t e = ev[t->ix++];
+            if (LE_ON(e)) {
+                uint32_t raw = LE_NOTE(e);
+                note_on(l, lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
+                t->snd[raw >> 5] |= 1u << (raw & 31u);
+                t->rgo = 1;
+            } else if ((t->snd[LE_NOTE(e) >> 5] >> (LE_NOTE(e) & 31u)) & 1u) {   /* (only what it struck) */
+                note_off(l, lx_map(LE_NOTE(e), lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
+                t->snd[LE_NOTE(e) >> 5] &= ~(1u << (LE_NOTE(e) & 31u));
+            }
+        }
+        t->pos++;
+        return;
+    }
     if (t->dir > 0) {
         while (t->ix < (int32_t)t->n && (int32_t)LE_T(ev[t->ix]) <= t->pos) {
             uint32_t e = ev[t->ix++];
@@ -774,10 +827,18 @@ static void loop_mode(uint32_t l, uint32_t what, uint32_t val)
         p->rate = (uint8_t)(val <= LS_DOUBLE ? val : LS_NORMAL);
         return;
     }
-    p->dmode = (uint8_t)(val <= LD_PEND ? val : LD_FWD);
+    if (p->dmode == LD_RAND && val != LD_RAND)    /* (out of RANDOM: on from where it is, in range) */
+        for (k = 0; k < p->ntrk; k++)
+            if (p->trk[k].pos >= (int32_t)p->trk[k].len) {
+                p->trk[k].pos = 0;
+                p->trk[k].ix = 0;
+            }
+    p->dmode = (uint8_t)(val <= LD_RAND ? val : LD_FWD);
     if (p->dmode != LD_PEND)
         for (k = 0; k < p->ntrk; k++)
             trk_turn(&p->trk[k], p->dmode == LD_REV ? -1 : 1);
+    if (!p->rnd)
+        p->rnd = 0x9E3779B9u ^ (blk_clock * 2654435761u) ^ l;
 }
 /* one block of every loop that plays: as many blocks of loop time as the speed has passed (at half speed every
  * other block, at double two) */

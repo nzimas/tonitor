@@ -57,8 +57,9 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define KEY_EDIT 22u             /* the black key before SHIFT: EDIT, on and off (KNOB 1 .. 4: the sound's macros) */
 #define KEY_REV 8u               /* the 4th black key: the chosen track's loops backwards (again: forwards) */
 #define KEY_PEND 10u             /* the 5th: PENDULUM, forwards and backwards in turn */
-#define KEY_HALF 13u             /* the 6th: half speed (again: normal) */
-#define KEY_DOUBLE 15u           /* the 7th: double speed */
+#define KEY_RAND 13u             /* the 6th: RANDOM, forwards from a note drawn at random each time the next is due */
+#define KEY_HALF 15u             /* the 7th: half speed (again: normal) */
+#define KEY_DOUBLE 17u           /* the 8th: double speed */
 #define KEY_NOTE0 53             /* the lowest key, F3 */
 
 static const uint16_t LAYER_COL[NLAYER] = {RGB(255, 214, 0), RGB(0, 214, 255), RGB(255, 92, 210),
@@ -756,11 +757,11 @@ static void ui_input(void)
     ch = keys ^ ui.keys;
     {   /* the chosen track's loops: backwards or PENDULUM (or forwards again); half or double speed (or normal) */
         const looper_t *p = &loop[ui.sel];
-        if ((ch & keys) >> KEY_REV & 1u || (ch & keys) >> KEY_PEND & 1u) {
-            uint32_t want = (ch & keys) >> KEY_REV & 1u ? LD_REV : LD_PEND;
+        if ((ch & keys) >> KEY_REV & 1u || (ch & keys) >> KEY_PEND & 1u || (ch & keys) >> KEY_RAND & 1u) {
+            uint32_t want = (ch & keys) >> KEY_REV & 1u ? LD_REV : (ch & keys) >> KEY_PEND & 1u ? LD_PEND : LD_RAND;
             want = p->dmode == want ? LD_FWD : want;
             ev_post(EV_LOOP_MODE, ui.sel, 0, want);
-            say(want == LD_REV ? "REVERSE" : want == LD_PEND ? "PENDULUM" : "FORWARD", 1200);
+            say(want == LD_REV ? "REVERSE" : want == LD_PEND ? "PENDULUM" : want == LD_RAND ? "RANDOM" : "FORWARD", 1200);
         }
         if ((ch & keys) >> KEY_HALF & 1u || (ch & keys) >> KEY_DOUBLE & 1u) {
             uint32_t want = (ch & keys) >> KEY_HALF & 1u ? LS_HALF : LS_DOUBLE;
@@ -866,6 +867,7 @@ static void ui_leds(void)
     fm1_led_key(14u + KEY_EDIT, ui.edit);
     fm1_led_key(14u + KEY_REV, loop[ui.sel].dmode == LD_REV);
     fm1_led_key(14u + KEY_PEND, loop[ui.sel].dmode == LD_PEND);
+    fm1_led_key(14u + KEY_RAND, loop[ui.sel].dmode == LD_RAND);
     fm1_led_key(14u + KEY_HALF, loop[ui.sel].rate == LS_HALF);
     fm1_led_key(14u + KEY_DOUBLE, loop[ui.sel].rate == LS_DOUBLE);
 }

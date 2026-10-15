@@ -3,9 +3,11 @@
 ## 0.31
 
 Added
-- Loop direction and speed per track, on the 4th–7th black keys (lit while on): REVERSE, PENDULUM (forwards
-  and backwards alternately), HALF SPEED, DOUBLE SPEED. REVERSE/PENDULUM and HALF/DOUBLE are exclusive pairs;
-  direction and speed combine. Applies to all overdubs of the track, each within its own length. A direction
+- Loop direction and speed per track, on the 4th–8th black keys (lit while on): REVERSE, PENDULUM (forwards
+  and backwards alternately), RANDOM, HALF SPEED, DOUBLE SPEED. REVERSE/PENDULUM/RANDOM are exclusive, as are
+  HALF/DOUBLE; direction and speed combine. RANDOM plays forwards and, each time the next note-on is due and at
+  the loop end, releases the sounding notes and jumps to a randomly chosen note-on (with any note-ons at the
+  same time); note lengths and the interval to the following note-on are those recorded. Applies to all overdubs of the track, each within its own length. A direction
   change continues from the current position (sounding notes are not cut or retriggered). The loop clock runs
   at the selected speed, so overdubs recorded at half or double speed keep their played timing; overdubs
   recorded in reverse are stored mirrored and play back as played. Stored in sessions (format 12), copied with

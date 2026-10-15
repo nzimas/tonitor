@@ -692,7 +692,7 @@ static int cmd_flows(void)
         for (k = 0; k < NKEY; k++) {
             if (white_ix(k) < 0) {
                 uint32_t before = ev_w;
-                if (k == KEY_REV || k == KEY_PEND || k == KEY_HALF || k == KEY_DOUBLE)
+                if (k == KEY_REV || k == KEY_PEND || k == KEY_RAND || k == KEY_HALF || k == KEY_DOUBLE)
                     continue;                    /* (the loops' direction and speed: loopmodes) */
                 press_phys(k, 1);
                 press_phys(k, 0);
@@ -3620,6 +3620,65 @@ static int cmd_loopmodes(void)
     lm_key(KEY_PEND);
     if (loop[0].dmode != LD_FWD)
         printf("FAIL loopmodes: PENDULUM again is not forwards\n"), fail++;
+    {   /* RANDOM: the loop's notes, in an order drawn anew (C3 and E3: either may follow either), never two at once */
+        uint32_t last = 0, ce = 0, cc = 0, ee = 0, ec = 0, two = 0, onsets = 0, gaps = 0, gapsum = 0, since = 0;
+        lm_key(KEY_RAND);
+        ui_leds();
+        if (loop[0].dmode != LD_RAND || !host_led[14u + KEY_RAND] || strcmp(ui.msg, "RANDOM"))
+            printf("FAIL loopmodes: the 6th black key does not turn RANDOM on, lit\n"), fail++;
+        for (b = 0; b < 30000u; b++) {
+            uint32_t c = lm_sounds(0, c3), e = lm_sounds(0, e3), now = c ? c3 : e ? e3 : 0;
+            run_blocks(1, 0);
+            since++;
+            c = lm_sounds(0, c3);
+            e = lm_sounds(0, e3);
+            if (c && e)
+                two++;
+            if ((c && now != c3) || (e && now != e3)) {   /* a note starts */
+                uint32_t nt = c ? c3 : e3;
+                if (last == c3 && nt == e3) ce++;
+                if (last == c3 && nt == c3) cc++;
+                if (last == e3 && nt == c3) ec++;
+                if (last == e3 && nt == e3) ee++;
+                if (last) {
+                    gaps++;
+                    gapsum += since;
+                }
+                since = 0;
+                last = nt;
+                onsets++;
+            }
+        }
+        if (!ce || !cc || !ec || !ee || two)
+            printf("FAIL loopmodes: RANDOM does not draw the order anew (CE %u CC %u EC %u EE %u, both at once %u)\n", ce, cc, ec, ee, two), fail++;
+        {   /* at half speed the notes come half as often */
+            uint32_t g1 = gaps ? gapsum / gaps : 0, g2;
+            gaps = gapsum = 0;
+            last = 0;
+            lm_key(KEY_HALF);
+            for (b = 0; b < 30000u; b++) {
+                uint32_t c = lm_sounds(0, c3), e = lm_sounds(0, e3), was = c || e;
+                run_blocks(1, 0);
+                since++;
+                if ((lm_sounds(0, c3) || lm_sounds(0, e3)) && !was) {
+                    if (last) {
+                        gaps++;
+                        gapsum += since;
+                    }
+                    last = 1;
+                    since = 0;
+                }
+            }
+            g2 = gaps ? gapsum / gaps : 0;
+            if (g2 < g1 * 17u / 10u || g2 > g1 * 23u / 10u)
+                printf("FAIL loopmodes: RANDOM at half speed, the notes do not come half as often (%u, %u)\n", g1, g2), fail++;
+            lm_key(KEY_HALF);
+        }
+        lm_key(KEY_RAND);
+        if (loop[0].dmode != LD_FWD)
+            printf("FAIL loopmodes: RANDOM again is not forwards\n"), fail++;
+        (void)onsets;
+    }
     /* an overdub at half speed: G3 held 200 blocks is 100 of loop time, and sounds 200 blocks at half speed */
     lm_key(KEY_HALF);
     press_btn(B_REC);
@@ -3687,13 +3746,13 @@ static int cmd_loopmodes(void)
         printf("FAIL loopmodes: a session does not keep them (%u %u)\n", loop[0].dmode, loop[0].rate), fail++;
     /* turned about at random: never a note hanging, never one struck twice */
     {
-        static const uint32_t KS[4] = {KEY_REV, KEY_PEND, KEY_HALF, KEY_DOUBLE};
+        static const uint32_t KS[5] = {KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE};
         uint32_t r = 12345u;
         bad = 0;
         for (b = 0; b < 6000u; b++) {
             if (b % 37u == 0u) {
                 r = r * 1103515245u + 12345u;
-                lm_key(KS[(r >> 16) & 3u]);
+                lm_key(KS[(r >> 16) % 5u]);
             }
             run_blocks(1, 0);
             if (lm_sounds(0, c3) > 1u || lm_sounds(0, e3) > 1u || lm_sounds(0, g3) > 1u)

@@ -1048,7 +1048,7 @@ static int ses_load(uint32_t i)
                 y.loop_len &= 0xFFu;
                 nt = y.loop_len > LOOP_TRK ? LOOP_TRK : y.loop_len;
                 play = h.format >= 12u ? y.loop_state & 1u : y.loop_state;
-                lp->dmode = (uint8_t)(h.format >= 12u && (y.loop_state >> 1 & 3u) <= LD_PEND ? y.loop_state >> 1 & 3u : LD_FWD);
+                lp->dmode = (uint8_t)(h.format >= 12u && (y.loop_state >> 1 & 3u) <= LD_RAND ? y.loop_state >> 1 & 3u : LD_FWD);
                 lp->rate = (uint8_t)(h.format >= 12u && (y.loop_state >> 3 & 3u) <= LS_DOUBLE ? y.loop_state >> 3 & 3u : LS_NORMAL);
                 for (k = 0; k < y.loop_len; k++) {
                     uint32_t tl[2];
