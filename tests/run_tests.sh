@@ -27,6 +27,9 @@ build/host overdubs build/screens
 build/host transpose
 build/host ties
 build/host budget
+build/host anref | diff -q - tests/golden/anima_render.txt >/dev/null || { echo "FAIL anima: the render is no longer the same"; exit 1; }
+ANCACHE=1 build/host anref | diff -q - tests/golden/anima_render.txt >/dev/null || { echo "FAIL anima: the render from the RAM copies differs"; exit 1; }
+echo "anima: the render as it was, through the flash and the RAM copies"
 build/host clip build/screens
 build/host clicks
 build/host voices

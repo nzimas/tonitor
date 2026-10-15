@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.29
+
+- **ANIMA lighter on the chip**: the wavetables its voices play are copied into RAM while they play (from the
+  flash, a read could cost twenty times as much), and its inner loop keeps what it works on close at hand. The
+  sound is exactly the same, sample for sample. To make room, a track's loops now hold about 500 notes between
+  them (were about 1000); a session saved with more loads the first 500 or so of each track.
+
 ## 0.28
 
 - **Copy a track onto another**: hold a track's button (0.8 s) to copy it — COPIED, its button blinking — then

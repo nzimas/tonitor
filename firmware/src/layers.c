@@ -101,7 +101,7 @@ typedef struct {
 static layer_t lay[NLAYER];
 
 /* ------------------------------------------------------------ looper --- */
-#define LOOP_N 2048u             /* note events a layer's loops hold between them */
+#define LOOP_N 1024u             /* note events a track's loops hold between them (~500 notes) */
 #define LOOP_TRK 10u             /* loops a layer */
 enum { LR_IDLE, LR_ARMED, LR_REC };
 /* an event: t (24 bits, blocks from the loop's start), the note (7 bits), on (bit 31) */
@@ -1076,6 +1076,8 @@ static void mix_block(int32_t *out)
     int32_t l_[CTL], r_[CTL], rvin[CTL];
     uint32_t i, l;
     uint32_t c0 = COST_NOW();
+    an_cache_now = blk_clock + 1u;                /* (ANIMA's wavetables from RAM while the ISR renders) */
+    an_cache_filled = 0;
     events_take();
     loops_run();
     budget_guard();
@@ -1093,6 +1095,7 @@ static void mix_block(int32_t *out)
         out[2u * i + 1u] = ceiling(mulq12(r_[i], master_q12));
     }
     blk_last = COST_NOW() - c0;
+    an_cache_now = 0;
     blk_clock++;
 }
 

@@ -137,13 +137,55 @@ static int32_t an_at(const an_map *m, const int32_t *c)
 #define AN_INC_600 58434930u
 #define AN_INC_2000 194783100u
 
-AINL int32_t an_read(uint32_t k, uint32_t ph, uint32_t inc)
+/* a wavetable's point at a phase, linear between two (the table chosen once a block: an_tab) */
+AINL int32_t an_rd(const int16_t *d, uint32_t ph)
 {
-    uint32_t lv = inc < AN_INC_200 ? 0u : inc < AN_INC_600 ? 1u : inc < AN_INC_2000 ? 2u : 3u;
-    const int16_t *d = &AN_WT[(k * AN_LEVELS + lv) * (AN_TSIZE + 1u)];
     uint32_t i = ph >> 22;
     int32_t f = (int32_t)((ph >> 7) & 0x7FFFu);
     return d[i] + (((d[i + 1u] - d[i]) * f) >> 15);
+}
+
+/* the wavetables in RAM: the flash's 196 KB of them are read through a cache that misses often (a read costs 6 to
+ * 33 ticks of the chip, against 1.6 from RAM), so the tables the voices are playing are copied into RAM, as many as
+ * fit; a table no voice has asked for in ~50 ms may make room for another. At most one copied a block (~0.2 % of
+ * the chip's time); the others, meanwhile, from the flash. The main loop (measuring a sound) reads the flash */
+#ifndef AN_CACHE_N
+#define AN_CACHE_N 15u              /* (~30 KB of the pool: as many as leave it its 8 KB headroom) */
+#endif
+static int16_t an_cache[AN_CACHE_N][AN_TSIZE + 1u] POOL;
+static uint16_t an_cache_tag[AN_CACHE_N];       /* the table x AN_LEVELS + its level, + 1 (0: empty) */
+static uint32_t an_cache_used[AN_CACHE_N];      /* the block it was last asked for */
+static uint32_t an_cache_now;                   /* the ISR's block (+ 1) while it renders; 0 elsewhere */
+static uint8_t an_cache_filled;                 /* a table copied in this block */
+static const int16_t *an_tab(uint32_t k, uint32_t inc)
+{
+    uint32_t lv = inc < AN_INC_200 ? 0u : inc < AN_INC_600 ? 1u : inc < AN_INC_2000 ? 2u : 3u, tag = k * AN_LEVELS + lv + 1u;
+    uint32_t i, room = AN_CACHE_N;
+    const int16_t *flash = &AN_WT[(tag - 1u) * (AN_TSIZE + 1u)];
+    if (!an_cache_now)
+        return flash;
+    for (i = 0; i < AN_CACHE_N; i++)
+        if (an_cache_tag[i] == tag) {
+            an_cache_used[i] = an_cache_now;
+            return an_cache[i];
+        }
+    if (an_cache_filled)
+        return flash;
+    for (i = 0; i < AN_CACHE_N; i++) {
+        if (!an_cache_tag[i]) {
+            room = i;
+            break;
+        }
+        if (an_cache_now - an_cache_used[i] > 64u && (room == AN_CACHE_N || an_cache_used[i] < an_cache_used[room]))
+            room = i;
+    }
+    if (room == AN_CACHE_N)
+        return flash;                           /* (all of them in use: this one from the flash) */
+    memcpy(an_cache[room], flash, sizeof an_cache[room]);
+    an_cache_tag[room] = (uint16_t)tag;
+    an_cache_used[room] = an_cache_now;
+    an_cache_filled = 1;
+    return an_cache[room];
 }
 
 typedef struct {
@@ -163,6 +205,7 @@ typedef struct {
 
 typedef struct {
     uint32_t ph, pos, posinc, inc;
+    const int16_t *tab;          /* its wavetable (an_tab) */
     uint8_t on;
 } an_grain;
 
@@ -209,6 +252,7 @@ typedef struct {
     int32_t ktmul;               /* the filter's keyboard tracking for this note, Q16 */
     int8_t mac[NMAC];            /* EDIT's macros (layers.c sets them each block; 0: the design as drawn) */
     uint8_t res_on, shp_on;      /* the comb and the shaper, the design's or brought in by a macro */
+    const int16_t *tA, *tB, *tFM, *tAM, *tM[4];   /* this block's wavetables (an_tab) */
 } an_voice_t;
 
 /* ------------------------------------------------------ the envelope --- */
@@ -699,45 +743,64 @@ static void an_control(an_voice_t *v, const an_design_t *d)
 #ifndef AN_RENDER_PLACE
 #define AN_RENDER_PLACE __attribute__((noinline))   /* (FAST, from RAM: measured no faster -- the cost is the work) */
 #endif
-/* a block's samples (from RAM, FAST: the hottest code of all; its helpers inline), e / a the envelope and the
- * amplitude moving by de / da a sample; its mean square back, for the leveller */
+/* a block's samples, e / a the envelope and the amplitude moving by de / da a sample; its mean square back, for the
+ * leveller. Everything a sample touches is held in locals for the block (the compiler cannot otherwise tell the
+ * voice, the design and the output apart: it would load and store them all again at every sample), the wavetables
+ * through the pointers an_render chose for this block (the RAM copies when there are) */
 static AN_RENDER_PLACE int64_t an_samples(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n, int32_t e,
                                           int32_t de, int32_t a, int32_t da)
 {
-    uint32_t i, k, ns = (uint32_t)clampi(d->multiCount, 1, 4), grainInc = hz8_inc(v->gRate8);
+    const uint32_t ns = (uint32_t)clampi(d->multiCount, 1, 4), grainInc = hz8_inc(v->gRate8), amInc = hz8_inc(v->amRate8);
+    const int oscA = d->oscA, oscB = d->oscB, fm = d->fm, multi = d->multi, gran = d->gran && v->lGran > 0;
+    const int noise = d->noise && v->lNoise > 0 ? d->noise : 0, filter = d->filter, ampMod = d->ampMod, down = d->down;
+    const int shp = v->shp_on, curve = d->shaperCurve, phaser = d->phaser, gfilter = d->groupFilter, res = v->res_on;
+    const int32_t lA = v->lA, lB = v->lB, lFM = v->lFM, lMulti = v->lMulti, lGran = v->lGran, lNoise = v->lNoise;
+    const int32_t index = v->index, amDepth = v->amDepth, drive = v->drive, driveNorm = v->driveNorm, phA = v->phA;
+    const int32_t resDelay = v->resDelay, resFb = v->resFb, resMix = v->resMix, dout = d->out, level = v->level >> 13;
+    const int32_t granSpread = d->granSpread;
+    const uint32_t inc = v->inc, incB = v->incB, incM = v->incM, downInc = v->downInc;
+    const int16_t *const tA = v->tA, *const tB = v->tB, *const tFM = v->tFM, *const tAM = v->tAM;
+    const svf_c fc = v->filtc, nc = v->nfiltc, gc = v->gfiltc;
+    uint32_t pA = v->pA, pB = v->pB, pC = v->pC, pM = v->pM, pAM = v->pAM, grainClock = v->grainClock;
+    uint32_t downAcc = v->downAcc, resPos = v->resPos, i, k;
+    int32_t downHeld = v->downHeld, phFb = v->phFb, resLp = v->resLp, ap0 = v->ap[0], ap1 = v->ap[1], ap2 = v->ap[2],
+            ap3 = v->ap[3];
+    svf_t filt = v->filt, nfilt = v->nfilt, gfilt = v->gfilt;
+    rnd_t rnd = v->rnd;
+    int16_t *const rbuf = v->res;
     int64_t ms = 0;
     for (i = 0; i < n; i++) {
         int32_t s = 0;
         e += de;
         a += da;
-        if (d->oscA) {
-            v->pA += v->inc;
-            s += mulq15(v->lA, an_read(d->tableA, v->pA, v->inc));
+        if (oscA) {
+            pA += inc;
+            s += mulq15(lA, an_rd(tA, pA));
         }
-        if (d->oscB) {
-            v->pB += v->incB;
-            s += mulq15(v->lB, an_read(d->tableB, v->pB, v->incB));
+        if (oscB) {
+            pB += incB;
+            s += mulq15(lB, an_rd(tB, pB));
         }
-        if (d->fm) {
+        if (fm) {
             int32_t mod;
-            v->pM += v->incM;
-            mod = sin_ph(v->pM) * v->index;                     /* Q27 radians */
-            v->pC += v->inc;
-            s += mulq15(v->lFM, an_read(d->tableFM, v->pC + (uint32_t)(((int64_t)mod * 333772) >> 16), v->incFMlevel));
+            pM += incM;
+            mod = sin_ph(pM) * index;                           /* Q27 radians */
+            pC += inc;
+            s += mulq15(lFM, an_rd(tFM, pC + (uint32_t)(((int64_t)mod * 333772) >> 16)));
         }
-        if (d->multi) {
+        if (multi) {
             int32_t sum = 0;
             for (k = 0; k < ns; k++) {
                 v->pStack[k] += v->incStack[k];
-                sum += mulq15(an_read(d->tableMulti, v->pStack[k], v->incStack[k]), v->stackGain[k]);
+                sum += mulq15(an_rd(v->tM[k], v->pStack[k]), v->stackGain[k]);
             }
-            s += mulq15(v->lMulti, sum);
+            s += mulq15(lMulti, sum);
         }
-        if (d->gran && v->lGran > 0) {
-            uint32_t was = v->grainClock;
+        if (gran) {
+            uint32_t was = grainClock;
             int32_t gs = 0;
-            v->grainClock += grainInc;
-            if (v->grainClock < was) {                          /* a grain is due */
+            grainClock += grainInc;
+            if (grainClock < was) {                             /* a grain is due */
                 for (k = 0; k < 3u; k++)
                     if (!v->gr[k].on) {
                         an_grain *g = &v->gr[k];
@@ -745,14 +808,14 @@ static AN_RENDER_PLACE int64_t an_samples(an_voice_t *v, const an_design_t *d, i
                         g->on = 1;
                         g->pos = 0;
                         g->posinc = 0xFFFFFFFFu / (len > 16u ? len : 16u);
-                        g->ph = rnd_next(&v->rnd);
+                        g->ph = rnd_next(&rnd);
                         /* scattered, when the design asks, onto fixed octaves and a fifth */
-                        if (rnd_q15(&v->rnd) < d->granSpread) {
-                            uint32_t w = rnd_next(&v->rnd) >> 30;
-                            g->inc = w == 0 ? v->inc << 1 : w == 1 ? v->inc >> 1 : w == 2 ? v->inc + (v->inc >> 1)
-                                                                                         : v->inc << 2;
+                        if (rnd_q15(&rnd) < granSpread) {
+                            uint32_t w = rnd_next(&rnd) >> 30;
+                            g->inc = w == 0 ? inc << 1 : w == 1 ? inc >> 1 : w == 2 ? inc + (inc >> 1) : inc << 2;
                         } else
-                            g->inc = v->inc;
+                            g->inc = inc;
+                        g->tab = an_tab(d->tableGran, g->inc);
                         break;
                     }
             }
@@ -765,97 +828,159 @@ static AN_RENDER_PLACE int64_t an_samples(an_voice_t *v, const an_design_t *d, i
                 w = sin_ph(g->pos >> 1);
                 w = mulq15(w, w);
                 g->ph += g->inc;
-                gs += mulq15(w, an_read(d->tableGran, g->ph, g->inc));
+                gs += mulq15(w, an_rd(g->tab, g->ph));
                 was2 = g->pos;
                 g->pos += g->posinc;
                 if (g->pos < was2)
                     g->on = 0;
             }
-            s += mulq15(v->lGran, mulq15(gs, LV(0.6)));
+            s += mulq15(lGran, mulq15(gs, LV(0.6)));
         }
-        if (d->noise && v->lNoise > 0) {
-            int32_t nz = rnd_bi(&v->rnd);
-            if (d->noise > 1) {
-                nz = svf_run(&v->nfilt, &v->nfiltc, nz, d->noise - 1);
-                if (d->noise == 3)
+        if (noise) {
+            int32_t nz = rnd_bi(&rnd);
+            if (noise > 1) {
+                nz = svf_run(&nfilt, &nc, nz, noise - 1);
+                if (noise == 3)
                     nz <<= 1;
             }
-            s += mulq15(v->lNoise, nz);
+            s += mulq15(lNoise, nz);
         }
-        if (d->filter)
-            s = svf_run(&v->filt, &v->filtc, s, d->filter);
-        if (d->ampMod) {
-            v->pAM += hz8_inc(v->amRate8);
-            s = mulq15(s, Q15 - mulq15(v->amDepth, Q15 / 2 - (an_read(d->tableAM, v->pAM, 0) >> 1)));
+        if (filter)
+            s = svf_run(&filt, &fc, s, filter);
+        if (ampMod) {
+            pAM += amInc;
+            s = mulq15(s, Q15 - mulq15(amDepth, Q15 / 2 - (an_rd(tAM, pAM) >> 1)));
         }
         s = mulq15(mulq15(s, a), e >> 9);
         /* the hand's chain (AnimaCore.h group) */
-        if (d->down) {
-            uint32_t was = v->downAcc;
-            v->downAcc += v->downInc;
-            if (v->downAcc < was || v->downInc >= 0xFFFF0000u)
-                v->downHeld = s;
-            s = v->downHeld;
+        if (down) {
+            uint32_t was = downAcc;
+            downAcc += downInc;
+            if (downAcc < was || downInc >= 0xFFFF0000u)
+                downHeld = s;
+            s = downHeld;
         }
-        if (v->shp_on) {
-            int32_t y = mulq12(s, v->drive);
-            if (d->shaperCurve == 1)
+        if (shp) {
+            int32_t y = mulq12(s, drive);
+            if (curve == 1)
                 y = sin_ph((uint32_t)((int64_t)clampi(y, -4 * Q15, 4 * Q15) * 25033));   /* sin(1.2 y) */
-            else if (d->shaperCurve == 2) {
+            else if (curve == 2) {
                 int32_t z = clampi(y, -Q15, Q15);
                 y = mulq15(mulq15(mulq15(z, z), z), 4 * Q15) - 3 * z;
             } else
                 y = tanh_q15(y);
-            s = mulq15(y, v->driveNorm);
+            s = mulq15(y, driveNorm);
         }
-        if (d->phaser) {
-            int32_t y = s + (v->phFb >> 1), st;
-            for (st = 0; st < 4; st++) {
-                int32_t o = -mulq15(v->phA, y) + v->ap[st];
-                v->ap[st] = y + mulq15(v->phA, o);
-                y = o;
-            }
-            v->phFb = y;
+        if (phaser) {
+            int32_t y = s + (phFb >> 1), o;
+            o = -mulq15(phA, y) + ap0;
+            ap0 = y + mulq15(phA, o);
+            y = o;
+            o = -mulq15(phA, y) + ap1;
+            ap1 = y + mulq15(phA, o);
+            y = o;
+            o = -mulq15(phA, y) + ap2;
+            ap2 = y + mulq15(phA, o);
+            y = o;
+            o = -mulq15(phA, y) + ap3;
+            ap3 = y + mulq15(phA, o);
+            y = o;
+            phFb = y;
             s = mulq15(s + y, LV(0.6));
         }
-        if (d->groupFilter)
-            s = svf_run(&v->gfilt, &v->gfiltc, s, d->groupFilter);
-        if (v->res_on) {
-            uint32_t rp = (v->resPos << 16) - (uint32_t)v->resDelay, i0 = (rp >> 16) & (AN_RES_N - 1u);
-            int32_t fr = (int32_t)(rp & 0xFFFFu) >> 1, d0 = v->res[i0] * 4, d1 = v->res[(i0 + 1u) & (AN_RES_N - 1u)] * 4;
+        if (gfilter)
+            s = svf_run(&gfilt, &gc, s, gfilter);
+        if (res) {
+            uint32_t rp = (resPos << 16) - (uint32_t)resDelay, i0 = (rp >> 16) & (AN_RES_N - 1u);
+            int32_t fr = (int32_t)(rp & 0xFFFFu) >> 1, d0 = rbuf[i0] * 4, d1 = rbuf[(i0 + 1u) & (AN_RES_N - 1u)] * 4;
             int32_t y = d0 + (int32_t)(((int64_t)(d1 - d0) * fr) >> 15);
-            v->resLp += (y - v->resLp) >> 1;
-            v->res[v->resPos & (AN_RES_N - 1u)] = (int16_t)(clampi(s + mulq15(v->resLp, v->resFb), -4 * Q15, 4 * Q15 - 4) >> 2);
-            v->resPos++;
-            s = s + mulq15(y - s, v->resMix);
+            resLp += (y - resLp) >> 1;
+            rbuf[resPos & (AN_RES_N - 1u)] = (int16_t)(clampi(s + mulq15(resLp, resFb), -4 * Q15, 4 * Q15 - 4) >> 2);
+            resPos++;
+            s = s + mulq15(y - s, resMix);
         }
-        s = mulq12(s, d->out);
+        s = mulq12(s, dout);
         ms += ((int64_t)s * s) >> 6;                            /* Q24 */
         /* the slow level, and a soft ceiling for a resonance pushed into its peak */
-        out[i] = mulq15(tanh_q15(mulq15((int32_t)(((int64_t)s * (v->level >> 13)) >> 15), LV(1.1111))), LV(0.9));
+        out[i] = mulq15(tanh_q15(mulq15((int32_t)(((int64_t)s * level) >> 15), LV(1.1111))), LV(0.9));
     }
+    v->pA = pA;
+    v->pB = pB;
+    v->pC = pC;
+    v->pM = pM;
+    v->pAM = pAM;
+    v->grainClock = grainClock;
+    v->downAcc = downAcc;
+    v->downHeld = downHeld;
+    v->resPos = resPos;
+    v->phFb = phFb;
+    v->resLp = resLp;
+    v->ap[0] = ap0;
+    v->ap[1] = ap1;
+    v->ap[2] = ap2;
+    v->ap[3] = ap3;
+    v->filt = filt;
+    v->nfilt = nfilt;
+    v->gfilt = gfilt;
+    v->rnd = rnd;
     return ms;
 }
 /* (RAM is too far from the flash for a direct call: through a pointer, which reaches anywhere) */
 static int64_t (*volatile an_samples_at)(an_voice_t *, const an_design_t *, int32_t *, uint32_t, int32_t, int32_t, int32_t,
                                          int32_t) = an_samples;
+#if TELEMETRY
+static uint32_t an_t_ctl, an_t_smp, an_t_n;    /* (a diagnostic build: the control's and the samples' ticks, summed) */
+#endif
 static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
 {
     int32_t e0, e1, de, a0, da;
     int64_t ms;
+#if TELEMETRY
+    uint32_t t0 = an_cache_now ? fm1_ticks() : 0u, t1 = 0;
+#endif
     if (!v->live)
         return 0;
     an_control(v, d);
+#if TELEMETRY
+    if (an_cache_now)
+        t1 = fm1_ticks();
+#endif
     e0 = v->ev;
     e1 = an_env_tick(v, d);
     if (v->est == EN_IDLE && e0 == 0) {
         v->live = 0;
         return 0;
     }
+    {   /* the wavetables this block reads (the RAM copies when there are) */
+        uint32_t k, ns = (uint32_t)clampi(d->multiCount, 1, 4);
+        if (d->oscA)
+            v->tA = an_tab(d->tableA, v->inc);
+        if (d->oscB)
+            v->tB = an_tab(d->tableB, v->incB);
+        if (d->fm)
+            v->tFM = an_tab(d->tableFM, v->incFMlevel);
+        if (d->ampMod)
+            v->tAM = an_tab(d->tableAM, 0);
+        if (d->multi)
+            for (k = 0; k < ns; k++)
+                v->tM[k] = an_tab(d->tableMulti, v->incStack[k]);
+        if (d->gran)
+            for (k = 0; k < 3u; k++)
+                if (v->gr[k].on)
+                    v->gr[k].tab = an_tab(d->tableGran, v->gr[k].inc);
+    }
     de = (e1 - e0) / (int32_t)n;
     a0 = v->ampPrev;
     da = (v->amp - v->ampPrev) / (int32_t)n;
     ms = an_samples_at(v, d, out, n, e0, de, a0, da);
+#if TELEMETRY
+    if (an_cache_now) {
+        uint32_t t2 = fm1_ticks();
+        an_t_ctl += t1 - t0;
+        an_t_smp += t2 - t1;
+        an_t_n++;
+    }
+#endif
     {   /* AnimaCore.h: towards 0.1 RMS over seconds, never more than nine decibels either way */
         int32_t blk = (int32_t)((ms >> 5) > 0x7FFFFFFF ? 0x7FFFFFFF : (ms >> 5)), want;
         uint32_t root;

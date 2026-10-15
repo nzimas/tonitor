@@ -178,7 +178,7 @@ phase. Each plays back exactly what was played, to 0.73 ms. A note still held wh
 **tied over its end**: it sounds on unbroken as the loop goes round, so a drone stays one long note rather than
 being struck again each time. The keys go on playing the track over its loops,
 and the loops' notes and the keys' never cut each other's notes off — but all of them share the pool's twelve
-voices with the other tracks, so many loops and tracks at once take voices from each other. A track's loops hold about 1000 notes between
+voices with the other tracks, so many loops and tracks at once take voices from each other. A track's loops hold about 500 notes between
 them; nothing is lost when the FM-1 is switched off if the session is saved.
 
 **Bringing loops in and out.** Hold **PLAY** (it does not start or stop anything held): the chosen track's

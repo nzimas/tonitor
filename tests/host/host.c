@@ -3243,6 +3243,44 @@ static int cmd_clip(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* ANIMA's output, fingerprinted: every kind on every path, several seeds and notes, held then let go (a check that
+ * a faster render is the same render, bit for bit) */
+static int cmd_anref(void)
+{
+    static an_design_t d;
+    static an_voice_t v;
+    int32_t out[CTL], k;
+    uint32_t pa, s, b, i, h = 2166136261u, clk = 0, cached = getenv("ANCACHE") != 0;
+    for (pa = 0; pa < PATH_N; pa++)
+        for (k = 0; k < AK_N; k++)
+            for (s = 0; s < 4u; s++) {
+                uint32_t hk = 2166136261u;
+                an_design(&d, k, 77u + s * 7919u + (uint32_t)k * 31u, pa, GEN_NOW);
+                an_measure(&d);
+                an_init(&v, 5u + s);
+                an_note_on(&v, &d, pitch_inc((int32_t)(36u + 9u * s) * 16), 1);
+                for (b = 0; b < 2600u; b++) {
+                    if (b == 1800u)
+                        an_note_off(&v);
+                    if (b == 900u)
+                        an_note_on(&v, &d, pitch_inc((int32_t)(43u + 9u * s) * 16), 0);
+                    if (cached) {                     /* (as the ISR: the RAM copies, one copied a block) */
+                        an_cache_now = ++clk;
+                        an_cache_filled = 0;
+                    }
+                    if (!an_render(&v, &d, out, CTL))
+                        memset(out, 0, sizeof out);
+                    an_cache_now = 0;
+                    for (i = 0; i < CTL; i++)
+                        hk = (hk ^ (uint32_t)out[i]) * 16777619u;
+                }
+                printf("anref %u %d %u %08x\n", pa, k, s, hk);
+                h = (h ^ hk) * 16777619u;
+            }
+    printf("anref all %08x\n", h);
+    return 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -3616,6 +3654,8 @@ int main(int argc, char **argv)
         return cmd_evcost();
     if (argc >= 3 && !strcmp(argv[1], "clip"))
         return cmd_clip(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "anref"))
+        return cmd_anref();
     if (argc >= 2 && !strcmp(argv[1], "budget"))
         return cmd_budget();
     if (argc >= 2 && !strcmp(argv[1], "burst"))
