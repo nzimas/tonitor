@@ -149,6 +149,13 @@ AINL int32_t an_rd(const int16_t *d, uint32_t ph)
  * 33 ticks of the chip, against 1.6 from RAM), so the tables the voices are playing are copied into RAM, as many as
  * fit; a table no voice has asked for in ~50 ms may make room for another. At most one copied a block (~0.2 % of
  * the chip's time); the others, meanwhile, from the flash. The main loop (measuring a sound) reads the flash */
+/* AN_HALF 1: each voice computed at half the rate (22.05 kHz: nothing above 11 kHz, half the cost), its 16 samples
+ * a block drawn out to 32 by straight lines between them. Its pitches, rates, delays and filters are scaled to sound
+ * where they did; the wavetables, for the doubled increments, take their darker levels (clean below 11 kHz) */
+#ifndef AN_HALF
+#define AN_HALF 0
+#endif
+#define AN_SVF(c, hz, q) svf_coef(c, AN_HALF ? clampi((hz) * 2, 16, TANG_FMAX) : (hz), q)
 #ifndef AN_CACHE_N
 #define AN_CACHE_N 15u              /* (~30 KB of the pool: as many as leave it its 8 KB headroom) */
 #endif
@@ -253,6 +260,7 @@ typedef struct {
     int8_t mac[NMAC];            /* EDIT's macros (layers.c sets them each block; 0: the design as drawn) */
     uint8_t res_on, shp_on;      /* the comb and the shaper, the design's or brought in by a macro */
     const int16_t *tA, *tB, *tFM, *tAM, *tM[4];   /* this block's wavetables (an_tab) */
+    int32_t hprev;               /* (AN_HALF: the last half-rate sample, the line to the next starts there) */
 } an_voice_t;
 
 /* ------------------------------------------------------ the envelope --- */
@@ -488,6 +496,7 @@ static void an_note_on(an_voice_t *v, const an_design_t *d, uint32_t inc, int fr
         for (i = 0; i < 4u; i++)
             v->ap[i] = 0;
         v->resLp = 0;
+        v->hprev = 0;
         memset(v->res, 0, sizeof v->res);
         v->ev = 0;
         v->grainClock = 0x80000000u;
@@ -673,11 +682,11 @@ static void an_control(an_voice_t *v, const an_design_t *d)
             cut = clampi((int32_t)(((int64_t)cut * v->ktmul) >> 16), 30, 18000);
         if (tone != Q16)
             cut = clampi((int32_t)(((int64_t)cut * tone) >> 16), 30, 18000);
-        svf_coef(&v->filtc, cut, clampi(an_at(&d->q, c), IX(0.5), IX(25.0)));
+        AN_SVF(&v->filtc, cut, clampi(an_at(&d->q, c), IX(0.5), IX(25.0)));
     }
     if (d->noise > 1)
-        svf_coef(&v->nfiltc, tone == Q16 ? an_at(&d->noiseCut, c)
-                                         : clampi((int32_t)(((int64_t)an_at(&d->noiseCut, c) * tone) >> 16), 30, 18000), IX(1.2));
+        AN_SVF(&v->nfiltc, tone == Q16 ? an_at(&d->noiseCut, c)
+                                       : clampi((int32_t)(((int64_t)an_at(&d->noiseCut, c) * tone) >> 16), 30, 18000), IX(1.2));
     {   /* the FM carrier's band-limit level: its frequency with the sidebands, hz (1 + index ratio) */
         int32_t ratio = d->golden ? R16(1.6180340) : d->fmRatio;
         uint64_t k = (uint64_t)Q16 + (uint64_t)(((int64_t)v->index * ratio) >> 12);
@@ -727,7 +736,7 @@ static void an_control(an_voice_t *v, const an_design_t *d)
         if (tone != Q16 || (role == AR_VOWEL && mac[1]))
             gcut = clampi((int32_t)(((int64_t)gcut * mulq16(tone, role == AR_VOWEL && mac[1] ? an_mac_exp(mac[1], R16(1.75)) : Q16)) >> 16),
                           60, 17000);
-        svf_coef(&v->gfiltc, gcut, clampi(an_at(&d->groupQ, gc), IX(0.5), IX(25.0)));
+        AN_SVF(&v->gfiltc, gcut, clampi(an_at(&d->groupQ, gc), IX(0.5), IX(25.0)));
     }
     v->resFb = clampi(an_at(&d->resFeedback, gc), 0, LV(0.95));
     v->resMix = clampi(an_at(&d->resMix, gc), 0, Q15);
@@ -750,7 +759,8 @@ static void an_control(an_voice_t *v, const an_design_t *d)
 static AN_RENDER_PLACE int64_t an_samples(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n, int32_t e,
                                           int32_t de, int32_t a, int32_t da)
 {
-    const uint32_t ns = (uint32_t)clampi(d->multiCount, 1, 4), grainInc = hz8_inc(v->gRate8), amInc = hz8_inc(v->amRate8);
+    const uint32_t ns = (uint32_t)clampi(d->multiCount, 1, 4), grainInc = hz8_inc(v->gRate8) << AN_HALF,
+                   amInc = hz8_inc(v->amRate8) << AN_HALF;
     const int oscA = d->oscA, oscB = d->oscB, fm = d->fm, multi = d->multi, gran = d->gran && v->lGran > 0;
     const int noise = d->noise && v->lNoise > 0 ? d->noise : 0, filter = d->filter, ampMod = d->ampMod, down = d->down;
     const int shp = v->shp_on, curve = d->shaperCurve, phaser = d->phaser, gfilter = d->groupFilter, res = v->res_on;
@@ -951,6 +961,25 @@ static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t
         v->live = 0;
         return 0;
     }
+#if AN_HALF
+    /* (the increments doubled and the delays halved for the half rate, given back after) */
+    uint32_t sv_inc = v->inc, sv_incB = v->incB, sv_incM = v->incM, sv_fml = v->incFMlevel, sv_down = v->downInc, sv_st[4];
+    int32_t sv_res = v->resDelay, sv_glen = v->gLen4;
+    {
+        uint32_t k;
+        for (k = 0; k < 4u; k++) {
+            sv_st[k] = v->incStack[k];
+            v->incStack[k] <<= 1;
+        }
+        v->inc <<= 1;
+        v->incB <<= 1;
+        v->incM <<= 1;
+        v->incFMlevel <<= 1;
+        v->downInc = v->downInc >= 0x80000000u ? 0xFFFFFFFFu : v->downInc << 1;
+        v->resDelay = clampi(v->resDelay >> 1, 2 << 16, (int32_t)(AN_RES_N - 4u) << 16);
+        v->gLen4 = v->gLen4 >> 1;
+    }
+#endif
     {   /* the wavetables this block reads (the RAM copies when there are) */
         uint32_t k, ns = (uint32_t)clampi(d->multiCount, 1, 4);
         if (d->oscA)
@@ -969,10 +998,35 @@ static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t
                 if (v->gr[k].on)
                     v->gr[k].tab = an_tab(d->tableGran, v->gr[k].inc);
     }
+#if AN_HALF
+    {
+        int32_t h[CTL / 2u], p = v->hprev;
+        uint32_t k, nh = n >> 1;
+        de = (e1 - e0) / (int32_t)nh;
+        a0 = v->ampPrev;
+        da = (v->amp - v->ampPrev) / (int32_t)nh;
+        ms = an_samples_at(v, d, h, nh, e0, de, a0, da) << 1;   /* (the mean square of twice as many) */
+        for (k = 0; k < nh; k++) {                      /* drawn out: half-way, then the sample */
+            out[2u * k] = (p + h[k]) >> 1;
+            out[2u * k + 1u] = p = h[k];
+        }
+        v->hprev = p;
+        for (k = 0; k < 4u; k++)
+            v->incStack[k] = sv_st[k];
+        v->inc = sv_inc;
+        v->incB = sv_incB;
+        v->incM = sv_incM;
+        v->incFMlevel = sv_fml;
+        v->downInc = sv_down;
+        v->resDelay = sv_res;
+        v->gLen4 = sv_glen;
+    }
+#else
     de = (e1 - e0) / (int32_t)n;
     a0 = v->ampPrev;
     da = (v->amp - v->ampPrev) / (int32_t)n;
     ms = an_samples_at(v, d, out, n, e0, de, a0, da);
+#endif
 #if TELEMETRY
     if (an_cache_now) {
         uint32_t t2 = fm1_ticks();

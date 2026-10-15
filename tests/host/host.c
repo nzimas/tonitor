@@ -3281,6 +3281,44 @@ static int cmd_anref(void)
     return 0;
 }
 
+/* ANIMA's kinds: their loudness, their pitch (crossings at C3 and C4) and their peak, to set the half rate beside
+ * the full one */
+static int cmd_anstat(void)
+{
+    static an_design_t d;
+    static an_voice_t v;
+    int32_t out[CTL], k;
+    uint32_t s, b, i, note;
+    for (k = 0; k < AK_N; k++)
+        for (s = 0; s < 3u; s++) {
+            double rms[2] = {0, 0}, pk = 0;
+            uint32_t cr[2] = {0, 0};
+            an_design(&d, k, 400u + s * 7919u + (uint32_t)k * 31u, PATH_OPEN, GEN_NOW);
+            an_measure(&d);
+            for (note = 0; note < 2u; note++) {
+                int32_t last = 0;
+                an_init(&v, 5u + s);
+                an_note_on(&v, &d, pitch_inc((int32_t)(48u + 12u * note) * 16), 1);
+                for (b = 0; b < 2000u; b++) {
+                    if (!an_render(&v, &d, out, CTL))
+                        memset(out, 0, sizeof out);
+                    if (b < 600u)
+                        continue;
+                    for (i = 0; i < CTL; i++) {
+                        rms[note] += (double)out[i] * out[i];
+                        cr[note] += (out[i] >= 0) != (last >= 0);
+                        last = out[i];
+                        if (fabs((double)out[i]) > pk)
+                            pk = fabs((double)out[i]);
+                    }
+                }
+            }
+            printf("anstat %-8s %u: rms %6.0f, crossings C3 %6u C4 %6u, peak %6.0f\n", AK_NAME[k], s,
+                   sqrt(rms[0] / (1400.0 * CTL)), cr[0], cr[1], pk);
+        }
+    return 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -3654,6 +3692,8 @@ int main(int argc, char **argv)
         return cmd_evcost();
     if (argc >= 3 && !strcmp(argv[1], "clip"))
         return cmd_clip(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "anstat"))
+        return cmd_anstat();
     if (argc >= 2 && !strcmp(argv[1], "anref"))
         return cmd_anref();
     if (argc >= 2 && !strcmp(argv[1], "budget"))
