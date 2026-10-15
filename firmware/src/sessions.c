@@ -674,6 +674,71 @@ static void ses_choose(uint32_t num)
     if (num >= 1u && num <= SES_SLOTS)
         ses.current = (uint16_t)num;
 }
+/* an empty slot chosen: the machine as it starts -- silence, no loops, no latches; every layer on its first
+ * engine with new sounds, its settings at their defaults; the scale, the reverb, the transposition too -- and the
+ * slot is where the next save goes */
+static void ses_events_drain(void);
+static void ses_fresh(uint32_t num)
+{
+    uint32_t l, k;
+    for (l = 0; l < NLAYER; l++) {
+        ui.latch[l] = 0;
+        ev_post(EV_STOP, l, 0, 0);
+        ev_post(EV_LOOP_CLEAR, l, 0, 0);
+    }
+    ses_events_drain();
+    ui.sel = 0;
+    ui.edit = 0;
+    ui.scale = 0;
+    ui.root = 0;
+    ui.lx = 0;
+    lx_post();
+    for (k = 0; k < 4u; k++)
+        ui.rvp[k] = RV_DEF[k];
+    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+    for (l = 0; l < NLAYER; l++) {
+        uint32_t s = next_seed(), fk, ak, ck, rk;
+        loop[l].mute = 0;
+        memset(ui.mac[l], 0, sizeof ui.mac[l]);
+        memset(ui.latch_note[l], 0, sizeof ui.latch_note[l]);
+        ui.engine[l] = (uint8_t)(l & 1u ? ENG_ANIMA : ENG_FM);   /* (as layers_init starts them) */
+        ui.oct[l] = 0;
+        ui.level[l] = LEVEL_UNITY;
+        ui.pan[l] = PAN_DEF[l];
+        ui.send[l] = SEND_DEF;
+        ui.flt[l] = ui.gr[l] = ui.cr[l] = 0;
+        ui.path[l] = PATH_OPEN;
+        gran_profile(l, next_seed());
+        level_pan_apply(l);
+        sound_slot_free(&fm_pub[l], &fm_use[l]);  /* new sounds, into the buffers the ISR is not using */
+        sound_slot_free(&an_pub[l], &an_use[l]);
+        sound_slot_free(&cal_pub[l], &cal_use[l]);
+        sound_slot_free(&rus_pub[l], &rus_use[l]);
+        fk = fm_use[l] ^ 1u;
+        ak = an_use[l] ^ 1u;
+        ck = cal_use[l] ^ 1u;
+        rk = rus_use[l] ^ 1u;
+        fm_generate(&fm_buf[l][fk], -1, s, PATH_OPEN, GEN_NOW);    /* (as sounds_init draws them) */
+        fm_measure(&fm_buf[l][fk]);
+        an_design(&an_buf[l][ak], -1, s * 7u + 3u, PATH_OPEN, GEN_NOW);
+        an_measure(&an_buf[l][ak]);
+        cal_design(&cal_buf[l][ck], -1, s * 13u + 5u, PATH_OPEN, GEN_NOW);
+        cal_measure(&cal_buf[l][ck]);
+        rus_design(&rus_buf[l][rk], -1, s * 17u + 9u, PATH_OPEN, GEN_NOW);
+        rus_measure(&rus_buf[l][rk]);
+        RING_PUBLISH();
+        cal_pub[l] = (uint8_t)ck;
+        rus_pub[l] = (uint8_t)rk;
+        RING_PUBLISH();
+        fm_pub[l] = (uint8_t)fk;
+        an_pub[l] = (uint8_t)ak;
+        ev_post(EV_ENGINE, l, 0, ui.engine[l]);
+        mac_apply(l);
+        ses_events_drain();
+    }
+    ses_choose(num);
+    ui.force = 1;
+}
 /* load the session in slot num */
 static int ses_load_slot(uint32_t num)
 {

@@ -236,6 +236,7 @@ static uint32_t ses_next_number(void);
 static int ses_has(uint32_t num);
 static int ses_current(void);
 static void ses_choose(uint32_t num);
+static void ses_fresh(uint32_t num);
 static int ses_load_slot(uint32_t num);
 static void mac_apply(uint32_t l);
 static int pre_kind(uint32_t e, uint32_t slot);   /* the kind of sound in engine e's slot, -1 if none */
@@ -362,9 +363,11 @@ static void save_short(void)
             ses_done(ses_load_slot(num), "LOADED", num);
         } else {
             char n[8];
-            ses_choose(num);                     /* the sound as it is; SAVE held writes it there */
+            flash("NEW", "", C_SES);
+            ui_draw();
+            ses_fresh(num);                      /* a clean slate, as at start; SAVE held writes it there */
             fmt_int(n, (int32_t)num);
-            flash("CHOSEN", n, C_WHITE);
+            flash("NEW", n, C_WHITE);
         }
         return;
     }

@@ -7,6 +7,9 @@
   way, shown on the screen. Another scale or root chosen meanwhile is walked instead. An overdub recorded while
   the loops are moved plays back as played. Sessions keep it; sessions saved before load as they were. The
   screen says TRANSP +2, TRANSP 0.
+- **An empty session is a clean slate**: choosing an empty slot on the SESSIONS page now starts afresh, as at
+  switching on — no loops, no latches, new sounds on every layer, every setting, the scale, the reverb and the
+  transposition at their defaults. The session you were in stays saved as it was.
 - **Drones stay whole in loops**: a note still held when REC closes the loop is tied over the loop's end, sounding
   on as it goes round instead of being let go and struck again each time (which was heard as a stutter, ANIMA and
   CALIGULA above all).

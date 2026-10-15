@@ -967,16 +967,32 @@ static int cmd_sessions(const char *dir)
             fail++;
         }
     }
-    /* an empty slot chosen in the list (slot 9), then SAVE held: saved there, at once */
+    /* an empty slot chosen in the list (slot 9): a clean slate, as at start; then SAVE held: saved there, at once */
+    ui.latch[1] = 1u;
+    ui.scale = 3;
+    ui.lx = 2;
+    ui.rvp[0] = 12;
+    ui.edit = 1;
     save_btn(0);
     host_enc[PANEL_ENC[EN_PRESET]] = 8;
     ui_input();
     ui_draw();
     snprintf(path, sizeof path, "%s/screen-16-empty-slot.ppm", dir);
     ppm(path);
-    save_btn(0);
-    if (ses.current != 9u || ses_has(9))
-        printf("FAIL sessions: the empty slot 9 was not chosen (current %u)\n", ses.current), fail++;
+    {
+        uint32_t fseed = fm_buf[0][fm_pub[0]].seed, bad = 0;
+        save_btn(0);
+        run_blocks(200, 0);
+        if (ses.current != 9u || ses_has(9))
+            printf("FAIL sessions: the empty slot 9 was not chosen (current %u)\n", ses.current), fail++;
+        for (l = 0; l < NLAYER; l++)
+            bad += loop[l].ntrk || loop[l].play || ui.latch[l] || ui.engine[l] != (l & 1u ? ENG_ANIMA : ENG_FM)
+                   || lay[l].engine != ui.engine[l] || ui.level[l] != LEVEL_UNITY || ui.pan[l] != PAN_DEF[l]
+                   || ui.send[l] != SEND_DEF || ui.oct[l] || ui.flt[l] || ui.gr[l] || ui.cr[l] || ui.path[l] != PATH_OPEN
+                   || layer_sounding(l);
+        if (bad || ui.scale || ui.root || ui.lx || ui.rvp[0] != RV_DEF[0] || ui.edit || ui.sel || fm_buf[0][fm_pub[0]].seed == fseed)
+            printf("FAIL sessions: an empty slot chosen does not start from a clean slate (%u layers)\n", bad), fail++;
+    }
     save_btn(900);
     if (!ses_has(9) || ui.ses_page)
         printf("FAIL sessions: SAVE held did not save into slot 9\n"), fail++;
