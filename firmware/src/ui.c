@@ -88,6 +88,7 @@ static struct {
     uint8_t sc_page;             /* the SCALE page is up */
     uint8_t scale, root;         /* the keyboard's scale (SCALES) and root (0 = C .. 11 = B) */
     int8_t lx;                   /* the loops' transposition, in steps of the scale (SHIFT + OCT) */
+    int8_t lxt[NLAYER];          /* each track's own, on top (SHIFT + its button held + OCT) */
     int8_t sc_touched;           /* 0 the root just turned, 1 the scale, -1 none (until sc_touch_until) */
     uint32_t sc_touch_until;
     int8_t shown_sc_touch;
@@ -192,6 +193,8 @@ static void lx_post(void)
         m |= 1u << ((ui.root + SCALE_STEP[ui.scale][k]) % 12u);
     lx_want_mask = (uint16_t)m;
     lx_want_steps = ui.lx;
+    for (k = 0; k < NLAYER; k++)
+        lx_want_tr[k] = ui.lxt[k];
     RING_PUBLISH();
     ev_post(EV_LOOP_XP, 0, 0, 0);
 }
@@ -479,6 +482,8 @@ static void ui_input(void)
         l = ui.trk_down - 1u;
         if (!btn_bit(fm1_in.buttons, LAYER_BTN[l]))
             ui.trk_down = 0;
+        else if ((fm1_in.notes >> KEY_SHIFT) & 1u)
+            ui.trk_done = 1;                     /* (with SHIFT: the track's transposition, never a copy) */
         else if (!ui.trk_done && (uint32_t)(fm1_ms - ui.trk_t0) >= 800u) {
             char n[12] = "TRACK ";
             ui.trk_done = 1;
@@ -609,6 +614,8 @@ static void ui_input(void)
         ui.rec_down = 0;
     if (ui.rec_down && !ui.rec_done && (uint32_t)(fm1_ms - ui.rec_t0) >= 1000u) {   /* held: emptied */
         ev_post(EV_LOOP_CLEAR, ui.sel, 0, 0);
+        ui.lxt[ui.sel] = 0;                      /* (emptied: its own transposition gone too) */
+        lx_post();
         char d[8] = "LOOP  ";
         ui.rec_done = 1;
         d[5] = (char)('1' + ui.sel);
@@ -688,12 +695,26 @@ static void ui_input(void)
         say(m, 1200);
     }
     if ((btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) && (fm1_in.notes >> KEY_SHIFT) & 1u) {
-        char m[12] = "TRANSP ";                  /* SHIFT and OCT: every loop a step of the scale down or up */
-        int32_t lim = 2 * SCALE_N[ui.scale], x = clampi(ui.lx + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
-        ui.lx = (int8_t)x;
+        char m[16] = "TRANSP ";                  /* SHIFT and OCT: every loop a step of the scale down or up; */
+        int32_t lim = 2 * SCALE_N[ui.scale], t = -1, x;   /* a track's button held too: that track's loops only */
+        for (l = 0; l < NLAYER; l++)
+            if (btn_bit(fm1_in.buttons, LAYER_BTN[l]))
+                t = (int32_t)l;
+        if (t >= 0) {
+            x = clampi(ui.lxt[t] + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
+            ui.lxt[t] = (int8_t)x;
+            ui.trk_done = 1;                     /* (its button held for this: no copy) */
+            m[7] = 'T';
+            m[8] = (char)('1' + t);
+            m[9] = ' ';
+            m[10] = 0;
+        } else {
+            x = clampi(ui.lx + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
+            ui.lx = (int8_t)x;
+        }
         lx_post();
         if (x > 0)
-            m[7] = '+';
+            str_cpy(m + str_len(m), "+", 2);
         fmt_int(m + str_len(m), x);
         say(m, 1200);
     } else if (btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) {
@@ -740,11 +761,6 @@ static void ui_input(void)
             say(ui.path[ui.sel] == PATH_AMBIENT ? "AMBIENT" : ui.path[ui.sel] == PATH_EXP ? "EXPERIMENTAL" : "OPEN", 1200);
         }
     if ((ch & keys) >> KEY_SHIFT & 1u) {         /* SHIFT pressed: the keys held latch, on the layer they play */
-        char m[16] = "LOAD ";                    /* (and the screen says how busy the audio is now: % of the time
-                                                  * there is) */
-        fmt_int(m + str_len(m), load_pct);
-        str_cpy(m + str_len(m), "%", 2);
-        say(m, 1500);
         for (k = 0; k < NKEY; k++)
             if (((ui.keys & keys) >> k & 1u) && white_ix(k) >= 0 && ui.key_layer[k] != KEY_NONE) {
                 uint32_t l = ui.key_layer[k];

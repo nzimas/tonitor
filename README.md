@@ -91,8 +91,9 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
 | **SHIFT + OCT− / OCT+** | **every loop** of every track down or up **one step of the scale** (see [the loopers](#the-loopers)). |
+| **SHIFT + a track's button held + OCT− / OCT+** | **that track's loops** only, down or up one step of the scale (TRANSP T3 +2). |
 | the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
-| the rightmost black key | **SHIFT** (lit while held; each press shows how busy the audio is, in % of the time it has, e.g. `LOAD 62%`. Tonitor measures what every voice costs as it plays, and before a new note, organism or loop would take more time than there is, it lets the oldest release tails go, quickly, so the sound never breaks up; a held note goes only if the audio is late after all). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
+| the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). |
 | the other black keys | play no notes (kept for other functions to come). |
@@ -196,6 +197,12 @@ loops are moved (TRANSP +2, TRANSP -1, TRANSP 0), up to two octaves of the scale
 or root while they are moved walks the new one. A note outside the scale keeps its distance from the scale note
 below it. The keys are not moved, and **an overdub recorded while the loops are moved plays back as you played
 it**, the others staying where they are. Sessions keep how far the loops are moved.
+
+**One track's loops along the scale.** Hold **SHIFT**, hold a track's button, and press **OCT+** or **OCT−**:
+only that track's loops move (every overdub with them), a step of the scale at a time; the screen says
+TRANSP T3 +2. It adds to the move of all the loops. Holding the track's button with SHIFT down never copies
+it. Emptying a track's loops (REC held) takes its own move away; copying a track takes it along; sessions keep
+it.
 
 ### The screen
 

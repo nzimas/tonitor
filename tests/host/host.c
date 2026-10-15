@@ -3389,6 +3389,111 @@ static int cmd_anstat(void)
     return 0;
 }
 
+/* SHIFT, a track's button held, OCT: that track's loops moved along the scale, the others not; the moves of all
+ * the loops on top; no copy; an overdub made while moved plays as played; a session keeps it; emptied, it goes;
+ * SHIFT shows no load */
+static void rec_loop(uint32_t btn, uint32_t key, uint32_t blocks)
+{
+    press_btn(btn);
+    press_btn(B_REC);
+    press_key(key, 1);
+    run_blocks(blocks, 0);
+    press_btn(B_REC);
+    press_key(key, 0);
+    run_blocks(20, 0);
+}
+static void shift_track_oct(uint32_t btn, int up)
+{
+    press_phys(KEY_SHIFT, 1);
+    host_press |= 1u << PANEL_BTN[btn];
+    fm1_in.buttons |= 1u << PANEL_BTN[btn];
+    ui_input();
+    fm1_ms += 300u;
+    ui_input();
+    press_btn(up ? B_OCTUP : B_OCTDN);
+    fm1_ms += 1000u;                                  /* (held long: still no copy) */
+    ui_input();
+    fm1_in.buttons &= ~(1u << PANEL_BTN[btn]);
+    press_phys(KEY_SHIFT, 0);
+    ui_input();
+    run_blocks(2, 0);
+}
+static int cmd_tracktransp(void)
+{
+    uint32_t fail = 0, n, lo, hi, c3 = scale_note(0, 0), e3 = scale_note(2, 0);
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    ui.scale = 0;
+    ui.root = 0;
+    lx_post();
+    rec_loop(B_FX, 0, 400);                           /* track 1: C3; track 2: E3, both held across their loops */
+    rec_loop(B_SEL, 2, 330);
+    loop_to(0, 100);
+    press_phys(KEY_SHIFT, 1);
+    say("", 1);
+    press_phys(KEY_SHIFT, 0);
+    ui_input();
+    if (strstr(ui.msg, "LOAD"))
+        printf("FAIL tracktransp: SHIFT still shows the load\n"), fail++;
+    shift_track_oct(B_SEL, 1);
+    if (loop_sounding(0, &lo, &hi) != 1u || lo != c3)
+        printf("FAIL tracktransp: track 1 moved with track 2 (%u)\n", lo), fail++;
+    if (loop_sounding(1, &lo, &hi) != 1u || lo != scale_note(3, 0))
+        printf("FAIL tracktransp: track 2 is not a step up at once (%u, want %u)\n", lo, scale_note(3, 0)), fail++;
+    if (clip_from() >= 0)
+        printf("FAIL tracktransp: holding the track's button with SHIFT copied it\n"), fail++;
+    if (!strstr(ui.msg, "T2 +1"))
+        printf("FAIL tracktransp: the screen does not say TRANSP T2 +1 (%s)\n", ui.msg), fail++;
+    shift_oct(1);                                     /* all of them, on top */
+    loop_sounding(0, &lo, &hi);
+    n = lo;
+    loop_sounding(1, &lo, &hi);
+    if (n != scale_note(1, 0) || lo != scale_note(4, 0))
+        printf("FAIL tracktransp: every loop's move is not added (%u %u)\n", n, lo), fail++;
+    press_btn(B_SEL);                                 /* an overdub on track 2 while moved: plays as played (G3) */
+    press_btn(B_REC);
+    loop_to(1, 0);
+    press_key(4, 1);
+    run_blocks(150, 0);
+    press_btn(B_REC);
+    press_key(4, 0);
+    loop_to(1, 100);
+    loop_sounding(1, &lo, &hi);
+    if (loop[1].ntrk != 2u || hi != scale_note(4, 0) || lo != scale_note(4, 0))
+        printf("FAIL tracktransp: an overdub made while moved does not play as played (%u %u)\n", lo, hi), fail++;
+    if (ses_save(1) != SES_OK)
+        printf("FAIL tracktransp: not saved\n"), fail++;
+    ui.lxt[1] = 0;
+    ui.lx = 0;
+    lx_post();
+    run_blocks(2, 0);
+    ses_load_slot(1);
+    loop_to(1, 100);
+    loop_sounding(1, &lo, &hi);
+    if (ui.lxt[1] != 1 || ui.lx != 1 || lo != scale_note(4, 0))
+        printf("FAIL tracktransp: a session does not keep it (lxt %d, lx %d, %u)\n", ui.lxt[1], ui.lx, lo), fail++;
+    {   /* REC held: emptied, its own move gone */
+        uint32_t t;
+        press_btn(B_SEL);
+        host_press |= 1u << PANEL_BTN[B_REC];
+        fm1_in.buttons |= 1u << PANEL_BTN[B_REC];
+        ui_input();
+        for (t = 0; t < 1100u; t += 50u) {
+            fm1_ms += 50u;
+            ui_input();
+        }
+        fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+        ui_input();
+        run_blocks(5, 0);
+        if (loop[1].ntrk || ui.lxt[1])
+            printf("FAIL tracktransp: emptied, track 2 keeps its move (%d)\n", ui.lxt[1]), fail++;
+    }
+    (void)e3;
+    printf("tracktransp: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -3776,6 +3881,8 @@ int main(int argc, char **argv)
         return cmd_ties();
     if (argc >= 2 && !strcmp(argv[1], "clicks"))
         return cmd_clicks();
+    if (argc >= 2 && !strcmp(argv[1], "tracktransp"))
+        return cmd_tracktransp();
     if (argc >= 2 && !strcmp(argv[1], "transpose"))
         return cmd_transpose();
     if (argc >= 3 && !strcmp(argv[1], "overdubs"))

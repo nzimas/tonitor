@@ -186,8 +186,10 @@ static void trk_held(const looper_t *p, const loop_trk_t *t, uint32_t held[4])
  * scale's pitch classes (a mask from C); a note off the scale keeps its distance from the scale note below it.
  * The ISR's; the main loop asks for a change with lx_want_* and EV_LOOP_XP */
 static int8_t lx_steps;
+static int8_t lx_tr[NLAYER];                     /* each track's own, on top (SHIFT + its button held + OCT) */
 static uint16_t lx_mask = 0xFFFu;
 static volatile int8_t lx_want_steps;
+static volatile int8_t lx_want_tr[NLAYER];
 static volatile uint16_t lx_want_mask = 0xFFFu;
 static uint32_t lx_map(uint32_t n, int32_t k, uint32_t mask)
 {
@@ -633,7 +635,8 @@ static void loop_hear(uint32_t l, uint32_t on, uint32_t note)
         p->rec = LR_REC;
         p->start = blk_clock;
         p->trk[p->ntrk].first = (uint16_t)p->nev;
-        p->trk[p->ntrk].xb = lx_steps;            /* (it plays back as played, whatever the others are moved by) */
+        p->trk[p->ntrk].xb = (int8_t)(lx_steps + lx_tr[l]);   /* (it plays back as played, whatever the others are
+                                                              * moved by) */
         p->nheld = 0;
     }
     if (p->rec == LR_REC)
@@ -660,7 +663,7 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
             trk_held(p, t, held);
             for (n = 0; n < 128u; n++)
                 if ((held[n >> 5] >> (n & 31u)) & 1u)
-                    note_off(l, lx_map(n, lx_steps - t->xb, lx_mask), SRC_LOOP);
+                    note_off(l, lx_map(n, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
         }
         p->mute |= (uint16_t)bit;
     }
@@ -678,7 +681,7 @@ static void loops_run(void)
             if ((p->mute >> k) & 1u)
                 continue;                         /* (held out: it waits, silent, where it is) */
             while (t->ix < t->n && LE_T(p->ev[t->first + t->ix]) <= t->pos) {
-                uint32_t e = p->ev[t->first + t->ix++], nt = lx_map(LE_NOTE(e), lx_steps - t->xb, lx_mask);
+                uint32_t e = p->ev[t->first + t->ix++], nt = lx_map(LE_NOTE(e), lx_steps + lx_tr[l] - t->xb, lx_mask);
                 if (LE_ON(e)) {
                     if (!(t->wrap && trk_tied(p, t, e))) {   /* (tied: still sounding from the round before) */
                         note_on(l, nt, SRC_LOOP);
@@ -705,9 +708,14 @@ static void loops_run(void)
  * notes at once -- let go at the old, struck at the new */
 static void loop_retune(void)
 {
-    int32_t s = lx_want_steps;
-    uint32_t m = lx_want_mask, l, k, pass;
-    if (s == lx_steps && (m == lx_mask || !s))
+    int32_t s = lx_want_steps, tr[NLAYER];
+    uint32_t m = lx_want_mask, l, k, pass, same = s == lx_steps, still = !s;
+    for (l = 0; l < NLAYER; l++) {
+        tr[l] = lx_want_tr[l];
+        same &= tr[l] == lx_tr[l];
+        still &= !tr[l] && !lx_tr[l];
+    }
+    if (same && (m == lx_mask || still))
         return;
     for (pass = 0; pass < 2u; pass++) {           /* every old note off first, then every new one on */
         for (l = 0; l < NLAYER; l++) {
@@ -722,7 +730,7 @@ static void loop_retune(void)
                 trk_held(p, t, held);
                 for (n = 0; n < 128u; n++)
                     if ((held[n >> 5] >> (n & 31u)) & 1u) {
-                        uint32_t was = lx_map(n, lx_steps - t->xb, lx_mask), now = lx_map(n, s - t->xb, m);
+                        uint32_t was = lx_map(n, lx_steps + lx_tr[l] - t->xb, lx_mask), now = lx_map(n, s + tr[l] - t->xb, m);
                         if (was == now)
                             continue;
                         if (!pass)
@@ -734,6 +742,8 @@ static void loop_retune(void)
         }
     }
     lx_steps = (int8_t)s;
+    for (l = 0; l < NLAYER; l++)
+        lx_tr[l] = (int8_t)tr[l];
     lx_mask = (uint16_t)m;
 }
 

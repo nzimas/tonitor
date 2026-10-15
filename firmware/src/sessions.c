@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 10u           /* 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 11u           /* 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -363,6 +363,7 @@ static void ses_emit(void)
             ses_out(&ui.latch[l], 4u);
             memset(ln, 0, sizeof ln);
             memcpy(ln, ui.latch_note[l], NKEY);
+            ln[27] = (uint8_t)ui.lxt[l];               /* (format 11: the track's own transposition, in the spare byte) */
             ses_out(ln, sizeof ln);
         }
         /* the sounds: the engine in use in full; the other two as the seed that made them, their level and
@@ -692,6 +693,7 @@ static void ses_fresh(uint32_t num)
     ui.scale = 0;
     ui.root = 0;
     ui.lx = 0;
+    memset(ui.lxt, 0, sizeof ui.lxt);
     lx_post();
     for (k = 0; k < 4u; k++)
         ui.rvp[k] = RV_DEF[k];
@@ -744,7 +746,7 @@ static void ses_fresh(uint32_t num)
  * Level and pan stay with the track pasted onto (its place in the mix) */
 static struct {
     uint8_t full, from, engine, path, play;
-    int8_t oct, send, flt, gr, cr;
+    int8_t oct, send, flt, gr, cr, lxt;
     uint32_t gseed;
     int8_t mac[NENG][NMAC];
     fm_patch_t fm;
@@ -770,6 +772,7 @@ static void clip_copy(uint32_t l)
     clip.flt = ui.flt[l];
     clip.gr = ui.gr[l];
     clip.cr = ui.cr[l];
+    clip.lxt = ui.lxt[l];
     clip.gseed = gran[l].seed;
     memcpy(clip.mac, ui.mac[l], sizeof clip.mac);
     clip.fm = fm_buf[l][fm_pub[l]];
@@ -799,6 +802,8 @@ static void clip_paste(uint32_t l)
     ui.flt[l] = clip.flt;
     ui.gr[l] = clip.gr;
     ui.cr[l] = clip.cr;
+    ui.lxt[l] = clip.lxt;
+    lx_post();                                          /* (its loops move as they were heard; empty yet: nothing moves) */
     memcpy(ui.mac[l], clip.mac, sizeof clip.mac);
     gran_profile(l, clip.gseed);
     level_pan_apply(l);
@@ -913,6 +918,7 @@ static int ses_load(uint32_t i)
         }
         gseed = ui.seed = ui.seed * 1664525u + 1013904223u + fm1_ticks();   /* (before format 8: a new character) */
         ui.latch[l] = 0;
+        ui.lxt[l] = 0;
         if (h.format >= 8u) {
             uint8_t ln[28];
             ses_in(&gseed, 4u);
@@ -920,7 +926,10 @@ static int ses_load(uint32_t i)
             ses_in(ln, sizeof ln);
             memcpy(ui.latch_note[l], ln, NKEY);
             ui.latch[l] &= (1u << NKEY) - 1u;
+            if (h.format >= 11u)                        /* (the track's own transposition) */
+                ui.lxt[l] = (int8_t)clampi((int8_t)ln[27], -14, 14);
         }
+        lx_post();                                      /* (before its loops are set going: they start where they were) */
         ui.engine[l] = (uint8_t)(y.engine < NENG ? y.engine : 0);
         if (h.format < 9u && ui.engine[l] == ENG_RUS)
             ui.engine[l] = 0;
