@@ -883,17 +883,24 @@ static void ui_leds(void)
     fm1_led_key(14u + KEY_AMB, ui.path[ui.sel] == PATH_AMBIENT);
     fm1_led_key(14u + KEY_EXP, ui.path[ui.sel] == PATH_EXP);
     fm1_led_key(14u + KEY_EDIT, ui.edit);
-    fm1_led_key(14u + KEY_REV, loop[ui.sel].dmode == LD_REV);
-    fm1_led_key(14u + KEY_PEND, loop[ui.sel].dmode == LD_PEND);
-    fm1_led_key(14u + KEY_RAND, loop[ui.sel].dmode == LD_RAND);
-    fm1_led_key(14u + KEY_HALF, loop[ui.sel].rate == LS_HALF);
-    fm1_led_key(14u + KEY_DOUBLE, loop[ui.sel].rate == LS_DOUBLE);
-    {   /* the black keys that do something glow while they are not on (lit takes the brightest); SHIFT does not */
-        static const uint8_t FN[8] = {KEY_AMB, KEY_EXP, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_EDIT};
-        uint32_t k;
-        for (k = 0; k < 8u; k++)
-            led_dim_key(14u + FN[k], 1);
+    {   /* the loops' direction and speed: shown only while the chosen track's loops play (PLAY lit) -- lit when
+         * on, a glow when off; stopped, dark (they still answer) */
+        const looper_t *lp = &loop[ui.sel];
+        int on = lp->play && lp->ntrk;
+        fm1_led_key(14u + KEY_REV, on && lp->dmode == LD_REV);
+        fm1_led_key(14u + KEY_PEND, on && lp->dmode == LD_PEND);
+        fm1_led_key(14u + KEY_RAND, on && lp->dmode == LD_RAND);
+        fm1_led_key(14u + KEY_HALF, on && lp->rate == LS_HALF);
+        fm1_led_key(14u + KEY_DOUBLE, on && lp->rate == LS_DOUBLE);
+        led_dim_key(14u + KEY_REV, on);
+        led_dim_key(14u + KEY_PEND, on);
+        led_dim_key(14u + KEY_RAND, on);
+        led_dim_key(14u + KEY_HALF, on);
+        led_dim_key(14u + KEY_DOUBLE, on);
     }
+    led_dim_key(14u + KEY_AMB, 1);               /* (the others with a function glow while off; SHIFT does not) */
+    led_dim_key(14u + KEY_EXP, 1);
+    led_dim_key(14u + KEY_EDIT, 1);
 }
 
 /* -------------------------------------------------------------- screen --- */

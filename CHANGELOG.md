@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.34
+
+Changed
+- The loop direction and speed keys (REVERSE, PENDULUM, RANDOM, HALF SPEED, DOUBLE SPEED) are lit only while the
+  selected track's loops play (PLAY lit): dimly when off, fully when on. With the loops stopped they are unlit;
+  their settings are kept and the keys still respond.
+
 ## 0.33
 
 Changed

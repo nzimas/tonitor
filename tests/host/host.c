@@ -3986,17 +3986,40 @@ static int cmd_glow(void)
 {
     static const uint8_t FN[8] = {KEY_AMB, KEY_EXP, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_EDIT};
     uint32_t fail = 0, k, j;
+    uint32_t pass;
     grain_reset();
-    ui_leds();
-    for (k = 0; k < NKEY; k++) {
-        int fn = 0;
-        if (white_ix(k) >= 0)
-            continue;
-        for (j = 0; j < 8u; j++)
-            fn |= FN[j] == k;
-        if (key_glows(k) != fn)
-            printf("FAIL glow: black key %u %s\n", k, fn ? "does not glow" : "glows, with no function"), fail++;
+    for (pass = 0; pass < 2u; pass++) {          /* no loop playing: the loop keys dark; playing: they glow */
+        if (pass) {
+            press_btn(B_FX);
+            press_btn(B_REC);
+            press_key(0, 1);
+            run_blocks(100, 0);
+            press_key(0, 0);
+            press_btn(B_REC);
+            run_blocks(5, 0);
+        }
+        ui_leds();
+        for (k = 0; k < NKEY; k++) {
+            int fn = 0, looping = k == KEY_REV || k == KEY_PEND || k == KEY_RAND || k == KEY_HALF || k == KEY_DOUBLE;
+            if (white_ix(k) >= 0)
+                continue;
+            for (j = 0; j < 8u; j++)
+                fn |= FN[j] == k;
+            if (looping && !pass)
+                fn = 0;
+            if (key_glows(k) != fn)
+                printf("FAIL glow: black key %u %s (%s)\n", k, fn ? "does not glow" : "glows", pass ? "loops playing" : "no loops"), fail++;
+        }
     }
+    lm_key(KEY_REV);                             /* playing, REVERSE on: lit; stopped: dark */
+    ui_leds();
+    if (!host_led[14u + KEY_REV])
+        printf("FAIL glow: REVERSE on while the loops play is not lit\n"), fail++;
+    press_btn(B_PLAY);
+    run_blocks(3, 0);
+    ui_leds();
+    if (host_led[14u + KEY_REV] || key_glows(KEY_REV))
+        printf("FAIL glow: the loops stopped, REVERSE is still lit\n"), fail++;
     printf("glow: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
