@@ -92,7 +92,7 @@ typedef struct {
     uint32_t len, pos;           /* blocks; pos: where it is */
     uint16_t first, n, ix;       /* its events in the looper's ev[]; the next to play */
     int8_t xb;                   /* the loops' transposition when it was recorded (it plays at lx_steps - xb) */
-    uint8_t rsv;
+    uint8_t wrap;                /* it has just gone round (its notes tied over the end are still sounding) */
 } loop_trk_t;
 typedef struct {
     volatile uint8_t rec;        /* LR_*: the screen's and the LEDs' */
@@ -108,6 +108,51 @@ typedef struct {
 } looper_t;
 static looper_t loop[NLAYER] POOL;
 static uint32_t blk_clock;
+/* a note tied over the loop's end: held from its first block to its last (held when the recording ended: ended
+ * with the last block, REC's; a key let go is never later than the one before it). Going round, it is neither let
+ * go at the end nor struck again at the start: a drone stays one note */
+static int trk_tied(const looper_t *p, const loop_trk_t *t, uint32_t e)
+{
+    uint32_t i;
+    if (LE_ON(e) ? LE_T(e) != 0u : LE_T(e) != t->len - 1u)
+        return 0;
+    if (LE_ON(e))
+        for (i = t->n; i-- > 0u;) {               /* (its end: among the last events) */
+            uint32_t f = p->ev[t->first + i];
+            if (LE_T(f) != t->len - 1u)
+                return 0;
+            if (!LE_ON(f) && LE_NOTE(f) == LE_NOTE(e))
+                return 1;
+        }
+    else
+        for (i = 0; i < t->n; i++) {              /* (its start: among the first) */
+            uint32_t f = p->ev[t->first + i];
+            if (LE_T(f) != 0u)
+                return 0;
+            if (LE_ON(f) && LE_NOTE(f) == LE_NOTE(e))
+                return 1;
+        }
+    return 0;
+}
+/* the notes loop t holds now (its events played so far; a tied note over its end, just gone round, too) */
+static void trk_held(const looper_t *p, const loop_trk_t *t, uint32_t held[4])
+{
+    uint32_t i;
+    held[0] = held[1] = held[2] = held[3] = 0;
+    for (i = 0; i < t->ix; i++) {
+        uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
+        if (LE_ON(e))
+            held[nt >> 5] |= 1u << (nt & 31u);
+        else if (!trk_tied(p, t, e))              /* (a tied note sounds on over its end) */
+            held[nt >> 5] &= ~(1u << (nt & 31u));
+    }
+    if (t->wrap)
+        for (i = 0; i < t->n && LE_T(p->ev[t->first + i]) == 0u; i++) {
+            uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
+            if (LE_ON(e) && trk_tied(p, t, e))
+                held[nt >> 5] |= 1u << (nt & 31u);
+        }
+}
 /* the loops' transposition (SHIFT + OCT): every loop moved by steps of the scale, its notes walked up or down the
  * scale's pitch classes (a mask from C); a note off the scale keeps its distance from the scale note below it.
  * The ISR's; the main loop asks for a change with lx_want_* and EV_LOOP_XP */
@@ -476,8 +521,10 @@ static void loop_put(looper_t *p, uint32_t on, uint32_t note)
 static void loop_rewind(looper_t *p)               /* every loop from its start */
 {
     uint32_t k;
-    for (k = 0; k < p->ntrk; k++)
+    for (k = 0; k < p->ntrk; k++) {
         p->trk[k].pos = p->trk[k].ix = 0;
+        p->trk[k].wrap = 0;
+    }
 }
 static void loop_cmd(uint32_t l, uint32_t type)
 {
@@ -497,6 +544,7 @@ static void loop_cmd(uint32_t l, uint32_t type)
             t->len = len;
             t->n = (uint16_t)(p->nev - t->first);
             t->pos = t->ix = 0;
+            t->wrap = 0;
             if (!p->play)
                 loop_rewind(p);                   /* stopped: all of them again, with the new one */
             p->mute &= (uint16_t)~(1u << p->ntrk);   /* (a new one plays) */
@@ -565,19 +613,15 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
     if (k >= p->ntrk)
         return;
     if (on && (p->mute & bit)) {
-        if (p->play)
+        if (p->play) {
             t->pos = t->ix = 0;
+            t->wrap = 0;
+        }
         p->mute &= (uint16_t)~bit;
     } else if (!on && !(p->mute & bit)) {
         if (p->play) {
-            uint32_t held[4] = {0, 0, 0, 0}, i, n;
-            for (i = 0; i < t->ix; i++) {
-                uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
-                if (LE_ON(e))
-                    held[nt >> 5] |= 1u << (nt & 31u);
-                else
-                    held[nt >> 5] &= ~(1u << (nt & 31u));
-            }
+            uint32_t held[4], n;
+            trk_held(p, t, held);
             for (n = 0; n < 128u; n++)
                 if ((held[n >> 5] >> (n & 31u)) & 1u)
                     note_off(l, lx_map(n, lx_steps - t->xb, lx_mask), SRC_LOOP);
@@ -599,14 +643,17 @@ static void loops_run(void)
                 continue;                         /* (held out: it waits, silent, where it is) */
             while (t->ix < t->n && LE_T(p->ev[t->first + t->ix]) <= t->pos) {
                 uint32_t e = p->ev[t->first + t->ix++], nt = lx_map(LE_NOTE(e), lx_steps - t->xb, lx_mask);
-                if (LE_ON(e))
-                    note_on(l, nt, SRC_LOOP);
-                else
+                if (LE_ON(e)) {
+                    if (!(t->wrap && trk_tied(p, t, e)))   /* (tied: still sounding from the round before) */
+                        note_on(l, nt, SRC_LOOP);
+                } else if (!trk_tied(p, t, e))
                     note_off(l, nt, SRC_LOOP);
             }
+            t->wrap = 0;
             if (++t->pos >= t->len) {
                 t->pos = 0;
                 t->ix = 0;
+                t->wrap = 1;
             }
         }
     }
@@ -627,16 +674,10 @@ static void loop_retune(void)
                 continue;
             for (k = 0; k < p->ntrk; k++) {
                 loop_trk_t *t = &p->trk[k];
-                uint32_t held[4] = {0, 0, 0, 0}, i, n;
+                uint32_t held[4], n;
                 if ((p->mute >> k) & 1u)
                     continue;
-                for (i = 0; i < t->ix; i++) {
-                    uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
-                    if (LE_ON(e))
-                        held[nt >> 5] |= 1u << (nt & 31u);
-                    else
-                        held[nt >> 5] &= ~(1u << (nt & 31u));
-                }
+                trk_held(p, t, held);
                 for (n = 0; n < 128u; n++)
                     if ((held[n >> 5] >> (n & 31u)) & 1u) {
                         uint32_t was = lx_map(n, lx_steps - t->xb, lx_mask), now = lx_map(n, s - t->xb, m);
@@ -719,7 +760,7 @@ static void events_take(void)        /* audio ISR, at a block start */
 
 /* ---------------------------------------------------------- the mix --- */
 static volatile uint8_t shed_req;
-static volatile uint8_t load_pct, load_peak;   /* the render's share of a half buffer, now and at most (main.c) */
+static volatile uint8_t load_pct;   /* the render's share of a half buffer, the last one (main.c) */
 static int32_t master_q12 = 2048;                /* the MASTER knob (main loop), Q12 */
 
 static int layer_sounding(uint32_t l)
@@ -915,7 +956,8 @@ static int shed_voice(int held)  /* the oldest released voice (held: the oldest 
     vox[ok].fade = FADE;                          /* (its key still held: it comes back with the next note) */
     return 1;
 }
-static void shed(void)
+/* near the edge (1): a released tail goes, else CALIGULA's ring-out; late (2): if none, a held note too */
+static void shed(uint32_t late)
 {
     uint32_t l;
     if (shed_voice(0))
@@ -925,7 +967,8 @@ static void shed(void)
             cal_rt[l].hush = 1;
             return;
         }
-    shed_voice(1);
+    if (late)
+        shed_voice(1);
 }
 
 /* one block: the events, the loops, the layers, the reverb, the master (Q15 stereo, interleaved) */
@@ -936,8 +979,8 @@ static void mix_block(int32_t *out)
     events_take();
     loops_run();
     if (shed_req) {                               /* overload: something already heard goes */
+        shed(shed_req > 1u);
         shed_req = 0;
-        shed();
     }
     for (i = 0; i < CTL; i++)
         l_[i] = r_[i] = rvin[i] = 0;

@@ -435,7 +435,16 @@ static void an_note_on(an_voice_t *v, const an_design_t *d, uint32_t inc, int fr
             v->pStack[i] = 0;
         for (i = 0; i < 3u; i++)
             v->gr[i].on = 0;
-        v->filt.ic1 = v->filt.ic2 = v->nfilt.ic1 = v->nfilt.ic2 = 0;
+        v->filt.ic1 = v->filt.ic2 = v->nfilt.ic1 = v->nfilt.ic2 = v->gfilt.ic1 = v->gfilt.ic2 = 0;
+        /* (and the chain's memories: a voice taken from another note is faded out, but its comb, phaser and
+         * sample hold still hold that note -- heard again, at once and at full level, as the new one begins) */
+        v->downAcc = 0;
+        v->downHeld = 0;
+        v->phFb = 0;
+        for (i = 0; i < 4u; i++)
+            v->ap[i] = 0;
+        v->resLp = 0;
+        memset(v->res, 0, sizeof v->res);
         v->ev = 0;
         v->grainClock = 0x80000000u;
     }

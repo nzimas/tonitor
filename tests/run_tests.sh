@@ -25,6 +25,8 @@ build/host presets build/screens
 build/host macros build/screens
 build/host overdubs build/screens
 build/host transpose
+build/host ties
+build/host clicks
 build/host voices
 build/host compat
 build/host paths build/sounds

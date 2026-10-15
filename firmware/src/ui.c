@@ -649,12 +649,12 @@ static void ui_input(void)
         say(m, 1200);
     }
     if ((btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) && (fm1_in.notes >> KEY_SHIFT) & 1u) {
-        char m[12] = "LOOPS ";                   /* SHIFT and OCT: every loop a step of the scale down or up */
+        char m[12] = "TRANSP ";                  /* SHIFT and OCT: every loop a step of the scale down or up */
         int32_t lim = 2 * SCALE_N[ui.scale], x = clampi(ui.lx + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
         ui.lx = (int8_t)x;
         lx_post();
         if (x > 0)
-            m[6] = '+';
+            m[7] = '+';
         fmt_int(m + str_len(m), x);
         say(m, 1200);
     } else if (btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) {
@@ -701,12 +701,10 @@ static void ui_input(void)
             say(ui.path[ui.sel] == PATH_AMBIENT ? "AMBIENT" : ui.path[ui.sel] == PATH_EXP ? "EXPERIMENTAL" : "OPEN", 1200);
         }
     if ((ch & keys) >> KEY_SHIFT & 1u) {         /* SHIFT pressed: the keys held latch, on the layer they play */
-        char m[16] = "LOAD ";                    /* (and the screen says how busy the audio is: now / at most
-                                                  * since the last time it was asked, % of the time there is) */
+        char m[16] = "LOAD ";                    /* (and the screen says how busy the audio is now: % of the time
+                                                  * there is) */
         fmt_int(m + str_len(m), load_pct);
-        str_cpy(m + str_len(m), "/", 2);
-        fmt_int(m + str_len(m), load_peak);
-        load_peak = 0;
+        str_cpy(m + str_len(m), "%", 2);
         say(m, 1500);
         for (k = 0; k < NKEY; k++)
             if (((ui.keys & keys) >> k & 1u) && white_ix(k) >= 0 && ui.key_layer[k] != KEY_NONE) {

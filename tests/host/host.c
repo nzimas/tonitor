@@ -2563,13 +2563,17 @@ static void loop_to(uint32_t l, uint32_t pos)   /* run until loop 1 of layer l i
     while (loop[l].trk[0].pos != pos && guard++ < 100000u)
         run_blocks(1, 0);
 }
-static void shift_oct(int up)
+static void shift_oct_press(int up)
 {
     press_phys(KEY_SHIFT, 1);
     ui_input();
     press_btn(up ? B_OCTUP : B_OCTDN);
     press_phys(KEY_SHIFT, 0);
     ui_input();
+}
+static void shift_oct(int up)
+{
+    shift_oct_press(up);
     run_blocks(2, 0);
 }
 /* SHIFT and OCT: every loop moved by steps of the scale, the notes sounding moving at once, nothing left hanging; an
@@ -2670,6 +2674,271 @@ static int cmd_transpose(void)
             printf("FAIL transpose: %u loop notes at once from two loops of one note each\n", worst), fail++;
     }
     printf("transpose: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* clicks: loops recorded, overdubbed, wrapped, stopped, started, taken out and in, transposed, on each engine --
+ * the output searched for discontinuities (a jump in the second difference far above its neighbourhood), each
+ * told with what happened just before it; and the blocks' cost at those moments against the others' */
+#define CK_MAX (44100u * 40u)
+static float ck_x[CK_MAX];
+static uint32_t ck_n;
+static double ck_ns[CK_MAX / CTL];
+static struct { uint32_t blk; const char *what; } ck_ev[256];
+static uint32_t ck_nev;
+static void ck_mark(const char *what)
+{
+    if (ck_nev < 256u) {
+        ck_ev[ck_nev].blk = ck_n / CTL;
+        ck_ev[ck_nev++].what = what;
+    }
+}
+static void ck_run(uint32_t nb)
+{
+    while (nb--) {
+        struct timespec a, b;
+        uint32_t i, w0 = loop[0].ntrk ? loop[0].trk[0].pos : 1u;
+        clock_gettime(CLOCK_MONOTONIC, &a);
+        host_pump();
+        clock_gettime(CLOCK_MONOTONIC, &b);
+        if (ck_n / CTL < CK_MAX / CTL)
+            ck_ns[ck_n / CTL] = (b.tv_sec - a.tv_sec) * 1e9 + (b.tv_nsec - a.tv_nsec);
+        if (loop[0].play && loop[0].ntrk && w0 != 1u && loop[0].trk[0].pos == 1u)
+            ck_mark("loop 1 wraps");
+        for (i = 0; i < CTL && ck_n < CK_MAX; i++)
+            ck_x[ck_n++] = (float)mix_out[2u * i];
+    }
+}
+static void ck_keys(const uint32_t *k, uint32_t n, int down)
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        press_key(k[i], down);
+}
+static int cmd_clicks(void)
+{
+    static const char *const EN[4] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
+    static const uint32_t CH1[3] = {0, 2, 4}, CH2[2] = {1, 5};
+    uint32_t e, total = 0;
+    for (e = 0; e < 4u; e++) {
+        uint32_t i, j, nclk = 0, guard = 0;
+        double base = 0, nb = 0;
+        layers_init();
+        ui_init();
+        sounds_init();
+        grain_reset();
+        ck_n = ck_nev = 0;
+        press_btn(B_FX);
+        while (ui.engine[0] != e && guard++ < 20u) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        ui.send[0] = 0;
+        level_pan_apply(0);
+        ck_run(60);
+        ck_mark("REC, a chord");
+        press_btn(B_REC);
+        ck_keys(CH1, 3, 1);
+        ck_run(300);
+        ck_mark("chord let go");
+        ck_keys(CH1, 3, 0);
+        ck_run(20);
+        ck_mark("REC: loop 1 closed, plays");
+        press_btn(B_REC);
+        ck_run(700);
+        ck_mark("REC armed, an overdub");
+        press_btn(B_REC);
+        ck_run(40);
+        ck_keys(CH2, 2, 1);
+        ck_run(150);
+        ck_mark("overdub keys let go");
+        ck_keys(CH2, 2, 0);
+        ck_run(30);
+        ck_mark("REC: overdub closed");
+        press_btn(B_REC);
+        ck_run(700);
+        ck_mark("PLAY: stop");
+        press_btn(B_PLAY);
+        ck_run(250);
+        ck_mark("PLAY: start");
+        press_btn(B_PLAY);
+        ck_run(500);
+        ck_mark("overdub out");
+        ev_post(EV_LOOP_TRK, 0, 1, 0);
+        ck_run(300);
+        ck_mark("overdub in");
+        ev_post(EV_LOOP_TRK, 0, 1, 1);
+        ck_run(300);
+        ck_mark("SHIFT OCT+");
+        shift_oct_press(1);
+        ck_run(300);
+        ck_mark("SHIFT OCT-");
+        shift_oct_press(0);
+        ck_run(300);
+        ck_mark("SHIFT PLAY: all stop");
+        press_phys(KEY_SHIFT, 1);
+        press_btn(B_PLAY);
+        press_phys(KEY_SHIFT, 0);
+        ck_run(300);
+        /* the clicks */
+        for (i = 600; i + 2 < ck_n; i++) {
+            double d2 = fabs(ck_x[i] - 2.0 * ck_x[i - 1] + ck_x[i - 2]), r = 0;
+            uint32_t m;
+            if (d2 < 200.0)
+                continue;
+            for (m = i - 520; m < i - 8; m++) {
+                double d = ck_x[m] - 2.0 * ck_x[m - 1] + ck_x[m - 2];
+                r += d * d;
+            }
+            r = sqrt(r / 512.0);
+            if (d2 > 8.0 * r + 200.0) {
+                const char *what = "(nothing)";
+                uint32_t blk = i / CTL, since = 0;
+                for (j = 0; j < ck_nev; j++)
+                    if (ck_ev[j].blk <= blk) {
+                        what = ck_ev[j].what;
+                        since = blk - ck_ev[j].blk;
+                    }
+                if (nclk < 12u && e != ENG_RUS)
+                    printf("clicks %-8s at %6.2f s: jump %5.0f against %4.0f, %3u blocks after: %s\n", EN[e], i / 44100.0, d2, r,
+                           since, what);
+                if (getenv("CKDUMP") && nclk < 3u) {
+                    uint32_t q;
+                    for (q = i - 6; q < i + 10; q++)
+                        printf(" %d", (int)ck_x[q]);
+                    printf("   (sample %u, block offset %u)\n", i, i % CTL);
+                }
+                nclk++;
+                i += 400;
+            }
+        }
+        for (i = 0; i < ck_n / CTL; i++) {
+            base += ck_ns[i];
+            nb++;
+        }
+        base /= nb;
+        printf("clicks %-8s %u found; a block costs %.0f ns on average here", EN[e], nclk, base);
+        for (j = 0; j < ck_nev; j++) {
+            double mx = 0;
+            for (i = ck_ev[j].blk; i < ck_ev[j].blk + 3u && i < ck_n / CTL; i++)
+                if (ck_ns[i] > mx)
+                    mx = ck_ns[i];
+            if (mx > 3 * base)
+                printf("; %s: %.0f", ck_ev[j].what, mx);
+        }
+        printf("\n");
+        if (e <= ENG_ANIMA)                   /* (CALIGULA's squares and RUSSOLO's clicks are its sound: told, not judged) */
+            total += nclk;
+    }
+    printf("clicks: %s\n", total ? "FAILED" : "ok");
+    return total ? 1 : 0;
+}
+
+/* what one note on and one note off cost, on each engine, against a block of six sounding layers */
+static double ns_now(void)
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1e9 + t.tv_nsec;
+}
+static int cmd_evcost(void)
+{
+    static const char *const EN[4] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
+    uint32_t e, r, k;
+    for (e = 0; e < 4u; e++) {
+        double on = 0, off = 0, blk = 0, worst_on = 0, worst_off = 0;
+        layers_init();
+        ui_init();
+        sounds_init();
+        lay[0].engine = lay[0].want_engine = (uint8_t)e;
+        run_blocks(10, 0);
+        for (r = 0; r < 200u; r++) {
+            double t0 = ns_now(), t1;
+            for (k = 0; k < 4u; k++)
+                note_on(0, 48u + 4u * k, SRC_LOOP);
+            t1 = ns_now();
+            on += t1 - t0;
+            if (t1 - t0 > worst_on)
+                worst_on = t1 - t0;
+            t0 = ns_now();
+            run_blocks(1, 0);
+            blk += ns_now() - t0;
+            run_blocks(20, 0);
+            t0 = ns_now();
+            loop_notes_off(0);
+            t1 = ns_now();
+            off += t1 - t0;
+            if (t1 - t0 > worst_off)
+                worst_off = t1 - t0;
+            run_blocks(30, 0);
+        }
+        printf("evcost %-8s four notes on: %6.0f ns (worst %6.0f); all off: %6.0f ns (worst %6.0f); the block after: %6.0f ns\n",
+               EN[e], on / 200, worst_on, off / 200, worst_off, blk / 200);
+    }
+    return 0;
+}
+
+/* a note held when REC closes the loop is tied over its end: going round it is neither let go nor struck again
+ * (the same voice, never re-attacked; CALIGULA's hand stays down); taken out just as it goes round, it stops */
+static int cmd_ties(void)
+{
+    uint32_t fail = 0, e;
+    for (e = 0; e < 3u; e++) {               /* FM, ANIMA, CALIGULA */
+        uint32_t guard = 0, k, v0 = NVOICE, born = 0, i, broke = 0, n, lo, hi;
+        layers_init();
+        ui_init();
+        sounds_init();
+        grain_reset();
+        press_btn(B_FX);
+        while (ui.engine[0] != e && guard++ < 20u) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(40, 0);
+        press_btn(B_REC);
+        press_key(0, 1);                     /* a drone: held through REC */
+        run_blocks(200, 0);
+        press_key(3, 1);                     /* and a note let go before the end */
+        run_blocks(50, 0);
+        press_key(3, 0);
+        run_blocks(50, 0);
+        press_btn(B_REC);
+        run_blocks(5, 0);
+        press_key(0, 0);
+        loop_to(0, 10);
+        for (k = 0; k < NVOICE; k++)
+            if (vox[k].gate && vox_owner(&vox[k]) == 0u && vox[k].src == SRC_LOOP && vox[k].note == scale_note(0, 0)) {
+                v0 = k;
+                born = vox[k].born;
+            }
+        if (e != ENG_CAL && v0 == NVOICE)
+            printf("FAIL ties: %u: the drone does not sound from the loop\n", e), fail++;
+        for (i = 0; i < 3u * 300u + 40u; i++) {   /* three times round */
+            run_blocks(1, 0);
+            if (e == ENG_CAL) {
+                if (!cal_rt[0].nheld)
+                    broke++;
+            } else if (!vox[v0].gate || vox[v0].born != born || vox[v0].note != scale_note(0, 0))
+                broke++;
+        }
+        if (broke)
+            printf("FAIL ties: %u: the drone is let go or struck again going round (%u blocks)\n", e, broke), fail++;
+        /* the other note does go and come back each time round */
+        loop_to(0, 230);
+        n = loop_sounding(0, &lo, &hi);
+        if (e != ENG_CAL && (n != 2u || hi != scale_note(3, 0)))
+            printf("FAIL ties: %u: the note let go before the end does not come back (%u notes)\n", e, n), fail++;
+        /* out just as it goes round: nothing left hanging */
+        loop_to(0, loop[0].trk[0].len - 1u);
+        run_blocks(1, 0);                     /* (it has gone round: wrap set, its first events not yet played) */
+        if (!loop[0].trk[0].wrap)
+            printf("FAIL ties: %u: the test missed the turn\n", e), fail++;
+        loop_trk_set(0, 0, 0);
+        run_blocks(20, 0);
+        if (loop_sounding(0, &lo, &hi) || (e == ENG_CAL && cal_rt[0].nheld))
+            printf("FAIL ties: %u: taken out as it goes round, the drone hangs\n", e), fail++;
+    }
+    printf("ties: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
 
@@ -3042,6 +3311,12 @@ int main(int argc, char **argv)
         return cmd_compat();
     if (argc >= 2 && !strcmp(argv[1], "voices"))
         return cmd_voices();
+    if (argc >= 2 && !strcmp(argv[1], "evcost"))
+        return cmd_evcost();
+    if (argc >= 2 && !strcmp(argv[1], "ties"))
+        return cmd_ties();
+    if (argc >= 2 && !strcmp(argv[1], "clicks"))
+        return cmd_clicks();
     if (argc >= 2 && !strcmp(argv[1], "transpose"))
         return cmd_transpose();
     if (argc >= 3 && !strcmp(argv[1], "overdubs"))

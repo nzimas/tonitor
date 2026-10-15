@@ -13,7 +13,7 @@ static int32_t abuf[2u * HALF_WORDS] __attribute__((aligned(4)));
 static struct {
     volatile uint32_t in_audio;  /* TIMER5 reads it: what may nest in the render */
     uint32_t halves, late, max_us, last_us, cpu_q8;
-    uint8_t over;                /* bit k: the half k halves ago was over 85 % */
+    uint8_t over;                /* bit k: the half k halves ago was over 90 % */
 } dbg;
 static volatile uint32_t t5_nested_ticks;
 
@@ -37,14 +37,14 @@ void fm1_alnk0_irq(void)         /* via isr_alnk0 (hal/fm1_isr.S) */
         fm1_audio_ack_half();
         all = fm1_ticks() - t0;
         us = (all - t5_nested_ticks) / FM1_TICKS_PER_US;
-        dbg.over = (uint8_t)(dbg.over << 1 | (all / FM1_TICKS_PER_US * 100u > (HALF_FRAMES * 1000000u / FS) * 85u));
-        if ((dbg.over & 3u) == 3u)
-            shed_req = 1;                        /* two in a row: something already heard goes (layers.c) */
         {
             uint32_t pc = all / FM1_TICKS_PER_US * 100u / (HALF_FRAMES * 1000000u / FS);
+            dbg.over = (uint8_t)(dbg.over << 1 | (pc > 90u));
+            if (pc >= 100u)
+                shed_req = 2;                    /* late: something goes, a held note if it must (layers.c) */
+            else if ((dbg.over & 3u) == 3u && !shed_req)
+                shed_req = 1;                    /* two near the edge in a row: a tail goes */
             load_pct = (uint8_t)(pc > 255u ? 255u : pc);
-            if (load_pct > load_peak)
-                load_peak = load_pct;
         }
         dbg.cpu_q8 = (dbg.cpu_q8 * 15u + (us * 256u) / (HALF_FRAMES * 1000000u / FS)) / 16u;
         if (us > dbg.max_us)

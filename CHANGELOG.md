@@ -5,7 +5,16 @@
 - **Loops moved along the scale**: SHIFT + OCT+ / OCT− moves every loop of every layer one step of the chosen
   scale up or down (C to D in C major), the notes sounding moving at once; up to two octaves of the scale either
   way, shown on the screen. Another scale or root chosen meanwhile is walked instead. An overdub recorded while
-  the loops are moved plays back as played. Sessions keep it; sessions saved before load as they were.
+  the loops are moved plays back as played. Sessions keep it; sessions saved before load as they were. The
+  screen says TRANSP +2, TRANSP 0.
+- **Drones stay whole in loops**: a note still held when REC closes the loop is tied over the loop's end, sounding
+  on as it goes round instead of being let go and struck again each time (which was heard as a stutter, ANIMA and
+  CALIGULA above all).
+- **No click when ANIMA reuses a voice**: a voice taken over for a new note (loops going round, many notes at once)
+  kept its comb resonator, phaser and sample hold from the note before, heard again at full level as the new note
+  began. They now start empty.
+- **The overload guard waits longer**: a release tail goes only when the audio is past 90 % (was 85 %) twice in a
+  row; a held note only when it is actually late, past 100 %. SHIFT shows the load now, as one percentage.
 
 ## 0.26
 

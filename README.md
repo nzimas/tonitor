@@ -92,7 +92,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **OCT− / OCT+** | the chosen layer's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
 | **SHIFT + OCT− / OCT+** | **every loop** of every layer down or up **one step of the scale** (see [the loopers](#the-loopers)). |
 | the white keys | play the chosen layer **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the layers**: a note takes a free voice, so a layer has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any layer), else the oldest note held on its own layer, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a layer, outside the pool.) A key lifted ends its note on the layer it was played on, so **a held note keeps sounding while you choose and play another layer**. The keys you hold on the chosen layer light up. |
-| the rightmost black key | **SHIFT** (lit while held; each press shows the audio's load in % of the time it has, now / at most since the last press, e.g. `LOAD 62/91`). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
+| the rightmost black key | **SHIFT** (lit while held; each press shows how busy the audio is, in % of the time it has, e.g. `LOAD 62%`; near 90 % Tonitor lets the oldest release tails go to keep the sound whole, and only past 100 % a held note). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen layer's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen layer's sound. See [Macros](#macros). |
 | the other black keys | play no notes (kept for other functions to come). |
@@ -160,7 +160,9 @@ latch. Latched notes hold voices of the shared pool: with all twelve busy, a new
 Every layer has its own looper of up to **ten loops**, and they are all **free**: no tempo, no grid, no
 quantising — not even between a layer's own loops. Each overdub is a loop of its own, as long as you made
 it (from its first note to REC), going round in its own length over the others, so they drift in and out of
-phase. Each plays back exactly what was played, to 0.73 ms. The keys go on playing the layer over its loops,
+phase. Each plays back exactly what was played, to 0.73 ms. A note still held when REC closes the loop is
+**tied over its end**: it sounds on unbroken as the loop goes round, so a drone stays one long note rather than
+being struck again each time. The keys go on playing the layer over its loops,
 and the loops' notes and the keys' never cut each other's notes off — but all of them share the pool's twelve
 voices with the other layers, so many loops and layers at once take voices from each other. A layer's loops hold about 1000 notes between
 them; nothing is lost when the FM-1 is switched off if the session is saved.
@@ -176,7 +178,7 @@ Every loop is in when recorded. Sessions keep which loops are out.
 **Moving the loops along the scale.** Hold **SHIFT** and press **OCT+** or **OCT−**: every loop of every layer
 moves one step of the chosen scale up or down — from C to D in C major, from C to D♯ in C minor pentatonic —
 so each loop keeps its shape within the scale. The notes sounding move at once; the screen shows how far the
-loops are moved (LOOPS +2, LOOPS -1, LOOPS 0), up to two octaves of the scale either way. Choosing another scale
+loops are moved (TRANSP +2, TRANSP -1, TRANSP 0), up to two octaves of the scale either way. Choosing another scale
 or root while they are moved walks the new one. A note outside the scale keeps its distance from the scale note
 below it. The keys are not moved, and **an overdub recorded while the loops are moved plays back as you played
 it**, the others staying where they are. Sessions keep how far the loops are moved.
