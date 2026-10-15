@@ -87,6 +87,7 @@ static struct {
     char flash_l1[12], flash_l2[12];
     uint8_t sc_page;             /* the SCALE page is up */
     uint8_t scale, root;         /* the keyboard's scale (SCALES) and root (0 = C .. 11 = B) */
+    int8_t lx;                   /* the loops' transposition, in steps of the scale (SHIFT + OCT) */
     int8_t sc_touched;           /* 0 the root just turned, 1 the scale, -1 none (until sc_touch_until) */
     uint32_t sc_touch_until;
     int8_t shown_sc_touch;
@@ -180,6 +181,17 @@ static uint32_t scale_note(int32_t w, int32_t oct)
 {
     int32_t n = SCALE_N[ui.scale];
     return (uint32_t)clampi(SCALE_BASE + ui.root + 12 * oct + 12 * (w / n) + SCALE_STEP[ui.scale][w % n], 12, 120);
+}
+/* the loops' transposition and the scale it walks, to the ISR (which moves the notes sounding) */
+static void lx_post(void)
+{
+    uint32_t k, m = 0;
+    for (k = 0; k < SCALE_N[ui.scale]; k++)
+        m |= 1u << ((ui.root + SCALE_STEP[ui.scale][k]) % 12u);
+    lx_want_mask = (uint16_t)m;
+    lx_want_steps = ui.lx;
+    RING_PUBLISH();
+    ev_post(EV_LOOP_XP, 0, 0, 0);
 }
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
@@ -595,12 +607,14 @@ static void ui_input(void)
         s = enc_take(EN_ALGO);
         if (s) {
             ui.scale = (uint8_t)clampi((int32_t)ui.scale + s, 0, NSCALE - 1);
+            lx_post();                           /* (the loops moved walk the new scale) */
             ui.sc_touched = 1;
             ui.sc_touch_until = fm1_ms + 1500u;
         }
         s = enc_take(EN_SELECT);
         if (s) {
             ui.root = (uint8_t)(((int32_t)ui.root + s % 12 + 12) % 12);   /* round the octave */
+            lx_post();
             ui.sc_touched = 0;
             ui.sc_touch_until = fm1_ms + 1500u;
         }
@@ -634,7 +648,16 @@ static void ui_input(void)
         }
         say(m, 1200);
     }
-    if (btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) {
+    if ((btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) && (fm1_in.notes >> KEY_SHIFT) & 1u) {
+        char m[12] = "LOOPS ";                   /* SHIFT and OCT: every loop a step of the scale down or up */
+        int32_t lim = 2 * SCALE_N[ui.scale], x = clampi(ui.lx + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
+        ui.lx = (int8_t)x;
+        lx_post();
+        if (x > 0)
+            m[6] = '+';
+        fmt_int(m + str_len(m), x);
+        say(m, 1200);
+    } else if (btn_bit(press, B_OCTDN) || btn_bit(press, B_OCTUP)) {
         char m[8] = "OCT  ";
         int32_t o = clampi(ui.oct[ui.sel] + (btn_bit(press, B_OCTUP) ? 1 : -1), -3, 3);
         ui.oct[ui.sel] = (int8_t)o;

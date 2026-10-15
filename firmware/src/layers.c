@@ -91,7 +91,8 @@ enum { LR_IDLE, LR_ARMED, LR_REC };
 typedef struct {
     uint32_t len, pos;           /* blocks; pos: where it is */
     uint16_t first, n, ix;       /* its events in the looper's ev[]; the next to play */
-    uint16_t rsv;
+    int8_t xb;                   /* the loops' transposition when it was recorded (it plays at lx_steps - xb) */
+    uint8_t rsv;
 } loop_trk_t;
 typedef struct {
     volatile uint8_t rec;        /* LR_*: the screen's and the LEDs' */
@@ -106,7 +107,33 @@ typedef struct {
     uint32_t ev[LOOP_N];
 } looper_t;
 static looper_t loop[NLAYER] POOL;
-static uint32_t blk_clock;       /* blocks since boot (the ISR) */
+static uint32_t blk_clock;
+/* the loops' transposition (SHIFT + OCT): every loop moved by steps of the scale, its notes walked up or down the
+ * scale's pitch classes (a mask from C); a note off the scale keeps its distance from the scale note below it.
+ * The ISR's; the main loop asks for a change with lx_want_* and EV_LOOP_XP */
+static int8_t lx_steps;
+static uint16_t lx_mask = 0xFFFu;
+static volatile int8_t lx_want_steps;
+static volatile uint16_t lx_want_mask = 0xFFFu;
+static uint32_t lx_map(uint32_t n, int32_t k, uint32_t mask)
+{
+    int32_t b = (int32_t)n;
+    mask &= 0xFFFu;
+    if (!k || !mask)
+        return n;
+    while (b > 0 && !((mask >> (b % 12)) & 1u))   /* the scale note at or below it */
+        b--;
+    n -= (uint32_t)b;                             /* (how far it is above it) */
+    for (; k > 0; k--)
+        do
+            b++;
+        while (!((mask >> (b % 12)) & 1u) && b < 140);
+    for (; k < 0; k++)
+        do
+            b--;
+        while (b > 0 && !((mask >> (b % 12)) & 1u));
+    return (uint32_t)clampi(b + (int32_t)n, 0, 127);
+}       /* blocks since boot (the ISR) */
 
 /* each layer's level and place in the stereo field, set by the main loop (SELECT, ALGORITHM): the gain Q14
  * (1.0 = 16384) and the two sides of an equal-power pan, Q15. The ISR glides to them over a block. */
@@ -194,7 +221,7 @@ static void lim_block(int32_t *env, int32_t *g, int32_t *x, uint32_t n)
 }
 
 /* --------------------------------------------------------- events --- */
-enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK };
+enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK, EV_LOOP_XP };
 typedef struct { uint8_t type, layer, note, val; } ev_t;
 #define EVQ 64u
 static ev_t evq[EVQ];
@@ -522,6 +549,7 @@ static void loop_hear(uint32_t l, uint32_t on, uint32_t note)
         p->rec = LR_REC;
         p->start = blk_clock;
         p->trk[p->ntrk].first = (uint16_t)p->nev;
+        p->trk[p->ntrk].xb = lx_steps;            /* (it plays back as played, whatever the others are moved by) */
         p->nheld = 0;
     }
     if (p->rec == LR_REC)
@@ -552,7 +580,7 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
             }
             for (n = 0; n < 128u; n++)
                 if ((held[n >> 5] >> (n & 31u)) & 1u)
-                    note_off(l, n, SRC_LOOP);
+                    note_off(l, lx_map(n, lx_steps - t->xb, lx_mask), SRC_LOOP);
         }
         p->mute |= (uint16_t)bit;
     }
@@ -570,11 +598,11 @@ static void loops_run(void)
             if ((p->mute >> k) & 1u)
                 continue;                         /* (held out: it waits, silent, where it is) */
             while (t->ix < t->n && LE_T(p->ev[t->first + t->ix]) <= t->pos) {
-                uint32_t e = p->ev[t->first + t->ix++];
+                uint32_t e = p->ev[t->first + t->ix++], nt = lx_map(LE_NOTE(e), lx_steps - t->xb, lx_mask);
                 if (LE_ON(e))
-                    note_on(l, LE_NOTE(e), SRC_LOOP);
+                    note_on(l, nt, SRC_LOOP);
                 else
-                    note_off(l, LE_NOTE(e), SRC_LOOP);
+                    note_off(l, nt, SRC_LOOP);
             }
             if (++t->pos >= t->len) {
                 t->pos = 0;
@@ -582,6 +610,48 @@ static void loops_run(void)
             }
         }
     }
+}
+
+/* the loops' transposition changed (its steps, or the scale it walks): the loop notes sounding move to their new
+ * notes at once -- let go at the old, struck at the new */
+static void loop_retune(void)
+{
+    int32_t s = lx_want_steps;
+    uint32_t m = lx_want_mask, l, k, pass;
+    if (s == lx_steps && (m == lx_mask || !s))
+        return;
+    for (pass = 0; pass < 2u; pass++) {           /* every old note off first, then every new one on */
+        for (l = 0; l < NLAYER; l++) {
+            looper_t *p = &loop[l];
+            if (!p->play)
+                continue;
+            for (k = 0; k < p->ntrk; k++) {
+                loop_trk_t *t = &p->trk[k];
+                uint32_t held[4] = {0, 0, 0, 0}, i, n;
+                if ((p->mute >> k) & 1u)
+                    continue;
+                for (i = 0; i < t->ix; i++) {
+                    uint32_t e = p->ev[t->first + i], nt = LE_NOTE(e);
+                    if (LE_ON(e))
+                        held[nt >> 5] |= 1u << (nt & 31u);
+                    else
+                        held[nt >> 5] &= ~(1u << (nt & 31u));
+                }
+                for (n = 0; n < 128u; n++)
+                    if ((held[n >> 5] >> (n & 31u)) & 1u) {
+                        uint32_t was = lx_map(n, lx_steps - t->xb, lx_mask), now = lx_map(n, s - t->xb, m);
+                        if (was == now)
+                            continue;
+                        if (!pass)
+                            note_off(l, was, SRC_LOOP);
+                        else
+                            note_on(l, now, SRC_LOOP);
+                    }
+            }
+        }
+    }
+    lx_steps = (int8_t)s;
+    lx_mask = (uint16_t)m;
 }
 
 static void events_take(void)        /* audio ISR, at a block start */
@@ -621,6 +691,9 @@ static void events_take(void)        /* audio ISR, at a block start */
             break;
         case EV_LOOP_SET:
             loop_set(e.layer, e.val);
+            break;
+        case EV_LOOP_XP:                          /* SHIFT and OCT: the loops moved along the scale */
+            loop_retune();
             break;
         case EV_LOOP_TRK:                         /* (note: the loop, val: in or out) */
             loop_trk_set(e.layer, e.note, e.val);

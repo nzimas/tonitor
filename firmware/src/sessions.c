@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 9u            /* 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 10u           /* 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -329,7 +329,7 @@ static void ses_emit(void)
         g[1u + i] = (uint8_t)ui.rvp[i];
     g[5] = ui.scale;
     g[6] = ui.root;
-    g[7] = 0;
+    g[7] = (uint8_t)ui.lx;                       /* (format 10: the loops' transposition) */
     ses_out(g, sizeof g);
     for (l = 0; l < NLAYER; l++) {
         ses_layer_t y;
@@ -402,7 +402,7 @@ static void ses_emit(void)
         for (k = 0; k < nt; k++) {
             uint32_t tl[2];
             tl[0] = lp->trk[k].len;
-            tl[1] = lp->trk[k].n;
+            tl[1] = lp->trk[k].n | (uint32_t)(uint8_t)lp->trk[k].xb << 16;   /* (format 10: its transposition) */
             ses_out(tl, sizeof tl);
         }
         for (i = 0; i < n; i++)                         /* t (24 bits), note, on */
@@ -725,6 +725,8 @@ static int ses_load(uint32_t i)
     rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
     ui.scale = (uint8_t)(g[5] < NSCALE ? g[5] : 0);  /* (sessions before the scales: C major) */
     ui.root = (uint8_t)(g[6] < 12u ? g[6] : 0);
+    ui.lx = (int8_t)(h.format >= 10u ? clampi((int8_t)g[7], -14, 14) : 0);
+    lx_post();                                          /* (the loops are empty yet: nothing to move) */
     for (l = 0; l < NLAYER; l++) {
         ses_layer_t y;
         looper_t *lp = &loop[l];
@@ -859,6 +861,7 @@ static int ses_load(uint32_t i)
                 play = y.loop_state == 3u;
                 lp->trk[0].len = y.loop_len;
                 lp->trk[0].n = (uint16_t)(n > LOOP_N ? LOOP_N : n);
+                lp->trk[0].xb = 0;
             } else {
                 ui.cr[l] = (int8_t)clampi((int8_t)(y.loop_len >> 8), -FLT_MAX, FLT_MAX);
                 ui.path[l] = (uint8_t)((y.loop_len >> 16 & 0xFFu) < PATH_N ? y.loop_len >> 16 & 0xFFu : PATH_OPEN);
@@ -871,6 +874,7 @@ static int ses_load(uint32_t i)
                     if (k < nt) {
                         lp->trk[k].len = tl[0] ? tl[0] : 2u;
                         lp->trk[k].n = (uint16_t)tl[1];
+                        lp->trk[k].xb = (int8_t)(h.format >= 10u ? (int8_t)(tl[1] >> 16) : 0);
                     }
                 }
             }

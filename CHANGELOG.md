@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.27
+
+- **Loops moved along the scale**: SHIFT + OCT+ / OCT− moves every loop of every layer one step of the chosen
+  scale up or down (C to D in C major), the notes sounding moving at once; up to two octaves of the scale either
+  way, shown on the screen. Another scale or root chosen meanwhile is walked instead. An overdub recorded while
+  the loops are moved plays back as played. Sessions keep it; sessions saved before load as they were.
+
 ## 0.26
 
 - **RUSSOLO**, a fourth engine: noise, logic and broken buffers, re-making the techniques of Robert Heel's

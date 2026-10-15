@@ -2540,6 +2540,139 @@ static int loop_note_on(uint32_t l, uint32_t note)   /* a voice of layer l holds
             return 1;
     return 0;
 }
+/* the notes the loops sound on layer l now (gated voices of the pool, from a loop): how many, and the lowest two */
+static uint32_t loop_sounding(uint32_t l, uint32_t *lo, uint32_t *hi)
+{
+    uint32_t k, n = 0;
+    *lo = *hi = 999u;
+    for (k = 0; k < NVOICE; k++)
+        if (vox[k].gate && vox_owner(&vox[k]) == l && vox[k].src == SRC_LOOP) {
+            uint32_t nt = vox[k].note;
+            n++;
+            if (nt < *lo) {
+                *hi = *lo;
+                *lo = nt;
+            } else if (nt < *hi)
+                *hi = nt;
+        }
+    return n;
+}
+static void loop_to(uint32_t l, uint32_t pos)   /* run until loop 1 of layer l is at pos */
+{
+    uint32_t guard = 0;
+    while (loop[l].trk[0].pos != pos && guard++ < 100000u)
+        run_blocks(1, 0);
+}
+static void shift_oct(int up)
+{
+    press_phys(KEY_SHIFT, 1);
+    ui_input();
+    press_btn(up ? B_OCTUP : B_OCTDN);
+    press_phys(KEY_SHIFT, 0);
+    ui_input();
+    run_blocks(2, 0);
+}
+/* SHIFT and OCT: every loop moved by steps of the scale, the notes sounding moving at once, nothing left hanging; an
+ * overdub recorded while moved plays as played; the scale changed walks the new one; a session keeps it */
+static int cmd_transpose(void)
+{
+    uint32_t fail = 0, n, lo, hi;
+    uint32_t c3 = scale_note(0, 0);
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    ui.scale = 0;
+    ui.root = 0;
+    ui.lx = 0;
+    lx_post();
+    run_blocks(4, 0);
+    if (lx_map(60, 1, 0xAB5u) != 62u || lx_map(61, 1, 0xAB5u) != 63u || lx_map(60, -1, 0xAB5u) != 59u
+        || lx_map(64, 2, 0xAB5u) != 67u || lx_map(60, 7, 0xAB5u) != 72u || lx_map(60, -14, 0xAB5u) != 36u)
+        printf("FAIL transpose: the steps of C major are not walked right\n"), fail++;
+    press_btn(B_FX);
+    press_btn(B_REC);                                 /* a loop: C3 held through it */
+    press_key(0, 1);
+    run_blocks(400, 0);
+    press_btn(B_REC);
+    press_key(0, 0);
+    loop_to(0, 100);
+    n = loop_sounding(0, &lo, &hi);
+    if (n != 1u || lo != c3)
+        printf("FAIL transpose: the loop does not sound its C3 (%u notes, %u)\n", n, lo), fail++;
+    shift_oct(1);
+    n = loop_sounding(0, &lo, &hi);
+    if (n != 1u || lo != c3 + 2u || ui.oct[0] != 0)
+        printf("FAIL transpose: SHIFT OCT+ does not move it to D at once (%u notes, %u; octave %d)\n", n, lo, ui.oct[0]), fail++;
+    shift_oct(1);
+    shift_oct(1);
+    n = loop_sounding(0, &lo, &hi);
+    if (n != 1u || lo != c3 + 5u)
+        printf("FAIL transpose: three steps up is not F (%u notes, %u)\n", n, lo), fail++;
+    shift_oct(0);
+    shift_oct(0);
+    shift_oct(0);
+    shift_oct(0);
+    n = loop_sounding(0, &lo, &hi);
+    if (n != 1u || lo != c3 - 1u || ui.lx != -1)
+        printf("FAIL transpose: back down past the start is not B2 (%u notes, %u, lx %d)\n", n, lo, ui.lx), fail++;
+    loop_to(0, 50);                                   /* and round the loop: the next C3 struck as B2 too */
+    n = loop_sounding(0, &lo, &hi);
+    if (n != 1u || lo != c3 - 1u)
+        printf("FAIL transpose: round the loop it is not B2 (%u notes, %u)\n", n, lo), fail++;
+    ui.scale = 5;                                     /* minor pentatonic, C: one step down from C3 is A#2 */
+    lx_post();
+    run_blocks(2, 0);
+    n = loop_sounding(0, &lo, &hi);
+    if (n != 1u || lo != c3 - 2u)
+        printf("FAIL transpose: a new scale is not walked (%u notes, %u)\n", n, lo), fail++;
+    press_btn(B_REC);                                 /* an overdub while moved: G3 (key 3 of the pentatonic) */
+    loop_to(0, 0);
+    press_key(3, 1);
+    run_blocks(200, 0);
+    press_btn(B_REC);
+    press_key(3, 0);
+    loop_to(0, 100);
+    n = loop_sounding(0, &lo, &hi);
+    if (loop[0].ntrk != 2u || n != 2u || lo != c3 - 2u || hi != scale_note(3, 0))
+        printf("FAIL transpose: an overdub made while moved does not play as played (%u loops, %u notes, %u %u)\n",
+               loop[0].ntrk, n, lo, hi), fail++;
+    {   /* a session keeps it all */
+        int32_t xb = loop[0].trk[1].xb;
+        if (ses_save(1) != SES_OK)
+            printf("FAIL transpose: the session was not saved\n"), fail++;
+        ui.lx = 0;
+        ui.scale = 0;
+        lx_post();
+        run_blocks(2, 0);
+        ses_load_slot(1);
+        loop_to(0, 100);
+        n = loop_sounding(0, &lo, &hi);
+        if (ui.lx != -1 || ui.scale != 5u || loop[0].trk[1].xb != xb || xb != -1 || n != 2u || lo != c3 - 2u || hi != scale_note(3, 0))
+            printf("FAIL transpose: a session does not keep it (lx %d, xb %d/%d, %u notes, %u %u)\n", ui.lx, loop[0].trk[1].xb, xb,
+                   n, lo, hi), fail++;
+    }
+    press_btn(B_PLAY);                                /* stopped: nothing left hanging */
+    run_blocks(3, 0);
+    n = loop_sounding(0, &lo, &hi);
+    if (n)
+        printf("FAIL transpose: %u notes hang after the loops stop\n", n), fail++;
+    {   /* moved, no loop note sounding stays on: every step up and down while two loops play */
+        uint32_t i, worst = 0;
+        press_btn(B_PLAY);
+        for (i = 0; i < 40u; i++) {
+            shift_oct(i % 7u < 4u);
+            run_blocks(37, 0);
+            n = loop_sounding(0, &lo, &hi);
+            if (n > worst)
+                worst = n;
+        }
+        if (worst > 2u)
+            printf("FAIL transpose: %u loop notes at once from two loops of one note each\n", worst), fail++;
+    }
+    printf("transpose: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -2861,7 +2994,7 @@ static int cmd_russolo(const char *dir)
             printf("FAIL russolo: PRESETS does not reach it\n"), fail++;
         ui.force = 1;
         ui_draw();
-        ppm("build/screens/screen-33-russolo.ppm");
+        ppm("build/screens/screen-34-russolo.ppm");
         press_btn(B_REC);
         press_key(2, 1);
         run_blocks(300, 0);
@@ -2909,6 +3042,8 @@ int main(int argc, char **argv)
         return cmd_compat();
     if (argc >= 2 && !strcmp(argv[1], "voices"))
         return cmd_voices();
+    if (argc >= 2 && !strcmp(argv[1], "transpose"))
+        return cmd_transpose();
     if (argc >= 3 && !strcmp(argv[1], "overdubs"))
         return cmd_overdubs(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "macros"))
