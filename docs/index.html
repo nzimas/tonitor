@@ -45,34 +45,36 @@
 
 <h2>Features</h2>
 <dl class="features">
-  <dt>Six layers</dt>
+  <dt>Six tracks</dt>
   <dd>Each with its own engine, sound, octave, level and pan.</dd>
   <dt>Voices</dt>
-  <dd>Twelve voices shared by all layers: each layer takes as many as its notes need.</dd>
+  <dd>Twelve voices shared by all tracks: each track takes as many as its notes need.</dd>
   <dt>Four engines</dt>
-  <dd>FM, ANIMA, CALIGULA and RUSSOLO, chosen per layer (described <a href="#engines">below</a>).</dd>
+  <dd>FM, ANIMA, CALIGULA and RUSSOLO, chosen per track (described <a href="#engines">below</a>).</dd>
   <dt>Sound generation</dt>
-  <dd>HOME generates a new sound for the layer from the engine's families of sounds.</dd>
+  <dd>HOME generates a new sound for the track from the engine's families of sounds.</dd>
   <dt>Generative paths</dt>
-  <dd>Per layer, new sounds can be biased towards ambient (darker, slower) or experimental (noisier, harder).</dd>
+  <dd>Per track, new sounds can be biased towards ambient (darker, slower) or experimental (noisier, harder).</dd>
   <dt>Macros</dt>
   <dd>With EDIT on, the four knobs adjust four engine-specific parameters of the current sound.</dd>
+  <dt>Copy and paste</dt>
+  <dd>Holding a track's button copies its sound and loops; holding another's pastes them there.</dd>
   <dt>Loopers</dt>
-  <dd>One per layer, up to ten overdubs, each with its own length; each can be switched in and out. All the loops can be transposed together by steps of the scale.</dd>
+  <dd>One per track, up to ten overdubs, each with its own length; each can be switched in and out. All the loops can be transposed together by steps of the scale.</dd>
   <dt>Latching</dt>
   <dd>Notes held when SHIFT is pressed keep sounding after the keys are released.</dd>
   <dt>Filter, grains, crush</dt>
-  <dd>A resonant low/high-pass filter, a granulator and a bit-depth and sample-rate reducer on every layer.</dd>
+  <dd>A resonant low/high-pass filter, a granulator and a bit-depth and sample-rate reducer on every track.</dd>
   <dt>Reverb</dt>
-  <dd>A plate reverb (Dattorro) with a send from every layer.</dd>
+  <dd>A plate reverb (Dattorro) with a send from every track.</dd>
   <dt>Scales</dt>
   <dd>The white keys play a scale from any root.</dd>
   <dt>Presets</dt>
-  <dd>64 per engine; a stored sound can be loaded on any layer.</dd>
+  <dd>64 per engine; a stored sound can be loaded on any track.</dd>
   <dt>Sessions</dt>
-  <dd>64 slots holding every layer, sound, loop, latched note and setting, the reverb included.</dd>
+  <dd>64 slots holding every track, sound, loop, latched note and setting, the reverb included.</dd>
   <dt>Low vision</dt>
-  <dd>Few words, very large type, high contrast, a colour per layer.</dd>
+  <dd>Few words, very large type, high contrast, a colour per track.</dd>
 </dl>
 
 <h2 id="engines">Engines</h2>
@@ -80,32 +82,37 @@
 <h3>FM</h3>
 <p>Six-operator frequency modulation in the style of the DX7, built on msfa (the core of Dexed): 32 algorithms,
   four-rate, four-level envelopes, operators on frequency ratios or fixed frequencies, operator feedback, an LFO
-  and a pitch envelope. HOME generates a patch from one of seventeen families, among them bells and gongs on
+  and a pitch envelope. HOME generates a patch from one of twenty-two families, among them bells and gongs on
   inharmonic ratios, slowly beating drones, feedback noise, struck sounds with a falling pitch, sounds pulsed by
-  the LFO, glissandi, formant vowels, odd-harmonic tones and ring-modulated bands. Each patch is rendered once when
+  the LFO, glissandi, formant vowels, odd-harmonic tones, ring-modulated bands, plucked strings, struck bars,
+  and stranger ones: free ratios with a wandering pitch, sample-and-hold steps, bouncing pitch
+  envelopes. Each patch is rendered once when
   it is generated and its level adjusted to a common loudness. Polyphonic, from the shared pool of voices.</p>
 <p>Macros: <b>BRIGHT</b> (modulation index), <b>DETUNE</b> or <b>SKEW</b> (carrier detuning, or operators moved
   off their ratios), <b>GRIT</b> (feedback and saturation, or a low-pass), <b>MOTION</b> (LFO depth and a
   tremolo).</p>
 
 <h3>ANIMA</h3>
-<p>A fixed-point port of the anima opcode from Vascular. A voice has two wavetable oscillators (24 single-cycle
+<p>A lo-fi engine: each voice is computed at half the sample rate (22.05 kHz, nothing above 11 kHz) and drawn out
+  to the full rate by straight lines. A fixed-point port of the anima opcode from Vascular. A voice has two wavetable oscillators (24 single-cycle
   tables), an FM pair, a stack of up to four transposed copies, a grain generator, filtered noise, a resonant
   state-variable filter and a tremolo, followed by a sample-rate reducer, a waveshaper, a four-stage phaser, a
   second filter and a comb resonator tuned to the note. While a key is held, a simulated finger moves over a
   virtual surface; its position, pressure, speed and the time it has been down are routed to the voice's
   parameters through a modulation matrix. The key sets the pitch; the movement changes timbre, level and the
-  resonator. Fourteen kinds of design; polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>TONE</b> (all filter cutoffs), a macro for the main element of the design (<b>GRAINS</b>,
-  <b>AIR</b>, <b>FM</b>, <b>VOWEL</b> or <b>DRIVE</b>), <b>SPACE</b> (resonator mix and feedback), <b>MOTION</b>
-  (speed of the movement, LFOs and tremolo).</p>
+  resonator. Twenty-two kinds of design, among them plucked strings, reeds, organs, crushed pulses, drifting saws,
+  grain clouds and whistling resonances; polyphonic, from the shared pool of voices.</p>
+<p>Macros: <b>TONE</b> (all filter cutoffs, four octaves either way, and the FM's brightness), a macro for the
+  main element of the design (<b>GRAINS</b>, <b>AIR</b>, <b>FM</b>, <b>VOWEL</b> or <b>DRIVE</b>), <b>SPACE</b>
+  (from dry to a long-ringing resonator), <b>MOTION</b> (from a nearly still hand to a quick one with a
+  tremolo).</p>
 
 <h3>CALIGULA</h3>
 <p>Modelled on the architecture of the SOMA LYRA-8, after Miguel Moreno's LIRA-8. Eight oscillators in four
   pairs, each variable from triangle to square. Each pair is frequency-modulated by its partner, by the other
   pair on its side, by a pair on the other side or by the engine's own output (total feedback). Two LFOs combined
   into one modulation source change the modulation depth and can gate pairs on and off. Two short modulated delay
-  lines, a drive stage and the total feedback follow. One voice per layer: the key sets the note the eight
+  lines, a drive stage and the total feedback follow. One voice per track: the key sets the note the eight
   oscillators are tuned around, in intervals chosen when the sound is generated. While a key is held, a simulated
   hand touches the eight oscillators' sensors, at irregular times or in repeated patterns, and the engine adds
   short bursts and occasional rises of feedback and drive. Ten kinds of design.</p>
@@ -121,7 +128,7 @@
   squares, and triangles at an inharmonic ratio redrawn on a clock; a generated buffer of noise, saw and silent
   chunks, read at the key's speed, with random jumps, a wandering window, or its address bits forced, flipped or
   held; and tones fired by chance on the key's harmonics, a random walk over a scale, and slowly beating chords.
-  The key opens an envelope and sets the pitch or read speed. One voice per layer.</p>
+  The key opens an envelope and sets the pitch or read speed. One voice per track.</p>
 <p>Macros: two parameters specific to the kind (for example <b>RATIO</b> and <b>DRIFT</b>, or <b>DENSITY</b> and
   <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>CHAOS</b> (how much chance drives it; above the
   middle it also stutters).</p>
