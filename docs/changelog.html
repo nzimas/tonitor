@@ -36,6 +36,14 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="027">0.27</h2>
+<ul>
+<li><b>Loops moved along the scale</b>: SHIFT + OCT+ / OCT− moves every loop of every layer one step of the chosen scale up or down (C to D in C major), the notes sounding moving at once; up to two octaves of the scale either way, shown on the screen. Another scale or root chosen meanwhile is walked instead. An overdub recorded while the loops are moved plays back as played. Sessions keep it; sessions saved before load as they were. The screen says TRANSP +2, TRANSP 0.</li>
+<li><b>An empty session is a clean slate</b>: choosing an empty slot on the SESSIONS page now starts afresh, as at switching on — no loops, no latches, new sounds on every layer, every setting, the scale, the reverb and the transposition at their defaults. The session you were in stays saved as it was.</li>
+<li><b>Drones stay whole in loops</b>: a note still held when REC closes the loop is tied over the loop's end, sounding on as it goes round instead of being let go and struck again each time (which was heard as a stutter, ANIMA and CALIGULA above all).</li>
+<li><b>No click when ANIMA reuses a voice</b>: a voice taken over for a new note (loops going round, many notes at once) kept its comb resonator, phaser and sample hold from the note before, heard again at full level as the new note began. They now start empty.</li>
+<li><b>No more bursts when a loop starts</b>: with the machine busy (many release tails ringing), a loop starting — CALIGULA above all — could make the audio late for a few milliseconds, heard as a burst. Tonitor now measures what each voice and organism costs as it plays, and before anything new starts it makes room ahead, letting the oldest release tails go quickly, so the audio is never late. A held note is let go only if the audio is late after all (past 100 %). SHIFT shows the load now, as one percentage.</li>
+</ul>
 <h2 id="026">0.26</h2>
 <ul>
 <li><b>RUSSOLO</b>, a fourth engine: noise, logic and broken buffers, re-making the techniques of Robert Heel's Noisferatu. Seventeen kinds — HOLD, DUST, GATES, CRACKLE (noise); NOR, XOR, RING, CASCADE, CLANG (oscillators combined bit by bit); CHUNKS, JUMP, WANDER, BEND, QUAD (generated buffers read with their addresses bent); BLIPS, WALK, CHORD (chance-driven tones) — at a third of the sample rate in 10 bits, crushed and sample-held further as each sound says. A key gates it and sets its pitch; one organism a layer, as CALIGULA. Its macros: the kind's two parameters, CRUSH and CHAOS. The paths lean it: AMBIENT to chords, dust, crackle, blips and walks, clean and slow; EXPERIMENTAL to logic and bent buffers, crushed and abrupt. Presets: 64 for it too.</li>
