@@ -157,9 +157,10 @@ def page(title, current, body, desc, head=""):
     <nav aria-label="Site">
       {links}
     </nav>
-    <form class="donate" action="https://www.paypal.com/donate" method="post" target="_top">
+    <form class="donate" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+      <input type="hidden" name="cmd" value="_xclick">
       <input type="hidden" name="business" value="nzimas.lv@gmail.com">
-      <input type="hidden" name="item_name" value="Tonitor">
+      <input type="hidden" name="item_name" value="Support Tonitor">
       <input type="hidden" name="currency_code" value="EUR">
       <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" name="submit"
              title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button">
