@@ -35,7 +35,7 @@
 #define FM1_EMU_USP_L (*(volatile uint32_t *)0x1EEF0E4u)
 
 extern char _guard0[], _ustack_lo[], _guard1[], _sstack_lo[], _sstack_top[], _etext[];
-extern uint32_t _rt_start[], _rt_end[];
+extern uint32_t _rt_start[], _rt_end[], _ft_end[];   /* (_ft_end: the audio's RAM code, after it) */
 
 enum { FM1_GUARD_STACK = 1, FM1_GUARD_WRITE = 2, FM1_GUARD_BUS = 4, FM1_GUARD_PC = 8 };
 
@@ -75,8 +75,11 @@ static void fm1_guard_enable(uint32_t which)
     if (which & FM1_GUARD_PC) {
         FM1_PC_LIMIT0_L = 0x02000120u;
         FM1_PC_LIMIT0_H = (uint32_t)(uintptr_t)_etext;
-        {   /* RAM code (.ram_text); with none, repeat the XIP window */
-            volatile uint32_t rs = (uint32_t)(uintptr_t)_rt_start, re = (uint32_t)(uintptr_t)_rt_end;
+        {   /* RAM code (.ram_text, then .fast_text); with none, repeat the XIP window */
+            volatile uint32_t rs = (uint32_t)(uintptr_t)_rt_start, re = (uint32_t)(uintptr_t)_rt_end,
+                              fe = (uint32_t)(uintptr_t)_ft_end;
+            if (fe > re)
+                re = fe;
             FM1_PC_LIMIT1_L = re > rs ? rs : 0x02000120u;
             FM1_PC_LIMIT1_H = re > rs ? re - 1u : (uint32_t)(uintptr_t)_etext;
         }

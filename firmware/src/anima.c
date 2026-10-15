@@ -137,7 +137,7 @@ static int32_t an_at(const an_map *m, const int32_t *c)
 #define AN_INC_600 58434930u
 #define AN_INC_2000 194783100u
 
-static inline int32_t an_read(uint32_t k, uint32_t ph, uint32_t inc)
+AINL int32_t an_read(uint32_t k, uint32_t ph, uint32_t inc)
 {
     uint32_t lv = inc < AN_INC_200 ? 0u : inc < AN_INC_600 ? 1u : inc < AN_INC_2000 ? 2u : 3u;
     const int16_t *d = &AN_WT[(k * AN_LEVELS + lv) * (AN_TSIZE + 1u)];
@@ -697,29 +697,15 @@ static void an_control(an_voice_t *v, const an_design_t *d)
 /* ------------------------------------------------------- one block --- */
 /* renders n (= CTL) samples, Q15 into out; returns 0 when the voice is silent for good */
 #ifndef AN_RENDER_PLACE
-#define AN_RENDER_PLACE /* (from the flash, for now) */
+#define AN_RENDER_PLACE __attribute__((noinline))   /* (FAST, from RAM: measured no faster -- the cost is the work) */
 #endif
-static AN_RENDER_PLACE int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
+/* a block's samples (from RAM, FAST: the hottest code of all; its helpers inline), e / a the envelope and the
+ * amplitude moving by de / da a sample; its mean square back, for the leveller */
+static AN_RENDER_PLACE int64_t an_samples(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n, int32_t e,
+                                          int32_t de, int32_t a, int32_t da)
 {
-    uint32_t i, k, ns = clampi(d->multiCount, 1, 4);
-    int32_t e0, e1, de, e, a0, da, a;
-    uint32_t grainInc;
+    uint32_t i, k, ns = (uint32_t)clampi(d->multiCount, 1, 4), grainInc = hz8_inc(v->gRate8);
     int64_t ms = 0;
-    if (!v->live)
-        return 0;
-    an_control(v, d);
-    e0 = v->ev;
-    e1 = an_env_tick(v, d);
-    if (v->est == EN_IDLE && e0 == 0) {
-        v->live = 0;
-        return 0;
-    }
-    de = (e1 - e0) / (int32_t)n;
-    e = e0;
-    a0 = v->ampPrev;
-    da = (v->amp - v->ampPrev) / (int32_t)n;
-    a = a0;
-    grainInc = hz8_inc(v->gRate8);
     for (i = 0; i < n; i++) {
         int32_t s = 0;
         e += de;
@@ -848,6 +834,28 @@ static AN_RENDER_PLACE int an_render(an_voice_t *v, const an_design_t *d, int32_
         /* the slow level, and a soft ceiling for a resonance pushed into its peak */
         out[i] = mulq15(tanh_q15(mulq15((int32_t)(((int64_t)s * (v->level >> 13)) >> 15), LV(1.1111))), LV(0.9));
     }
+    return ms;
+}
+/* (RAM is too far from the flash for a direct call: through a pointer, which reaches anywhere) */
+static int64_t (*volatile an_samples_at)(an_voice_t *, const an_design_t *, int32_t *, uint32_t, int32_t, int32_t, int32_t,
+                                         int32_t) = an_samples;
+static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
+{
+    int32_t e0, e1, de, a0, da;
+    int64_t ms;
+    if (!v->live)
+        return 0;
+    an_control(v, d);
+    e0 = v->ev;
+    e1 = an_env_tick(v, d);
+    if (v->est == EN_IDLE && e0 == 0) {
+        v->live = 0;
+        return 0;
+    }
+    de = (e1 - e0) / (int32_t)n;
+    a0 = v->ampPrev;
+    da = (v->amp - v->ampPrev) / (int32_t)n;
+    ms = an_samples_at(v, d, out, n, e0, de, a0, da);
     {   /* AnimaCore.h: towards 0.1 RMS over seconds, never more than nine decibels either way */
         int32_t blk = (int32_t)((ms >> 5) > 0x7FFFFFFF ? 0x7FFFFFFF : (ms >> 5)), want;
         uint32_t root;

@@ -295,6 +295,37 @@ static void enter_uboot(const char *why)
     fm1_enter_uboot();
 }
 
+#if TELEMETRY
+/* the cost of the building blocks, on this chip: ticks for 256 of each (interrupts off), sent with the reports */
+static uint32_t bench_ticks[10];
+static volatile int32_t bench_sink;
+static void bench_blocks(void)
+{
+    static int16_t ramtab[AN_TSIZE + 1u];
+    static svf_t sv;
+    static svf_c sc;
+    uint32_t f = irq_save(), t, i, ph = 74565u, inc = 10485760u;
+    int32_t acc = 0, x = 1000;
+    for (i = 0; i <= AN_TSIZE; i++)
+        ramtab[i] = AN_WT[i];
+    svf_coef(&sc, 1000, IX(0.9));
+#define BENCH(k, body) do { t = fm1_ticks(); for (i = 0; i < 256u; i++) { body; } bench_ticks[k] = fm1_ticks() - t; } while (0)
+    BENCH(0, acc += (int32_t)i);
+    BENCH(1, { ph += inc; acc += an_read(i % 24u, ph, inc); });            /* a wavetable read, the flash's */
+    BENCH(2, { ph += inc; const int16_t *d = ramtab; uint32_t j = ph >> 22; int32_t fr = (int32_t)((ph >> 7) & 0x7FFFu);
+               acc += d[j] + (((d[j + 1u] - d[j]) * fr) >> 15); });          /* .. from RAM */
+    BENCH(3, { x = svf_run(&sv, &sc, x + (int32_t)i, 1); acc += x; });      /* a filter step */
+    BENCH(4, { acc = mulq15(acc + 3, 23456); });                             /* a Q15 multiply */
+    BENCH(5, { acc += tanh_q15((int32_t)(i * 300u) - 40000); });             /* the soft ceiling */
+    BENCH(6, { ph += inc; acc += sin_ph(ph); });                             /* a sine */
+    BENCH(7, { acc += (int32_t)(((int64_t)acc * (x | 1)) >> 15); });         /* a 64-bit product */
+    BENCH(8, { ph += inc; acc += an_read(3u, ph, inc) + an_read(9u, ph * 3u, inc) + an_read(17u, ph * 5u, inc); });
+#undef BENCH
+    bench_sink = acc;
+    irq_restore(f);
+}
+#endif
+
 static void fm1_main(void)
 {
     int32_t knob = 512 * 16;
@@ -307,6 +338,9 @@ static void fm1_main(void)
     if (flash_ok)
         ota_boot_cleanup();                          /* a staging area left by an update */
     ses_scan(flash_ok);                              /* the sessions in flash */
+#if TELEMETRY
+    bench_blocks();
+#endif
     lcd_init();
     splash();
     fm1_input_init();
@@ -380,6 +414,11 @@ static void fm1_main(void)
                     }
                     f[n++] = (uint8_t)(tele_trims > 127u ? 127u : tele_trims);
                     tele_trims = 0;
+                    for (j = 0; j < 9u; j++) {              /* the building blocks: ticks for 256, / 4 */
+                        uint32_t b = bench_ticks[j] / 4u;
+                        f[n++] = (uint8_t)(b > 16383u ? 127u : b >> 7);
+                        f[n++] = (uint8_t)(b & 0x7Fu);
+                    }
                 }
                 tele_max = 0;
                 tele_lates = 0;

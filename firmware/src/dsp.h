@@ -12,6 +12,8 @@
 #include <stdint.h>
 
 /* big zero-initialised buffers go to the pool (app.ld: 336 KiB beside the 96 KiB of .data / .bss) */
+/* always inline: the audio's RAM code (FAST) may not call into the flash */
+#define AINL static inline __attribute__((always_inline))
 #ifdef HOST
 #define POOL
 #define FAST                     /* (the host: no RAM code) */
@@ -34,11 +36,11 @@ enum { PATH_OPEN, PATH_AMBIENT, PATH_EXP, PATH_N };
 #define MAC_MAX 64
 #define NMAC 4u
 
-static inline int32_t clampi(int32_t x, int32_t lo, int32_t hi) { return x < lo ? lo : x > hi ? hi : x; }
-static inline int32_t mulq15(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 15); }
+AINL int32_t clampi(int32_t x, int32_t lo, int32_t hi) { return x < lo ? lo : x > hi ? hi : x; }
+AINL int32_t mulq15(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 15); }
 static inline int32_t mulq16(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 16); }
-static inline int32_t mulq12(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 12); }
-static inline int32_t absi(int32_t x) { return x < 0 ? -x : x; }
+AINL int32_t mulq12(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 12); }
+AINL int32_t absi(int32_t x) { return x < 0 ? -x : x; }
 
 /* 2^(x / 65536), Q16 in and out; x from -16 to +15 octaves */
 static inline uint32_t exp2_q16(int32_t x)
@@ -76,7 +78,7 @@ static inline int32_t log2_q16(uint32_t x)
 }
 
 /* tanh of a Q15 value (any range), Q15 */
-static inline int32_t tanh_q15(int32_t x)
+AINL int32_t tanh_q15(int32_t x)
 {
     int32_t a = x < 0 ? -x : x, i, f, y;
     if (a >= 4 * Q15)
@@ -90,7 +92,7 @@ static inline int32_t tanh_q15(int32_t x)
 }
 
 /* sine of a phase (2^32 = one cycle), Q15, linear between SINE's 1024 points */
-static inline int32_t sin_ph(uint32_t ph)
+AINL int32_t sin_ph(uint32_t ph)
 {
     const int16_t *s = &SINE[ph >> 22];
     return s[0] + (((s[1] - s[0]) * (int32_t)((ph >> 7) & 0x7FFFu)) >> 15);
@@ -135,7 +137,7 @@ static uint32_t udiv64_32(uint32_t hi, uint32_t lo, uint32_t d)
 }
 
 /* the phase increment of a frequency in Hz Q8 (2^32 / FS per hertz = 97391.5) */
-static inline uint32_t hz8_inc(int32_t hz8)
+AINL uint32_t hz8_inc(int32_t hz8)
 {
     if (hz8 <= 0)
         return 0;
@@ -159,8 +161,8 @@ static inline int32_t svf_g(int32_t hz)
 
 static inline int32_t mul24(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 24); }
 /* rounded, for the filters' integrators: a floor's bias, summed by an integrator at a low cutoff, is DC */
-static inline int32_t mulr16(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b + (1 << 15)) >> 16); }
-static inline int32_t mulr24(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b + (1 << 23)) >> 24); }
+AINL int32_t mulr16(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b + (1 << 15)) >> 16); }
+AINL int32_t mulr24(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b + (1 << 23)) >> 24); }
 
 /* A zero-delay state-variable filter (Simper / Cytomic), as AnimaCore.h Svf: coefficients once a block
  * (one 32-bit divide), then per sample. a1 Q16, a2 a3 k Q24. */
@@ -177,7 +179,7 @@ static void svf_coef(svf_c *c, int32_t hz, int32_t q12)   /* q in Q12, 0.5 .. 25
     c->a3 = mul24(g, c->a2);                                 /* g a2, Q24 */
 }
 /* one step: type 1 low-pass, 2 band-pass, 3 high-pass */
-static inline int32_t svf_run(svf_t *s, const svf_c *c, int32_t x, int type)
+AINL int32_t svf_run(svf_t *s, const svf_c *c, int32_t x, int type)
 {
     int32_t v3 = x - s->ic2;
     int32_t v1 = mulr16(c->a1, s->ic1) + mulr24(c->a2, v3);
@@ -193,7 +195,7 @@ static inline int32_t svf_run(svf_t *s, const svf_c *c, int32_t x, int type)
 
 /* a small fast random generator (xorshift32): per sample noise, the generators' draws */
 typedef struct { uint32_t s; } rnd_t;
-static inline uint32_t rnd_next(rnd_t *r)
+AINL uint32_t rnd_next(rnd_t *r)
 {
     uint32_t x = r->s ? r->s : 0x9E3779B9u;
     x ^= x << 13;
@@ -211,8 +213,8 @@ static inline void rnd_seed(rnd_t *r, uint32_t seed)
     for (i = 0; i < 4u; i++)
         rnd_next(r);
 }
-static inline int32_t rnd_q15(rnd_t *r) { return (int32_t)(rnd_next(r) >> 17); }               /* 0 .. 32767 */
-static inline int32_t rnd_bi(rnd_t *r) { return (int32_t)(rnd_next(r) >> 16) - 32768; }        /* -32768 .. 32767 */
+AINL int32_t rnd_q15(rnd_t *r) { return (int32_t)(rnd_next(r) >> 17); }               /* 0 .. 32767 */
+AINL int32_t rnd_bi(rnd_t *r) { return (int32_t)(rnd_next(r) >> 16) - 32768; }        /* -32768 .. 32767 */
 static inline int32_t rnd_below(rnd_t *r, int32_t n) { return n <= 1 ? 0 : (int32_t)(((uint64_t)rnd_next(r) * (uint32_t)n) >> 32); }
 static inline int rnd_chance(rnd_t *r, int32_t p_pct) { return rnd_below(r, 1000) < p_pct * 10; }   /* p in percent */
 /* one of n, each as likely as its weight */
