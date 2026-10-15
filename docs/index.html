@@ -88,9 +88,9 @@
   and stranger ones: free ratios with a wandering pitch, sample-and-hold steps, bouncing pitch
   envelopes. Each patch is rendered once when
   it is generated and its level adjusted to a common loudness. Polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>BRIGHT</b> (modulation index), <b>DETUNE</b> or <b>SKEW</b> (carrier detuning, or operators moved
-  off their ratios), <b>GRIT</b> (feedback and saturation, or a low-pass), <b>MOTION</b> (LFO depth and a
-  tremolo).</p>
+<p>Macros: <b>BRIGHTNESS</b> (modulation index), <b>DETUNE</b> or <b>INHARMONIC</b> (carriers and modulators
+  detuned, or operators moved off their ratios), <b>SATURATION</b> (feedback and saturation, or a low-pass),
+  <b>MOTION</b> (LFO depth and a tremolo).</p>
 
 <h3>ANIMA</h3>
 <p>A lo-fi engine: each voice is computed at half the sample rate (22.05 kHz, nothing above 11 kHz) and drawn out
@@ -103,8 +103,8 @@
   resonator. Twenty-two kinds of design, among them plucked strings, reeds, organs, crushed pulses, drifting saws,
   grain clouds and whistling resonances; polyphonic, from the shared pool of voices.</p>
 <p>Macros: <b>TONE</b> (all filter cutoffs, four octaves either way, and the FM's brightness), a macro for the
-  main element of the design (<b>GRAINS</b>, <b>AIR</b>, <b>FM</b>, <b>VOWEL</b> or <b>DRIVE</b>), <b>SPACE</b>
-  (from dry to a long-ringing resonator), <b>MOTION</b> (from a nearly still hand to a quick one with a
+  main element of the design (<b>GRAINS</b>, <b>NOISE</b>, <b>FM</b>, <b>FORMANT</b> or <b>DRIVE</b>), <b>RESONATOR</b>
+  (from dry to long ringing), <b>MOTION</b> (from a nearly still hand to a quick one with a
   tremolo).</p>
 
 <h3>CALIGULA</h3>
@@ -116,9 +116,9 @@
   oscillators are tuned around, in intervals chosen when the sound is generated. While a key is held, a simulated
   hand touches the eight oscillators' sensors, at irregular times or in repeated patterns, and the engine adds
   short bursts and occasional rises of feedback and drive. Ten kinds of design.</p>
-<p>Macros: <b>EDGE</b> (triangle to square), <b>DEPTH</b> (modulation depth), <b>CHAOS</b> or <b>ECHO</b> (total
-  feedback and drive, or the delay), <b>HAND</b> or <b>PULSE</b> (how often the hand touches, or the speed of
-  the gating).</p>
+<p>Macros: <b>WAVEFORM</b> (triangle to square), <b>MOD DEPTH</b> (modulation depth), <b>FEEDBACK</b> or
+  <b>DELAY</b> (total feedback and drive, or the delay), <b>TOUCHES</b> or <b>GATE RATE</b> (how often the hand
+  touches, or the speed of the gating).</p>
 
 <h3>RUSSOLO</h3>
 <p>Noise, logic operations and generated buffers, after the techniques of Robert Heel's Noisferatu. It runs at a
@@ -130,7 +130,7 @@
   held; and tones fired by chance on the key's harmonics, a random walk over a scale, and slowly beating chords.
   The key opens an envelope and sets the pitch or read speed. One voice per track.</p>
 <p>Macros: two parameters specific to the kind (for example <b>RATIO</b> and <b>DRIFT</b>, or <b>DENSITY</b> and
-  <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>CHAOS</b> (how much chance drives it; above the
+  <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>RANDOMNESS</b> (how much chance drives it; above the
   middle it also stutters).</p>
 
 <h2>Install</h2>
