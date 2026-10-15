@@ -36,6 +36,20 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="032">0.32</h2>
+<p>Added</p>
+<ul>
+<li>Master delay, mono, before the reverb. Per-track send on SHIFT + KNOB 4 (default 0). DELAY page on SHIFT + SEQ with TIME (20 ms – 2 s, logarithmic), FEEDBACK (0–0.95), DAMP (one-pole low-pass in the feedback path) and MIX. Delay line: 2 s at 22.05 kHz, 8-bit μ-law (44 100 bytes, split between the buffer pool and unused code RAM). Echoes go to both master channels and, at half level, to the reverb input. TIME changes glide over about 0.1 s. Stored in sessions (format 13); the send is copied with the track.</li>
+</ul>
+<p>Changed</p>
+<ul>
+<li>The screen is drawn in bands of at most 56 rows (was 112), freeing 27 KB of buffer memory; the display is unchanged.</li>
+</ul>
+<h2 id="031">0.31</h2>
+<p>Added</p>
+<ul>
+<li>Loop direction and speed per track, on the 4th–8th black keys (lit while on): REVERSE, PENDULUM (forwards and backwards alternately), RANDOM, HALF SPEED, DOUBLE SPEED. REVERSE/PENDULUM/RANDOM are exclusive, as are HALF/DOUBLE; direction and speed combine. RANDOM plays forwards and, each time the next note-on is due and at the loop end, releases the sounding notes and jumps to a randomly chosen note-on (with any note-ons at the same time); note lengths and the interval to the following note-on are those recorded. Applies to all overdubs of the track, each within its own length. A direction change continues from the current position (sounding notes are not cut or retriggered). The loop clock runs at the selected speed, so overdubs recorded at half or double speed keep their played timing; overdubs recorded in reverse are stored mirrored and play back as played. Stored in sessions (format 12), copied with the track, reset when the track's loops are cleared.</li>
+</ul>
 <h2 id="030">0.30</h2>
 <p>Added</p>
 <ul>
