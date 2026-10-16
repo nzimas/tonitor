@@ -154,11 +154,16 @@ def page(title, current, body, desc, head=""):
 <body>
 <div class="layout">
   <aside class="side">
-    <a class="brand" href="./"><img src="assets/mark.svg" alt="">TONITOR</a>
+    <div class="top">
+      <a class="brand" href="./"><img src="assets/mark.svg" alt="">TONITOR</a>
+      <button class="menu-btn" type="button" aria-label="Menu" aria-controls="site-nav" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
     <div class="layers" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-    <nav aria-label="Site">
+    <nav id="site-nav" aria-label="Site">
+      <button class="menu-close" type="button" aria-label="Close the menu">&times;</button>
       {links}
     </nav>
+    <div class="menu-shade" hidden></div>
     <form class="donate donate-side" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
       <input type="hidden" name="cmd" value="_xclick">
       <input type="hidden" name="business" value="nzimas.lv@gmail.com">
@@ -187,6 +192,7 @@ def page(title, current, body, desc, head=""):
     </footer>
   </div>
 </div>
+<script src="js/menu.js?v={CSS_V}"></script>
 </body>
 </html>
 """

@@ -10,20 +10,25 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=17c49e7b44">
+<link rel="stylesheet" href="css/site.css?v=6e1ff5f911">
 </head>
 <body>
 <div class="layout">
   <aside class="side">
-    <a class="brand" href="./"><img src="assets/mark.svg" alt="">TONITOR</a>
+    <div class="top">
+      <a class="brand" href="./"><img src="assets/mark.svg" alt="">TONITOR</a>
+      <button class="menu-btn" type="button" aria-label="Menu" aria-controls="site-nav" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
     <div class="layers" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-    <nav aria-label="Site">
+    <nav id="site-nav" aria-label="Site">
+      <button class="menu-close" type="button" aria-label="Close the menu">&times;</button>
       <a href="./">Home</a>
       <a href="install.html">Install</a>
       <a href="manual.html" aria-current="page">Manual</a>
       <a href="changelog.html">Changelog</a>
       <a href="https://github.com/nzimas/tonitor">GitHub</a>
     </nav>
+    <div class="menu-shade" hidden></div>
     <form class="donate donate-side" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
       <input type="hidden" name="cmd" value="_xclick">
       <input type="hidden" name="business" value="nzimas.lv@gmail.com">
@@ -302,5 +307,6 @@
     </footer>
   </div>
 </div>
+<script src="js/menu.js?v=6e1ff5f911"></script>
 </body>
 </html>
