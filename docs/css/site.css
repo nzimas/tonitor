@@ -98,6 +98,28 @@ main blockquote { border-left: 4px solid var(--l5); margin: 16px 0; padding: 4px
 .toc a { display: block; padding: 2px 0; text-decoration: none; }
 .toc a.sub { padding-left: 16px; color: var(--dim); }
 
+/* other projects */
+p.lead { font-size: 20px; color: var(--dim); margin: 0; max-width: 36em; }
+.projects { display: grid; gap: 24px; margin: 34px 0 0; }
+.project { --accent: var(--l1); background: var(--bg2); border: 1px solid var(--line); border-top: 4px solid var(--accent);
+           border-radius: 12px; padding: 24px 28px 26px; }
+.project-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 18px; }
+main .project h2 { margin: 0; padding: 0; border: 0; font-size: 28px; }
+.device { color: var(--accent); font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.project > p { margin: 12px 0 0; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.btn.small { padding: 7px 16px; font-size: 16px; border-radius: 7px; white-space: nowrap; }
+.editions { list-style: none; padding: 0; margin: 18px 0 0; border-top: 1px solid var(--line); }
+.editions li { display: grid; grid-template-columns: 1fr auto; gap: 12px 24px; align-items: center;
+               padding: 16px 0; border-bottom: 1px solid var(--line); }
+.editions li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ed-name { font-weight: 700; font-size: 19px; }
+.ed-note { color: var(--dim); font-size: 16px; line-height: 1.5; margin: 4px 0 0; }
+.ed-links { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.tag { display: inline-block; margin-left: 10px; padding: 1px 9px; border: 1px solid var(--line); border-radius: 999px;
+       color: var(--dim); font-size: 13px; font-weight: 700; vertical-align: 2px; }
+.tag.current { color: var(--ok); border-color: var(--ok); }
+
 /* the installer */
 .panel { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; margin-top: 20px; }
 .status { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
@@ -130,6 +152,11 @@ main blockquote { border-left: 4px solid var(--l5); margin: 16px 0; padding: 4px
   .menu-shade { display: block; position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.6); }
   .menu-shade[hidden] { display: none; }
   .menu-open { overflow: hidden; }
+  .project { padding: 20px 18px 22px; }
+  main .project h2 { font-size: 24px; }
+  .editions li { grid-template-columns: 1fr; }
+  .editions li > .btn { justify-self: start; }
+  .ed-links { justify-content: flex-start; }
   .hero { grid-template-columns: 1fr; gap: 22px; }
   .hero-text { order: -1; }
   .video { max-width: 340px; margin: 0 auto; }
