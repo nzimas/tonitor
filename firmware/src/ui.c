@@ -1038,7 +1038,7 @@ static void draw_number(void)
             const char *ab = AB[ui.chord_form[ui.sel] % CH_N];
             int32_t cw = text_w(&FONT_S, "CHO");
             cv_text(4, 2, &FONT_S, "CHO", C_WHITE);
-            cv_text(4 + (cw - text_w(&FONT_XS, ab)) / 2, 2 + FONT_S.h + 2, &FONT_XS, ab, C_GREY);
+            cv_text(4 + (cw - text_w(&FONT_XS, ab)) / 2, 2 + FONT_S.h + 2, &FONT_XS, ab, RGB(175, 175, 175));   /* (a light grey) */
         }
     }
 }
