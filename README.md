@@ -163,7 +163,8 @@ latch. Latched notes hold voices of the shared pool: with all twelve busy, a new
 
 ### Chords
 
-With chord mode on for a track (the 3rd black key held 0.6 s; CHO at the top left of the screen), each white
+With chord mode on for a track (the 3rd black key held 0.6 s; CHO at the top left of the screen, the form's
+abbreviation under it in grey: TRI, IN1, IN2, SU2, SU4, OPN, 4TH), each white
 key plays three notes: its own note and two more of the same scale, so every chord stays in the scale and its
 quality (major, minor, diminished) is the scale's at that degree. Pressing the 3rd black key steps through the
 forms (in steps of the scale from the key's note):
@@ -249,7 +250,9 @@ moved.) Sessions keep how far the loops are moved.
 **One track's loops along the scale.** Hold **SHIFT**, hold a track's button, and press **OCT+** or **OCT−**:
 only that track's loops move (every overdub with them), a step of the scale at a time; the screen says
 TRANSP T3 +2. It adds to the move of all the loops, and that track's white keys and **latched notes** (and chords)
-move with it; SHIFT + OCT alone moves every track's latched notes with all the loops. Holding the track's button with SHIFT down never copies
+move with it; SHIFT + OCT alone moves every track's latched notes with all the loops. The lit latched keys move
+along the keyboard by as many white keys, in the same direction (a latch that would leave the keyboard stays on
+its key, its note still moved). Holding the track's button with SHIFT down never copies
 it. Emptying a track's loops (REC held) takes its own move away; copying a track takes it along; sessions keep
 it.
 

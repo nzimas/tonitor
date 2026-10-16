@@ -4072,10 +4072,17 @@ static int cmd_chords(const char *dir)
     ui_leds();
     if (!ui.chord_on[0] || !host_led[14u + KEY_CHORD])
         printf("FAIL chords: holding the 3rd black key does not turn chord mode on, lit\n"), fail++;
+    ch_hold_key(KEY_CHORD, 100);                     /* (the screen at SUS4: SU4 under CHO) */
+    ch_hold_key(KEY_CHORD, 100);
+    ch_hold_key(KEY_CHORD, 100);
+    ch_hold_key(KEY_CHORD, 100);
+    ui.msg_until = fm1_ms;
     ui.force = 1;
     ui_draw();
     snprintf(path, sizeof path, "%s/screen-38-chords.ppm", dir);
     ppm(path);
+    while (ui.chord_form[0] != 0u)
+        ch_hold_key(KEY_CHORD, 100);
     press_key(0, 1);                                 /* C: C E G */
     run_blocks(3, 0);
     if (!ch_is(0, SRC_KEY, c3, c3 + 4u, c3 + 7u))
@@ -4120,6 +4127,16 @@ static int cmd_chords(const char *dir)
     shift_track_oct(B_FX, 1);
     if (!ch_is(0, SRC_KEY, c3 + 2u, c3 + 5u, c3 + 9u))
         printf("FAIL chords: SHIFT + track + OCT+ does not move the latched chord to D F A\n"), fail++;
+    {   /* the lit key moved along with it: from white key 0 to white key 1 */
+        uint32_t k0, k1;
+        for (k0 = 0; k0 < NKEY && white_ix(k0) != 0; k0++)
+            ;
+        for (k1 = 0; k1 < NKEY && white_ix(k1) != 1; k1++)
+            ;
+        ui_leds();
+        if (((ui.latch[0] >> k0) & 1u) || !((ui.latch[0] >> k1) & 1u) || !host_led[14u + k1] || host_led[14u + k0])
+            printf("FAIL chords: the latched key lit does not move up a white key\n"), fail++;
+    }
     shift_oct(0);
     if (!ch_is(0, SRC_KEY, c3, c3 + 4u, c3 + 7u))
         printf("FAIL chords: SHIFT + OCT- does not move the latched chord back\n"), fail++;

@@ -256,13 +256,34 @@ static void latch_move(uint32_t l, int32_t d)
     uint32_t k, m = scale_mask();
     if (!d)
         return;
+    uint32_t latch = 0;
+    uint8_t note[NKEY], form[NKEY];
     for (k = 0; k < NKEY; k++)
         if ((ui.latch[l] >> k) & 1u) {
-            uint32_t was = ui.latch_note[l][k], now = lx_map(was, d, m);
+            uint32_t was = ui.latch_note[l][k], now = lx_map(was, d, m), k2;
             chord_press(l, was, ui.latch_form[l][k], 0);
-            ui.latch_note[l][k] = (uint8_t)now;
             chord_press(l, now, ui.latch_form[l][k], 1);
+            /* the key lit moves as the hand would: d white keys along, unless that is off the keyboard or taken */
+            for (k2 = 0; k2 < NKEY && white_ix(k2) != white_ix((uint32_t)k) + d; k2++)
+                ;
+            if (k2 == NKEY || ((latch >> k2) & 1u))
+                k2 = k;
+            if ((latch >> k2) & 1u)
+                for (k2 = 0; k2 < NKEY && (white_ix(k2) < 0 || ((latch >> k2) & 1u) || ((ui.latch[l] >> k2) & 1u && k2 != k)); k2++)
+                    ;                            /* (a free white key, should two meet at an edge) */
+            if (k2 < NKEY) {
+                latch |= 1u << k2;
+                note[k2] = (uint8_t)now;
+                form[k2] = ui.latch_form[l][k];
+            }
         }
+    for (k = 0; k < NKEY; k++)
+        if ((latch >> k) & 1u) {
+            ui.latch_note[l][k] = note[k];
+            ui.latch_form[l][k] = form[k];
+        } else
+            ui.latch_form[l][k] = 0;
+    ui.latch[l] = latch;
 }
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
@@ -866,6 +887,7 @@ static void ui_input(void)
             if (ui.chord_on[ui.sel]) {
                 ui.chord_form[ui.sel] = (uint8_t)((ui.chord_form[ui.sel] + 1u) % CH_N);
                 say(CH_NAME[ui.chord_form[ui.sel]], 1200);
+                ui.force = 1;                    /* (its name under CHO) */
             } else
                 say("CHORDS OFF", 900);
         }
@@ -1011,8 +1033,13 @@ static void draw_number(void)
     char d[2] = {(char)('1' + ui.sel), 0};
     CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK) {
         cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
-        if (ui.chord_on[ui.sel])                 /* chord mode: CHO, top left */
+        if (ui.chord_on[ui.sel]) {               /* chord mode: CHO, top left; the form under it, smaller and dimmer */
+            static const char *const AB[CH_N] = {"TRI", "IN1", "IN2", "SU2", "SU4", "OPN", "4TH"};
+            const char *ab = AB[ui.chord_form[ui.sel] % CH_N];
+            int32_t cw = text_w(&FONT_S, "CHO");
             cv_text(4, 2, &FONT_S, "CHO", C_WHITE);
+            cv_text(4 + (cw - text_w(&FONT_XS, ab)) / 2, 2 + FONT_S.h + 2, &FONT_XS, ab, C_GREY);
+        }
     }
 }
 static void draw_engine(void)

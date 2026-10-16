@@ -11,7 +11,9 @@ Added
 
 Changed
 - Latched notes and chords move with the loop transposition: SHIFT + track button + OCT moves that track's, SHIFT +
-  OCT moves every track's, by scale steps.
+  OCT moves every track's, by scale steps. The lit latched keys move by the same number of white keys.
+- The chord form is shown under CHO as a three-letter abbreviation (TRI, IN1, IN2, SU2, SU4, OPN, 4TH) in a new
+  smaller font (XS, 19 px).
 
 ## 0.34
 
