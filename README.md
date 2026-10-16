@@ -96,6 +96,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). |
+| the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
 | the other black keys | play no notes (kept for other functions to come). The black keys that have a function glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT and the unused ones stay dark. |
@@ -159,6 +160,27 @@ track is chosen, and on another track the same keys play as usual, so a drone ca
 while you play another. Pressing a latched key without SHIFT does nothing (it sounds already); **SHIFT and
 the lit key** lets go of it, and its note ends as a lifted key's would. Loading a session lets go of every
 latch. Latched notes hold voices of the shared pool: with all twelve busy, a new note can take one, even a latched one's.
+
+### Chords
+
+With chord mode on for a track (the 3rd black key held 0.6 s; CHO at the top left of the screen), each white
+key plays three notes: its own note and two more of the same scale, so every chord stays in the scale and its
+quality (major, minor, diminished) is the scale's at that degree. Pressing the 3rd black key steps through the
+forms (in steps of the scale from the key's note):
+
+| Form | Steps | |
+| --- | --- | --- |
+| **TRIAD** | 0, 2, 4 | root, third, fifth (the start) |
+| **INV 1** | 2, 4, 7 | first inversion: the third at the bottom, the root an octave up |
+| **INV 2** | −3, 0, 2 | second inversion: the fifth below the root |
+| **SUS2** | 0, 1, 4 | the third replaced by the second |
+| **SUS4** | 0, 3, 4 | the third replaced by the fourth |
+| **OPEN** | 0, 4, 9 | root, fifth, and the third an octave up |
+| **FOURTHS** | 0, 3, 6 | stacked fourths |
+
+One chord sounds at a time on a track: a new key lets the one before go. Chords follow the loops' moves along
+the scale like single notes, latch with SHIFT (all three notes), are recorded by the loopers as three notes,
+and are kept in sessions (chord mode, its form, the chords latched); copying a track copies its chord mode.
 
 ### Direction and speed
 
@@ -226,7 +248,8 @@ moved.) Sessions keep how far the loops are moved.
 
 **One track's loops along the scale.** Hold **SHIFT**, hold a track's button, and press **OCT+** or **OCT−**:
 only that track's loops move (every overdub with them), a step of the scale at a time; the screen says
-TRANSP T3 +2. It adds to the move of all the loops, and that track's white keys move with it. Holding the track's button with SHIFT down never copies
+TRANSP T3 +2. It adds to the move of all the loops, and that track's white keys and **latched notes** (and chords)
+move with it; SHIFT + OCT alone moves every track's latched notes with all the loops. Holding the track's button with SHIFT down never copies
 it. Emptying a track's loops (REC held) takes its own move away; copying a track takes it along; sessions keep
 it.
 

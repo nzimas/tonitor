@@ -55,6 +55,8 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define KEY_AMB 1u               /* the leftmost black key: the AMBIENT path (again: back to the open path) */
 #define KEY_EXP 3u               /* the second: the EXPERIMENTAL path */
 #define KEY_EDIT 22u             /* the black key before SHIFT: EDIT, on and off (KNOB 1 .. 4: the sound's macros) */
+#define KEY_CHORD 5u             /* the 3rd black key: held 0.6 s, the track's chord mode on or off; pressed, the next
+                                  * chord form */
 #define KEY_REV 8u               /* the 4th black key: the chosen track's loops backwards (again: forwards) */
 #define KEY_PEND 10u             /* the 5th: PENDULUM, forwards and backwards in turn */
 #define KEY_RAND 13u             /* the 6th: RANDOM, forwards from a note drawn at random each time the next is due */
@@ -94,6 +96,11 @@ static struct {
     uint8_t scale, root;         /* the keyboard's scale (SCALES) and root (0 = C .. 11 = B) */
     int8_t lx;                   /* the loops' transposition, in steps of the scale (SHIFT + OCT) */
     int8_t lxt[NLAYER];          /* each track's own, on top (SHIFT + its button held + OCT) */
+    uint8_t chord_on[NLAYER], chord_form[NLAYER];   /* each track's chord mode, and its form (CH_*) */
+    uint8_t key_form[NKEY];      /* a key down: the chord it holds (form + 1; 0: a note) */
+    uint8_t latch_form[NLAYER][NKEY];   /* .. a latched key's */
+    uint8_t cho_down, cho_done;  /* the chord key down since cho_t0; held long enough: done */
+    uint32_t cho_t0;
     int8_t sc_touched;           /* 0 the root just turned, 1 the scale, -1 none (until sc_touch_until) */
     uint32_t sc_touch_until;
     int8_t shown_sc_touch;
@@ -205,6 +212,57 @@ static void lx_post(void)
         lx_want_tr[k] = ui.lxt[k];
     RING_PUBLISH();
     ev_post(EV_LOOP_XP, 0, 0, 0);
+}
+/* the scale's pitch classes, as a mask from C */
+static uint32_t scale_mask(void)
+{
+    uint32_t k, m = 0;
+    for (k = 0; k < SCALE_N[ui.scale]; k++)
+        m |= 1u << ((ui.root + SCALE_STEP[ui.scale][k]) % 12u);
+    return m;
+}
+/* the chord forms: three notes, as steps of the scale from the key's note (so in the scale, their quality as the
+ * scale gives it) */
+#define CH_N 7u
+static const int8_t CH_STEP[CH_N][3] = {{0, 2, 4}, {2, 4, 7}, {-3, 0, 2}, {0, 1, 4}, {0, 3, 4}, {0, 4, 9}, {0, 3, 6}};
+static const char *const CH_NAME[CH_N] = {"TRIAD", "INV 1", "INV 2", "SUS2", "SUS4", "OPEN", "FOURTHS"};
+static void chord_notes(uint32_t root, uint32_t form, uint32_t *n)
+{
+    uint32_t i, m = scale_mask();
+    for (i = 0; i < 3u; i++)
+        n[i] = lx_map(root, CH_STEP[form % CH_N][i], m);
+}
+/* a note, or a chord (form + 1), struck or let go on track l */
+static void chord_press(uint32_t l, uint32_t root, uint32_t f1, int on)
+{
+    uint32_t n[3], i;
+    if (!f1) {
+        if (on)
+            note_press(l, root);
+        else
+            note_release(l, root);
+        return;
+    }
+    chord_notes(root, f1 - 1u, n);
+    for (i = 0; i < 3u; i++)
+        if (on)
+            note_press(l, n[i]);
+        else
+            note_release(l, n[i]);
+}
+/* track l's latched notes (and chords) moved by d steps of the scale, as its loops are */
+static void latch_move(uint32_t l, int32_t d)
+{
+    uint32_t k, m = scale_mask();
+    if (!d)
+        return;
+    for (k = 0; k < NKEY; k++)
+        if ((ui.latch[l] >> k) & 1u) {
+            uint32_t was = ui.latch_note[l][k], now = lx_map(was, d, m);
+            chord_press(l, was, ui.latch_form[l][k], 0);
+            ui.latch_note[l][k] = (uint8_t)now;
+            chord_press(l, now, ui.latch_form[l][k], 1);
+        }
 }
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
@@ -725,6 +783,7 @@ static void ui_input(void)
                 t = (int32_t)l;
         if (t >= 0) {
             x = clampi(ui.lxt[t] + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
+            latch_move((uint32_t)t, x - ui.lxt[t]);   /* (its latched notes move with it) */
             ui.lxt[t] = (int8_t)x;
             ui.trk_done = 1;                     /* (its button held for this: no copy) */
             m[7] = 'T';
@@ -733,6 +792,8 @@ static void ui_input(void)
             m[10] = 0;
         } else {
             x = clampi(ui.lx + (btn_bit(press, B_OCTUP) ? 1 : -1), -lim, lim);
+            for (l = 0; l < NLAYER; l++)
+                latch_move(l, x - ui.lx);        /* (every track's latched notes with them) */
             ui.lx = (int8_t)x;
         }
         lx_post();
@@ -788,6 +849,27 @@ static void ui_input(void)
             say(want == LS_HALF ? "HALF SPEED" : want == LS_DOUBLE ? "DOUBLE SPEED" : "NORMAL SPEED", 1200);
         }
     }
+    if ((ch & keys) >> KEY_CHORD & 1u) {         /* the chord key: held, chord mode on or off; pressed, the next form */
+        ui.cho_down = 1;
+        ui.cho_done = 0;
+        ui.cho_t0 = fm1_ms;
+    }
+    if (ui.cho_down && (keys >> KEY_CHORD & 1u) && !ui.cho_done && (uint32_t)(fm1_ms - ui.cho_t0) >= 600u) {
+        ui.cho_done = 1;
+        ui.chord_on[ui.sel] = (uint8_t)!ui.chord_on[ui.sel];
+        say(ui.chord_on[ui.sel] ? "CHORDS" : "CHORDS OFF", 1200);
+        ui.force = 1;
+    }
+    if (ui.cho_down && !(keys >> KEY_CHORD & 1u)) {
+        ui.cho_down = 0;
+        if (!ui.cho_done) {
+            if (ui.chord_on[ui.sel]) {
+                ui.chord_form[ui.sel] = (uint8_t)((ui.chord_form[ui.sel] + 1u) % CH_N);
+                say(CH_NAME[ui.chord_form[ui.sel]], 1200);
+            } else
+                say("CHORDS OFF", 900);
+        }
+    }
     if ((ch & keys) >> KEY_EDIT & 1u) {          /* EDIT on or off */
         ui.edit = (uint8_t)!ui.edit;
         say(ui.edit ? "EDIT" : "EDIT OFF", 900);
@@ -804,6 +886,7 @@ static void ui_input(void)
                 uint32_t l = ui.key_layer[k];
                 ui.latch[l] |= 1u << k;
                 ui.latch_note[l][k] = ui.key_note[k];
+                ui.latch_form[l][k] = ui.key_form[k];
                 ui.key_layer[k] = KEY_NONE;     /* (letting go of the key no longer ends it) */
             }
     }
@@ -826,15 +909,24 @@ static void ui_input(void)
             if (ui.latch[ui.sel] & bit) {        /* a latched key: SHIFT held lets go of it; alone, nothing */
                 if ((keys >> KEY_SHIFT) & 1u) {
                     ui.latch[ui.sel] &= ~bit;
-                    note_release(ui.sel, ui.latch_note[ui.sel][k]);
+                    chord_press(ui.sel, ui.latch_note[ui.sel][k], ui.latch_form[ui.sel][k], 0);
+                    ui.latch_form[ui.sel][k] = 0;
                 }
             } else {
+                uint32_t f1 = ui.chord_on[ui.sel] ? ui.chord_form[ui.sel] + 1u : 0u, j;
+                if (f1)                          /* (chords: one at a time on a track -- the one before let go) */
+                    for (j = 0; j < NKEY; j++)
+                        if (j != k && ui.key_layer[j] == ui.sel && ui.key_form[j]) {
+                            chord_press(ui.sel, ui.key_note[j], ui.key_form[j], 0);
+                            ui.key_layer[j] = KEY_NONE;
+                        }
                 ui.key_layer[k] = ui.sel;
                 ui.key_note[k] = (uint8_t)note;
-                note_press(ui.sel, note);
+                ui.key_form[k] = (uint8_t)f1;
+                chord_press(ui.sel, note, f1, 1);
             }
         } else if (ui.key_layer[k] != KEY_NONE)
-            note_release(ui.key_layer[k], ui.key_note[k]);
+            chord_press(ui.key_layer[k], ui.key_note[k], ui.key_form[k], 0);
     }
     ui.keys = keys;
     midi_take();
@@ -901,6 +993,8 @@ static void ui_leds(void)
     led_dim_key(14u + KEY_AMB, 1);               /* (the others with a function glow while off; SHIFT does not) */
     led_dim_key(14u + KEY_EXP, 1);
     led_dim_key(14u + KEY_EDIT, 1);
+    led_dim_key(14u + KEY_CHORD, 1);
+    fm1_led_key(14u + KEY_CHORD, ui.chord_on[ui.sel]);
 }
 
 /* -------------------------------------------------------------- screen --- */
@@ -915,8 +1009,11 @@ static void ui_leds(void)
 static void draw_number(void)
 {
     char d[2] = {(char)('1' + ui.sel), 0};
-    CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK)
+    CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK) {
         cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
+        if (ui.chord_on[ui.sel])                 /* chord mode: CHO, top left */
+            cv_text(4, 2, &FONT_S, "CHO", C_WHITE);
+    }
 }
 static void draw_engine(void)
 {

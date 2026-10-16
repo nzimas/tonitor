@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.35
+
+Added
+- Chord mode per track on the 3rd black key: held 0.6 s toggles it (CHO at the top left of the screen, key lit),
+  pressed steps the form: TRIAD (0 2 4), INV 1 (2 4 7), INV 2 (−3 0 2), SUS2 (0 1 4), SUS4 (0 3 4), OPEN (0 4 9),
+  FOURTHS (0 3 6), in scale steps from the key's note. One chord per track at a time. Chords latch, follow the
+  loop transpositions, are recorded by the loopers, and are stored in sessions (format 14) and copied with the
+  track.
+
+Changed
+- Latched notes and chords move with the loop transposition: SHIFT + track button + OCT moves that track's, SHIFT +
+  OCT moves every track's, by scale steps.
+
 ## 0.34
 
 Changed
