@@ -502,17 +502,23 @@ static const char *mac_name(uint32_t l, uint32_t j)
 }
 
 /* HOME: a new sound for the layer chosen */
-static void new_sound(void)
+static void new_sound(int same)                  /* same: of the family (kind, species) the track plays now */
 {
     uint32_t l = ui.sel;
     int ok;
-    say("NEW", 900);
+    new_kind = !same ? -1
+               : ui.engine[l] == ENG_FM    ? (int32_t)fm_buf[l][fm_pub[l]].family
+               : ui.engine[l] == ENG_ANIMA ? (int32_t)an_buf[l][an_pub[l]].kind
+               : ui.engine[l] == ENG_CAL   ? (int32_t)cal_buf[l][cal_pub[l]].kind
+                                           : (int32_t)rus_buf[l][rus_pub[l]].kind;
+    say(same ? "SAME FAMILY" : "NEW", 900);
     ui.home_until = fm1_ms + 400u;
     ui_draw();                                   /* the message first: an FM patch takes ~30 ms to measure */
     ok = ui.engine[l] == ENG_FM      ? new_fm(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_ANIMA ? new_anima(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_CAL   ? new_cal(l, next_seed(), ui.path[l])
                                      : new_rus(l, next_seed(), ui.path[l]);
+    new_kind = -1;
     if (!ok)
         say("BUSY", 900);
     else {                                       /* a new sound: as drawn, no macros */
@@ -697,8 +703,8 @@ static void ui_input(void)
             ui.dial_until = fm1_ms + 1000u;
         }
     }
-    if (btn_bit(press, B_HOME))
-        new_sound();
+    if (btn_bit(press, B_HOME))                  /* a new sound; with SHIFT, of the same family */
+        new_sound((int)((fm1_in.notes >> KEY_SHIFT) & 1u));
     if (btn_bit(press, B_REC)) {                 /* the looper: at once (the loop ends exactly here) */
         const looper_t *p = &loop[ui.sel];
         char m[12] = "LOOP ";

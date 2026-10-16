@@ -29,6 +29,7 @@ build/host tracktransp
 build/host loopmodes
 build/host delay build/screens
 build/host glow
+build/host samefam
 build/host chords build/screens
 build/host ties
 build/host budget

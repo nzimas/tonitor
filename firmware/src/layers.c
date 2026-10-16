@@ -1335,6 +1335,9 @@ static int fm_misfit(int32_t hz, uint32_t path, int same)
     int32_t m = hz < LO[path] ? LO[path] - hz : hz > HI[path] ? hz - HI[path] : 0;
     return (hz <= 0 ? 1000000 : m) + (same ? 4000 : 0);
 }
+/* the family (kind, species) the next new sound is to be of (SHIFT + HOME: the one the track plays); -1, any but
+ * that one (HOME) */
+static int32_t new_kind = -1;
 static int new_fm(uint32_t l, uint32_t seed, uint32_t path)
 {
     static fm_patch_t cand;
@@ -1345,8 +1348,8 @@ static int new_fm(uint32_t l, uint32_t seed, uint32_t path)
     k = fm_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
         int32_t m;
-        fm_generate(&cand, -1, seed + tries * 7919u, path, GEN_NOW);
-        m = fm_misfit(fm_measure(&cand), path, cand.family == was);
+        fm_generate(&cand, new_kind, seed + tries * 7919u, path, GEN_NOW);
+        m = fm_misfit(fm_measure(&cand), path, new_kind < 0 && cand.family == was);
         if (m < best) {
             best = m;
             fm_buf[l][k] = cand;
@@ -1366,8 +1369,8 @@ static int new_anima(uint32_t l, uint32_t seed, uint32_t path)
         return 0;
     k = an_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
-        an_design(&an_buf[l][k], -1, seed + tries * 7919u, path, GEN_NOW);
-        if (an_buf[l][k].kind != was)
+        an_design(&an_buf[l][k], new_kind, seed + tries * 7919u, path, GEN_NOW);
+        if (new_kind >= 0 || an_buf[l][k].kind != was)
             break;
     }
     an_measure(&an_buf[l][k]);
@@ -1383,8 +1386,8 @@ static int new_cal(uint32_t l, uint32_t seed, uint32_t path)
         return 0;
     k = cal_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
-        cal_design(&cal_buf[l][k], -1, seed + tries * 7919u, path, GEN_NOW);
-        if (cal_buf[l][k].kind != was)
+        cal_design(&cal_buf[l][k], new_kind, seed + tries * 7919u, path, GEN_NOW);
+        if (new_kind >= 0 || cal_buf[l][k].kind != was)
             break;
     }
     cal_measure(&cal_buf[l][k]);
@@ -1440,8 +1443,8 @@ static int new_rus(uint32_t l, uint32_t seed, uint32_t path)
         return 0;
     k = rus_use[l] ^ 1u;
     for (tries = 0; tries < 4u; tries++) {
-        rus_design(&rus_buf[l][k], -1, seed + tries * 7919u, path, GEN_NOW);
-        if (rus_buf[l][k].kind != was)
+        rus_design(&rus_buf[l][k], new_kind, seed + tries * 7919u, path, GEN_NOW);
+        if (new_kind >= 0 || rus_buf[l][k].kind != was)
             break;
     }
     rus_measure(&rus_buf[l][k]);

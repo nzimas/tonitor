@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.36
+
+Added
+- SHIFT + HOME generates a new sound of the same family (FM), kind (ANIMA, RUSSOLO) or species (CALIGULA) as
+  the selected track's current sound, on its engine and path. HOME alone still changes the family.
+
 ## 0.35
 
 Added

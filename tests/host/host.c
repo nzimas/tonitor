@@ -896,7 +896,7 @@ static int cmd_sessions(const char *dir)
     press_btn(B_FX);
     host_enc[PANEL_ENC[EN_ALGO]] = -6;
     ui_input();
-    new_sound();
+    new_sound(0);
     run_blocks(100, 0);
     e0 = host_erases;
     save_btn(900);
@@ -4201,6 +4201,50 @@ static int cmd_chords(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* SHIFT + HOME: a new sound of the family (kind, species) the track plays; HOME: of another */
+static int32_t sf_kind(uint32_t l, uint32_t *seed)
+{
+    uint32_t e = ui.engine[l];
+    *seed = e == ENG_FM ? fm_buf[l][fm_pub[l]].seed : e == ENG_ANIMA ? an_buf[l][an_pub[l]].seed
+            : e == ENG_CAL ? cal_buf[l][cal_pub[l]].seed : rus_buf[l][rus_pub[l]].seed;
+    return e == ENG_FM ? fm_buf[l][fm_pub[l]].family : e == ENG_ANIMA ? an_buf[l][an_pub[l]].kind
+           : e == ENG_CAL ? cal_buf[l][cal_pub[l]].kind : rus_buf[l][rus_pub[l]].kind;
+}
+static int cmd_samefam(void)
+{
+    uint32_t fail = 0, e, n;
+    for (e = 0; e < 4u; e++) {
+        uint32_t guard = 0, seed0, seed;
+        int32_t k0, k;
+        grain_reset();
+        press_btn(B_FX);
+        while (ui.engine[0] != e && guard++ < 20u) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        k0 = sf_kind(0, &seed0);
+        for (n = 0; n < 8u; n++) {
+            press_phys(KEY_SHIFT, 1);
+            press_btn(B_HOME);
+            press_phys(KEY_SHIFT, 0);
+            run_blocks(20, 0);
+            k = sf_kind(0, &seed);
+            if (k != k0 || seed == seed0)
+                printf("FAIL samefam: engine %u, SHIFT + HOME: kind %d (was %d), a new sound %d\n", e, k, k0, seed != seed0), fail++;
+            seed0 = seed;
+        }
+        if (strcmp(ui.msg, "SAME FAMILY"))
+            printf("FAIL samefam: the screen does not say SAME FAMILY\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(20, 0);
+        if (sf_kind(0, &seed) == k0)
+            printf("FAIL samefam: engine %u, HOME keeps the family\n", e), fail++;
+    }
+    printf("samefam: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -4590,6 +4634,8 @@ int main(int argc, char **argv)
         return cmd_clicks();
     if (argc >= 3 && !strcmp(argv[1], "chords"))
         return cmd_chords(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "samefam"))
+        return cmd_samefam();
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))
