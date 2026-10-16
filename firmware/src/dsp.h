@@ -43,6 +43,7 @@ AINL int32_t mulq15(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >>
 static inline int32_t mulq16(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 16); }
 AINL int32_t mulq12(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 12); }
 AINL int32_t absi(int32_t x) { return x < 0 ? -x : x; }
+AINL int32_t maxi(int32_t a, int32_t b) { return a > b ? a : b; }
 
 /* 2^(x / 65536), Q16 in and out; x from -16 to +15 octaves */
 static inline uint32_t exp2_q16(int32_t x)

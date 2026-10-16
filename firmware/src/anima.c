@@ -264,6 +264,7 @@ typedef struct {
     uint8_t res_on, shp_on;      /* the comb and the shaper, the design's or brought in by a macro */
     const int16_t *tA, *tB, *tFM, *tAM, *tM[4];   /* this block's wavetables (an_tab) */
     int32_t hprev;               /* (AN_HALF: the last half-rate sample, the line to the next starts there) */
+    uint8_t env_hold;            /* the track's own envelope shapes it: its own held at full */
     uint8_t am_on;               /* the tremolo: the design's, or brought in by MOTION */
 } an_voice_t;
 
@@ -284,6 +285,10 @@ static void an_env_times(an_voice_t *v, const an_design_t *d)
 }
 static int32_t an_env_tick(an_voice_t *v, const an_design_t *d)   /* once a block, Q24 */
 {
+    if (v->env_hold) {
+        v->est = EN_SUS;
+        return v->ev = 1 << 24;
+    }
     int32_t sus = d->sus << 9;
     switch (v->est) {
     case EN_ATT:

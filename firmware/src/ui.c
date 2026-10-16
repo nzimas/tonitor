@@ -54,6 +54,8 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define KEY_NONE 0xFFu
 #define KEY_AMB 1u               /* the leftmost black key: the AMBIENT path (again: back to the open path) */
 #define KEY_EXP 3u               /* the second: the EXPERIMENTAL path */
+#define KEY_ENV 20u              /* the 3rd black key from the right: the ENVELOPE page, up and down (SHIFT: the
+                                 * sound's own envelope again) */
 #define KEY_EDIT 22u             /* the black key before SHIFT: EDIT, on and off (KNOB 1 .. 4: the sound's macros) */
 #define KEY_CHORD 5u             /* the 3rd black key: held 0.6 s, the track's chord mode on or off; pressed, the next
                                   * chord form */
@@ -142,6 +144,15 @@ static struct {
     uint32_t rv_touch_until;
     int8_t shown_rvp[4], shown_touch;
     uint8_t shown_page;
+    uint8_t env_page;            /* the ENVELOPE page is up: KNOB 1 .. 4, the track's own A D S R */
+    int8_t env[NLAYER][NENG][4]; /* each track's own envelope on each engine's sound, 0 .. 100 (layers.c env_ms) */
+    uint8_t env_on[NLAYER][NENG];   /* .. in use (0: the sound's own envelope, as drawn) */
+    int8_t env_nat[4];           /* the sound's own, read as A D S R (env_nat_ok: still the sound shown) */
+    uint8_t env_nat_ok;
+    int8_t env_touched;          /* the value just turned (-1 none), until env_touch_until */
+    uint32_t env_touch_until;
+    int8_t shown_env[4], shown_env_touch;
+    uint8_t shown_env_on;
     int32_t shown_meter, shown_level, shown_pan, shown_msel;
     uint32_t meter_at;
     uint8_t force;
@@ -405,7 +416,7 @@ static void save_long(void)
     }
     if (ui.ses_page == SP_ASK)
         return;
-    ui.rv_page = 0;
+    ui.rv_page = ui.env_page = 0;
     if (ui.ses_page == SP_LIST && ui.ses_ix != ses_current()) {   /* in the list: into the slot shown, asked */
         ui.ses_new = ui.ses_ix;
         ui.ses_over = (uint8_t)ses_has(ui.ses_ix);
@@ -469,7 +480,7 @@ static void save_short(void)
         }
         return;
     }
-    ui.rv_page = 0;                              /* the SESSIONS page, on the session chosen if any */
+    ui.rv_page = ui.env_page = 0;               /* the SESSIONS page, on the session chosen if any */
     ui.sc_page = 0;
     ui.ses_page = SP_LIST;
     ui.ses_ix = (uint8_t)(ses_current() ? ses_current() : 1);
@@ -489,9 +500,59 @@ static uint32_t next_seed(void)
 /* the macros of layer l's sound on the engine it plays, to the ISR */
 static void mac_apply(uint32_t l)
 {
-    uint32_t j;
+    uint32_t j, e = ui.engine[l];
     for (j = 0; j < NMAC; j++)
-        lay_mac[l][j] = ui.mac[l][ui.engine[l]][j];
+        lay_mac[l][j] = ui.mac[l][e][j];
+    for (j = 0; j < 4u; j++)                     /* (the track's own envelope: its values, then whether it is on) */
+        lay_env[l][j] = ui.env[l][e][j];
+    lay_env_on[l] = ui.env_on[l][e];
+    ui.env_nat_ok = 0;                           /* (the sound may be another: read again) */
+}
+
+/* the ENVELOPE page: the sound's own amplitude envelope read as A D S R knob positions (FM: its loudest carrier;
+ * CALIGULA: its pairs' times averaged; RUSSOLO and CALIGULA have no decay or sustain: 5 ms, 100 %) */
+static void env_native(uint32_t l, int8_t *v)
+{
+    int32_t a[4];
+    uint32_t e = ui.engine[l], k;
+    if (e == ENG_FM)
+        fm_env_adsr(&fm_buf[l][fm_pub[l]], a);
+    else if (e == ENG_ANIMA) {
+        const an_design_t *d = &an_buf[l][an_pub[l]];
+        a[0] = d->att;
+        a[1] = d->hold + d->dec;
+        a[2] = (d->sus * 100 + Q15 / 2) / Q15;
+        a[3] = d->rel;
+    } else if (e == ENG_CAL) {
+        const cal_design_t *d = &cal_buf[l][cal_pub[l]];
+        a[0] = a[3] = 0;
+        for (k = 0; k < 4u; k++) {
+            a[0] += d->att[k] / 4;
+            a[3] += d->rel[k] / 4;
+        }
+        a[1] = 5;
+        a[2] = 100;
+    } else {
+        const rus_design_t *d = &rus_buf[l][rus_pub[l]];
+        a[0] = d->att;
+        a[1] = 5;
+        a[2] = 100;
+        a[3] = d->rel;
+    }
+    for (k = 0; k < 4u; k++)
+        v[k] = (int8_t)(k == 2u ? clampi(a[2], 0, 100) : env_val(k, a[k]));
+}
+/* what the page shows: the track's own envelope, or the sound's */
+static const int8_t *env_shown(void)
+{
+    uint32_t l = ui.sel, e = ui.engine[l];
+    if (ui.env_on[l][e])
+        return ui.env[l][e];
+    if (!ui.env_nat_ok) {
+        env_native(l, ui.env_nat);
+        ui.env_nat_ok = 1;
+    }
+    return ui.env_nat;
 }
 /* the name of EDIT's macro j on layer l's sound */
 static const char *mac_name(uint32_t l, uint32_t j)
@@ -523,6 +584,7 @@ static void new_sound(int same)                  /* same: of the family (kind, s
         say("BUSY", 900);
     else {                                       /* a new sound: as drawn, no macros */
         memset(ui.mac[l][ui.engine[l]], 0, NMAC);
+        ui.env_on[l][ui.engine[l]] = 0;          /* (its own envelope too) */
         mac_apply(l);
     }
 }
@@ -566,8 +628,10 @@ static void ui_input(void)
             ui.trk_t0 = fm1_ms;
             ui.trk_done = 0;
             ui.sel = (uint8_t)l;
-            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page) {   /* a layer chosen: back to it */
+            ui.env_nat_ok = 0;
+            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page) {   /* a layer chosen: back to it */
                 ui.rv_page = 0;
+                ui.env_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
                 ui.pre_page = 0;
@@ -600,6 +664,7 @@ static void ui_input(void)
         uint8_t fx = (uint8_t)((fm1_in.notes >> KEY_SHIFT) & 1u);
         ui.rv_page = (uint8_t)!(ui.rv_page && ui.fx == fx);
         ui.fx = fx;
+        ui.env_page = 0;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.sc_page = 0;
@@ -608,6 +673,7 @@ static void ui_input(void)
     if (btn_bit(press, B_ARP)) {
         ui.sc_page = (uint8_t)!ui.sc_page;
         ui.rv_page = 0;
+        ui.env_page = 0;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.force = 1;
@@ -620,7 +686,7 @@ static void ui_input(void)
             ui.pre_eng = ui.engine[ui.sel];
             if (!ui.pre_ix)
                 ui.pre_ix = 1;
-            ui.rv_page = ui.ses_page = ui.sc_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = 0;
         }
         ui.force = 1;
     } else if (btn_bit(press, B_SAVE)) {
@@ -644,7 +710,24 @@ static void ui_input(void)
         ui.dial = DIAL_DSEND;
         ui.dial_until = fm1_ms + 1000u;
     }
-    if (ui.rv_page) {                            /* KNOB 1..4: the reverb, or the delay */
+    if (ui.env_page) {                           /* KNOB 1 .. 4: the track's own envelope, A D S R; the first turn
+                                                  * takes it from the sound's own (as drawn) */
+        static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t j, l = ui.sel, e = ui.engine[l];
+        for (j = 0; j < 4u; j++) {
+            s = enc_take(K[j]);
+            if (s) {
+                if (!ui.env_on[l][e]) {
+                    memcpy(ui.env[l][e], env_shown(), 4);
+                    ui.env_on[l][e] = 1;
+                }
+                ui.env[l][e][j] = (int8_t)clampi(ui.env[l][e][j] + 2 * s, 0, 100);
+                mac_apply(l);
+                ui.env_touched = (int8_t)j;
+                ui.env_touch_until = fm1_ms + 1500u;
+            }
+        }
+    } else if (ui.rv_page) {                     /* KNOB 1..4: the reverb, or the delay */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
         int8_t *pv = ui.fx ? ui.dlp : ui.rvp;
@@ -898,6 +981,17 @@ static void ui_input(void)
                 say("CHORDS OFF", 900);
         }
     }
+    if ((ch & keys) >> KEY_ENV & 1u) {           /* the ENVELOPE page up or down; with SHIFT, the sound's own envelope */
+        if ((keys >> KEY_SHIFT) & 1u) {
+            ui.env_on[ui.sel][ui.engine[ui.sel]] = 0;
+            mac_apply(ui.sel);
+            say("AS DRAWN", 900);
+        } else {
+            ui.env_page = (uint8_t)!ui.env_page;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = 0;
+        }
+        ui.force = 1;
+    }
     if ((ch & keys) >> KEY_EDIT & 1u) {          /* EDIT on or off */
         ui.edit = (uint8_t)!ui.edit;
         say(ui.edit ? "EDIT" : "EDIT OFF", 900);
@@ -1022,6 +1116,8 @@ static void ui_leds(void)
     led_dim_key(14u + KEY_EXP, 1);
     led_dim_key(14u + KEY_EDIT, 1);
     led_dim_key(14u + KEY_CHORD, 1);
+    led_dim_key(14u + KEY_ENV, 1);
+    fm1_led_key(14u + KEY_ENV, ui.env_page);
     fm1_led_key(14u + KEY_CHORD, ui.chord_on[ui.sel]);
 }
 
@@ -1172,6 +1268,99 @@ static void draw_rv_page(void)
         if (ui.shown_rvp[j] != (ui.fx ? ui.dlp : ui.rvp)[j] || (((int32_t)j == t) != ((int32_t)j == ui.shown_touch)))
             draw_rv_row(j, (int32_t)j == t);
     ui.shown_touch = (int8_t)t;
+}
+
+/* the ENVELOPE page: the title; the envelope drawn (the stages' widths by their knobs, the sustain a fixed
+ * stretch); A D S R in a square under it, the value just turned black on white. AS DRAWN: the sound's own, in grey */
+static void env_text(char *m, uint32_t j, int32_t v)   /* 12MS, 1.2S, 20S, 80% */
+{
+    int32_t ms = env_ms(j, v);
+    if (j == 2u) {
+        fmt_int(m, v);
+        str_cpy(m + str_len(m), "%", 2);
+    } else if (ms < 1000) {
+        fmt_int(m, ms);
+        str_cpy(m + str_len(m), "MS", 3);
+    } else {
+        if (ms < 10000)
+            fmt_fix(m, ms / 100, 1);
+        else
+            fmt_int(m, ms / 1000);
+        str_cpy(m + str_len(m), "S", 2);
+    }
+}
+static int32_t env_level(const int8_t *v, int32_t x, int32_t w)   /* 0 .. 1000 at column x of w */
+{
+    int32_t sw = w / 6, rest = w - sw, tot = v[0] + v[1] + v[3] + 24;
+    int32_t wa = rest * (v[0] + 8) / tot, wd = rest * (v[1] + 8) / tot, s = v[2] * 10, t, u;
+    if (x < wa)
+        return x * 1000 / wa;
+    x -= wa;
+    if (x < wd) {
+        u = 1000 - x * 1000 / wd;
+        return s + (1000 - s) * (u * u / 1000) / 1000;
+    }
+    x -= wd;
+    if (x < sw)
+        return s;
+    x -= sw;
+    t = w - wa - wd - sw;
+    u = t > 0 ? 1000 - clampi(x * 1000 / t, 0, 1000) : 0;
+    return s * (u * u / 1000) / 1000;
+}
+#define ENV_GX 8
+#define ENV_GW 224
+#define ENV_GT 28                /* the graph's top and its line along the bottom, in its area */
+#define ENV_GB 100
+static void draw_env_page(void)
+{
+    const int8_t *v = env_shown();
+    uint32_t j, on = ui.env_on[ui.sel][ui.engine[ui.sel]];
+    int32_t t = (int32_t)(ui.env_touch_until - fm1_ms) > 0 ? ui.env_touched : -1, x, y, yp = ENV_GB;
+    uint16_t col = on ? LAYER_COL[ui.sel] : C_GREY;
+    int ch = ui.force || ui.shown_env_on != on || ui.shown_env_touch != t;
+    for (j = 0; j < 4u; j++)
+        ch |= ui.shown_env[j] != v[j];
+    if (!ch)
+        return;
+    if (ui.force) {
+        char d[12] = "ENVELOPE  ";
+        d[9] = (char)('1' + ui.sel);
+        cv_begin(240, 36, C_BLACK);
+        cv_text_c(5, &FONT_S, d, LAYER_COL[ui.sel]);
+        cv_blit(0, 0);
+    }
+    CV_AREA(0, 36, 240, 104, C_BLACK) {
+        if (!on)
+            cv_text_c(2, &FONT_XS, "AS DRAWN", C_GREY);
+        cv_rect(ENV_GX, ENV_GB, ENV_GW, 2, RGB(70, 70, 70));
+        for (x = 0; x < ENV_GW; x++) {
+            y = ENV_GB - env_level(v, x, ENV_GW) * (ENV_GB - ENV_GT) / 1000;
+            cv_rect(ENV_GX + x, y, 1, ENV_GB - y, RGB(48, 48, 48));
+            cv_rect(ENV_GX + x - 1, y < yp ? y : yp, 3, (y < yp ? yp - y : y - yp) + 3, col);
+            yp = y;
+        }
+    }
+    CV_AREA(0, 140, 240, 100, C_BLACK) {
+        static const char *const N[4] = {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"};
+        for (j = 0; j < 4u; j++) {
+            int32_t cx = (int32_t)(j & 1u) * 120, cy = (int32_t)(j >> 1) * 50;
+            uint16_t fg = (int32_t)j == t ? C_BLACK : C_WHITE;
+            char m[12];
+            if ((int32_t)j == t)
+                cv_rect(cx + 2, cy + 1, 116, 48, C_WHITE);
+            cv_bg_set((int32_t)j == t ? C_WHITE : C_BLACK);
+            cv_text(cx + 6, cy + 3, &FONT_XS, N[j], (int32_t)j == t ? C_BLACK : C_GREY);
+            env_text(m, j, v[j]);
+            cv_text(cx + 6, cy + 23, &FONT_S, m, on ? fg : (int32_t)j == t ? C_BLACK : C_GREY);
+            cv_bg_set(C_BLACK);
+        }
+    }
+    for (j = 0; j < 4u; j++)
+        ui.shown_env[j] = v[j];
+    ui.shown_env_on = (uint8_t)on;
+    ui.shown_env_touch = (int8_t)t;
+    ui.force = 0;
 }
 
 /* the SCALE page: the title; the root, very large; the scale's name, one or two lines. What was just turned
@@ -1524,7 +1713,8 @@ static void ui_draw(void)
     int32_t px;
     if (draw_flash())
         return;
-    if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page && !ui.pre_page && !ui.ovd) {
+    if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page && !ui.pre_page && !ui.ovd &&
+        !ui.env_page) {
         if (ui.shown_page != 4 ||
             (ui.shown_dial != (int16_t)(dial_value() + ui.dial * 256) && (uint32_t)(fm1_ms - ui.dial_drawn_at) >= 40u))
             draw_dial();
@@ -1561,6 +1751,13 @@ static void ui_draw(void)
         draw_sc_page();
         ui.shown_page = 3;
         ui.force = 0;
+        return;
+    }
+    if (ui.env_page) {
+        if (ui.shown_page != 7)
+            ui.force = 1;
+        draw_env_page();
+        ui.shown_page = 7;
         return;
     }
     if (ui.rv_page) {

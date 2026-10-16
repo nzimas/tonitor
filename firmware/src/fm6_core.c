@@ -81,6 +81,7 @@ typedef struct {                 /* msfa Env: level in Q24 log2 (2^24 = 6 dB), 1
     int32_t level, target, inc, statc;
     int16_t outlevel;            /* microsteps (99 * 32 = full) */
     uint8_t rscale, ix, rising, down;
+    uint8_t hold;                /* (TONITOR: the track's own envelope shapes it -- this one goes to full and stays) */
 } fm6_env_t;
 
 static const uint8_t FM6_LEVELLUT[20] = {0, 5, 9, 13, 17, 20, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 42, 43, 45, 46};
@@ -101,16 +102,16 @@ static void fm6_env_advance(fm6_env_t *e, const uint8_t *op, uint32_t ix)
     e->ix = (uint8_t)ix;
     if (ix >= 4u)
         return;
-    lv = op[FP_L1 + ix];
+    lv = e->hold && ix < 3u ? 99 : op[FP_L1 + ix];
     actual = fm6_scaleout(lv) >> 1;
     actual = (actual << 6) + e->outlevel - 4256;
     actual = actual < 16 ? 16 : actual;
     e->target = actual << 16;
     e->rising = e->target > e->level;
-    qrate = ((op[FP_R1 + ix] * 41) >> 6) + e->rscale;
+    qrate = (((e->hold && ix < 3u ? 99 : op[FP_R1 + ix]) * 41) >> 6) + e->rscale;
     qrate = qrate > 63 ? 63 : qrate;
     if (e->target == e->level || (ix == 0u && lv == 0)) {
-        int32_t sr = op[FP_R1 + ix] + e->rscale;
+        int32_t sr = (e->hold && ix < 3u ? 99 : op[FP_R1 + ix]) + e->rscale;
         sr = sr > 99 ? 99 : sr;
         e->statc = sr < 77 ? FM6_STATICS[sr] : 20 * (99 - sr);
         if (sr < 77 && ix == 0u && lv == 0)
@@ -125,6 +126,7 @@ static void fm6_env_init(fm6_env_t *e, const uint8_t *op, int32_t outlevel, int3
 {
     e->outlevel = (int16_t)outlevel;
     e->rscale = (uint8_t)rate_scaling;
+    e->hold = 0;
     e->level = 0;
     e->down = 1;
     fm6_env_advance(e, op, 0);

@@ -3984,7 +3984,7 @@ static int key_glows(uint32_t k)
 }
 static int cmd_glow(void)
 {
-    static const uint8_t FN[9] = {KEY_AMB, KEY_EXP, KEY_CHORD, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_EDIT};
+    static const uint8_t FN[10] = {KEY_AMB, KEY_EXP, KEY_CHORD, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_ENV, KEY_EDIT};
     uint32_t fail = 0, k, j;
     uint32_t pass;
     grain_reset();
@@ -4003,7 +4003,7 @@ static int cmd_glow(void)
             int fn = 0, looping = k == KEY_REV || k == KEY_PEND || k == KEY_RAND || k == KEY_HALF || k == KEY_DOUBLE;
             if (white_ix(k) >= 0)
                 continue;
-            for (j = 0; j < 9u; j++)
+            for (j = 0; j < 10u; j++)
                 fn |= FN[j] == k;
             if (looping && !pass)
                 fn = 0;
@@ -4242,6 +4242,127 @@ static int cmd_samefam(void)
             printf("FAIL samefam: engine %u, HOME keeps the family\n", e), fail++;
     }
     printf("samefam: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* the ENVELOPE page: the sound's own envelope shown; the knobs take it over and shape the track's sounds; a short
+ * release ends them soon, a long one keeps them; SHIFT + the key, HOME, a preset give the sound's own back; sessions
+ * and the clipboard keep it */
+static int32_t env_peak(uint32_t nb)
+{
+    int32_t pk = 0;
+    uint32_t k;
+    while (nb--) {
+        run_blocks(1, 0);
+        for (k = 0; k < 2u * CTL; k++)
+            pk = absi(mix_out[k]) > pk ? absi(mix_out[k]) : pk;
+    }
+    return pk;
+}
+static int cmd_env(const char *dir)
+{
+    uint32_t fail = 0, e, guard;
+    char path[512];
+    for (e = 0; e < NENG; e++) {
+        int32_t hold, after, lng;
+        const int8_t *nat;
+        grain_reset();
+        ui.send[0] = 0;
+        level_pan_apply(0);
+        press_btn(B_FX);
+        for (guard = 0; ui.engine[0] != e && guard < 20u; guard++) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        lm_key(KEY_ENV);
+        ui_leds();
+        if (!ui.env_page || !host_led[14u + KEY_ENV] || ui.env_on[0][e])
+            printf("FAIL env: the key does not open the page, lit, as drawn\n"), fail++;
+        ui_draw();
+        nat = env_shown();
+        printf("env: %s as drawn: A %d ms, D %d ms, S %d %%, R %d ms\n", ENG_NAME[e], env_ms(0, nat[0]), env_ms(1, nat[1]),
+               nat[2], env_ms(3, nat[3]));
+        if (e == ENG_FM) {
+            snprintf(path, sizeof path, "%s/screen-38-envelope-as-drawn.ppm", dir);
+            ppm(path);
+        }
+        host_enc[PANEL_ENC[EN_K1]] = -60;
+        host_enc[PANEL_ENC[EN_K2]] = -60;
+        host_enc[PANEL_ENC[EN_K3]] = 60;
+        host_enc[PANEL_ENC[EN_K4]] = -60;
+        ui_input();
+        host_enc[PANEL_ENC[EN_K4]] = 10;
+        ui_input();
+        if (!ui.env_on[0][e] || !lay_env_on[0] || ui.env[0][e][0] || ui.env[0][e][1] || ui.env[0][e][2] != 100 ||
+            ui.env[0][e][3] != 20 || lay_env[0][3] != 20)
+            printf("FAIL env: %s: the knobs do not set it (%d %d %d %d)\n", ENG_NAME[e], ui.env[0][e][0], ui.env[0][e][1],
+                   ui.env[0][e][2], ui.env[0][e][3]), fail++;
+        ui_draw();
+        if (e == ENG_FM) {
+            snprintf(path, sizeof path, "%s/screen-39-envelope.ppm", dir);
+            ppm(path);
+        }
+        press_key(0, 1);
+        run_blocks(250, 0);
+        hold = env_peak(60);
+        press_key(0, 0);
+        run_blocks(60, 0);
+        after = env_peak(40);
+        host_enc[PANEL_ENC[EN_K4]] = 60;             /* a long release: 20 s */
+        ui_input();
+        press_key(0, 1);
+        run_blocks(310, 0);
+        press_key(0, 0);
+        run_blocks(300, 0);
+        lng = env_peak(40);
+        printf("env: %s: held %d, 70 ms after a 26 ms release %d, 0.2 s into a 20 s one %d\n", ENG_NAME[e], hold,
+               after, lng);
+        if (hold < 300 || after > hold / 300 || lng < hold / 20)
+            printf("FAIL env: %s: the release does not follow the knob\n", ENG_NAME[e]), fail++;
+        press_phys(KEY_SHIFT, 1);
+        lm_key(KEY_ENV);
+        press_phys(KEY_SHIFT, 0);
+        if (ui.env_on[0][e] || lay_env_on[0] || !ui.env_page)
+            printf("FAIL env: SHIFT + the key does not give the sound's own envelope back\n"), fail++;
+        lm_key(KEY_ENV);
+        if (ui.env_page)
+            printf("FAIL env: the key does not close the page\n"), fail++;
+    }
+    /* HOME, a session, the clipboard */
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    lm_key(KEY_ENV);
+    host_enc[PANEL_ENC[EN_K2]] = 5;
+    ui_input();
+    {
+        int8_t want[4];
+        memcpy(want, ui.env[0][ui.engine[0]], 4);
+        press_btn(B_HOME);
+        if (ui.env_on[0][ui.engine[0]] || lay_env_on[0])
+            printf("FAIL env: HOME keeps the track's own envelope\n"), fail++;
+        host_enc[PANEL_ENC[EN_K2]] = 5;
+        ui_input();
+        memcpy(want, ui.env[0][ui.engine[0]], 4);
+        if (ses_save(1) != SES_OK)
+            printf("FAIL env: not saved\n"), fail++;
+        ui.env_on[0][ui.engine[0]] = 0;
+        memset(ui.env, 0, sizeof ui.env);
+        ses_load_slot(1);
+        if (!ui.env_on[0][ui.engine[0]] || !lay_env_on[0] || memcmp(want, ui.env[0][ui.engine[0]], 4) ||
+            lay_env[0][1] != want[1])
+            printf("FAIL env: a session does not keep it\n"), fail++;
+        clip_copy(0);
+        clip_paste(1);
+        if (!ui.env_on[1][ui.engine[1]] || memcmp(want, ui.env[1][ui.engine[1]], 4) || !lay_env_on[1])
+            printf("FAIL env: the clipboard does not copy it\n"), fail++;
+        ses_fresh(9);
+        if (ui.env_on[0][ui.engine[0]] || lay_env_on[0])
+            printf("FAIL env: a fresh session keeps it\n"), fail++;
+    }
+    printf("env: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
 
@@ -4636,6 +4757,8 @@ int main(int argc, char **argv)
         return cmd_chords(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "samefam"))
         return cmd_samefam();
+    if (argc >= 3 && !strcmp(argv[1], "env"))
+        return cmd_env(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

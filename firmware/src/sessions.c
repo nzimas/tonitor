@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 14u           /* 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 15u           /* 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -416,6 +416,8 @@ static void ses_emit(void)
     ses_out(ui.chord_form, NLAYER);
     for (l = 0; l < NLAYER; l++)
         ses_out(ui.latch_form[l], NKEY);
+    ses_out(ui.env, sizeof ui.env);                     /* (format 15: each track's own envelopes, and which are on) */
+    ses_out(ui.env_on, sizeof ui.env_on);
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -661,6 +663,7 @@ static int pre_load(uint32_t l, uint32_t e, uint32_t slot)
         for (j = 0; j < NMAC; j++)                     /* (a format-1 slot: none) */
             ui.mac[l][e][j] = (int8_t)clampi(r.mac[j], -MAC_MAX, MAC_MAX);
     }
+    ui.env_on[l][e] = 0;                               /* (a preset: its own envelope, as drawn) */
     mac_apply(l);
     return SES_OK;
 }
@@ -712,6 +715,8 @@ static void ses_fresh(uint32_t num)
     memset(ui.chord_on, 0, sizeof ui.chord_on);
     memset(ui.chord_form, 0, sizeof ui.chord_form);
     memset(ui.latch_form, 0, sizeof ui.latch_form);
+    memset(ui.env, 0, sizeof ui.env);
+    memset(ui.env_on, 0, sizeof ui.env_on);
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed(), fk, ak, ck, rk;
         loop[l].mute = 0;
@@ -763,6 +768,8 @@ static struct {
     int8_t oct, send, flt, gr, cr, lxt, dsend;
     uint8_t chord_on, chord_form;
     uint8_t dmode, rate;
+    int8_t env[NENG][4];
+    uint8_t env_on[NENG];
     uint32_t gseed;
     int8_t mac[NENG][NMAC];
     fm_patch_t fm;
@@ -796,6 +803,8 @@ static void clip_copy(uint32_t l)
     clip.rate = loop[l].rate;
     clip.gseed = gran[l].seed;
     memcpy(clip.mac, ui.mac[l], sizeof clip.mac);
+    memcpy(clip.env, ui.env[l], sizeof clip.env);
+    memcpy(clip.env_on, ui.env_on[l], sizeof clip.env_on);
     clip.fm = fm_buf[l][fm_pub[l]];
     clip.an = an_buf[l][an_pub[l]];
     clip.cal = cal_buf[l][cal_pub[l]];
@@ -829,6 +838,8 @@ static void clip_paste(uint32_t l)
     ui.lxt[l] = clip.lxt;
     lx_post();                                          /* (its loops move as they were heard; empty yet: nothing moves) */
     memcpy(ui.mac[l], clip.mac, sizeof clip.mac);
+    memcpy(ui.env[l], clip.env, sizeof clip.env);
+    memcpy(ui.env_on[l], clip.env_on, sizeof clip.env_on);
     gran_profile(l, clip.gseed);
     level_pan_apply(l);
     sound_slot_free(&fm_pub[l], &fm_use[l]);            /* the sounds, into the buffers the ISR is not using */
@@ -1133,6 +1144,21 @@ static int ses_load(uint32_t i)
         }
         ses_events_drain();
     }
+    memset(ui.env, 0, sizeof ui.env);                   /* each track's own envelopes (before format 15: none) */
+    memset(ui.env_on, 0, sizeof ui.env_on);
+    if (h.format >= 15u) {
+        uint32_t e;
+        ses_in(ui.env, sizeof ui.env);
+        ses_in(ui.env_on, sizeof ui.env_on);
+        for (l = 0; l < NLAYER; l++)
+            for (e = 0; e < NENG; e++) {
+                ui.env_on[l][e] = (uint8_t)(ui.env_on[l][e] != 0);
+                for (k = 0; k < 4u; k++)
+                    ui.env[l][e][k] = (int8_t)clampi(ui.env[l][e][k], 0, 100);
+            }
+    }
+    for (l = 0; l < NLAYER; l++)
+        mac_apply(l);
     ses.current = ses.num[i];
     return SES_OK;
 }

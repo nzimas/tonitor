@@ -60,9 +60,67 @@ typedef struct {
     uint32_t age;                /* note-on order */
     uint32_t born;               /* blk_clock at its note-on */
     uint16_t cost;               /* what a block of it took, last time (ticks) */
+    uint8_t est;                 /* the track's own envelope (AE_*): where this voice is in it, its level Q24 */
+    int32_t elv;
     uint8_t fade_n;              /* the fade's length, when not FADE (the budget's quick one) */
     fm_voice_t fm;
 } voice_t;
+
+/* the tracks' own envelope (the ENVELOPE page): A D S R, 0 .. 100 each, while on (lay_env_on) the track's sounds'
+ * own amplitude envelope is held at full and this one shapes them -- attack a line, decay a curve to the sustain,
+ * release a curve to -60 dB; on CALIGULA and RUSSOLO the organism held through the release, then let go */
+static volatile int8_t lay_env[NLAYER][4];
+static volatile uint8_t lay_env_on[NLAYER];
+enum { AE_OFF, AE_ATT, AE_DEC, AE_REL, AE_DONE };
+static const int32_t ENV_BASE[4] = {1, 5, 0, 5};          /* ms at 0 */
+static const int32_t ENV_OCT[4] = {8708, 7187, 0, 7842};  /* log2 of the range (x 10000, 2000, -, 4000) x 2^16 / 100 */
+static int32_t env_ms(uint32_t j, int32_t v)   /* A, D, R: ms of a knob position 0 .. 100 */
+{
+    return (int32_t)(((uint64_t)(uint32_t)ENV_BASE[j] * exp2_q16(clampi(v, 0, 100) * ENV_OCT[j])) >> 16);
+}
+static int32_t env_val(uint32_t j, int32_t ms)   /* .. and back: the knob position nearest ms */
+{
+    int32_t d = log2_q16((uint32_t)clampi(ms, 1, 60000)) - log2_q16((uint32_t)ENV_BASE[j]);
+    return clampi((d + ENV_OCT[j] / 2) / ENV_OCT[j], 0, 100);
+}
+static int32_t cal_ex(int32_t ms);
+static void env_step(uint8_t *st, int32_t *lv, uint32_t l)   /* a block of it */
+{
+    int32_t s = lay_env[l][2] * ((1 << 24) / 100);
+    switch (*st) {
+    case AE_ATT:
+        *lv += (int32_t)(12173000u / (uint32_t)clampi(env_ms(0, lay_env[l][0]), 1, 20000));   /* 2^24 x 0.7256 / ms */
+        if (*lv >= 1 << 24) {
+            *lv = 1 << 24;
+            *st = AE_DEC;
+        }
+        break;
+    case AE_DEC:
+        *lv = s + (int32_t)(((int64_t)(*lv - s) * cal_ex(env_ms(1, lay_env[l][1]))) >> 16);
+        break;
+    case AE_REL:
+        *lv = (int32_t)(((int64_t)*lv * cal_ex(env_ms(3, lay_env[l][3]))) >> 16);
+        if (*lv < (1 << 24) / 1000) {
+            *lv = 0;
+            *st = AE_DONE;
+        }
+        break;
+    default:
+        break;
+    }
+}
+static void env_apply(int32_t *x, int32_t g0, int32_t g1)   /* Q24 levels, a block's line between them */
+{
+    uint32_t i;
+    int32_t a = g0 >> 9, d = ((g1 >> 9) - a) / (int32_t)CTL;
+    for (i = 0; i < CTL; i++) {
+        a += d;
+        x[i] = mulq15(x[i], a);
+    }
+}
+static uint8_t org_est[NLAYER];          /* the organism's place in it, its level */
+static int32_t org_elv[NLAYER];
+static uint8_t org_defer[NLAYER], org_dsrc[NLAYER];   /* the last note let go, kept held through the release (+ 1) */
 
 /* the budget: what the voices and organisms cost, measured as they render, so that a start that would overrun
  * the block's time makes room first (the oldest release tails let go, quickly) instead of the audio arriving
@@ -337,11 +395,25 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
         fm_note_on(&v->fm, &fm_buf[l][fm_use[l]], v->note, fresh || !v->sounding);
     else
         an_note_on(&an_vox[k], &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
+    an_vox[k].env_hold = 0;
+    v->est = AE_OFF;
+    if (lay_env_on[l]) {                          /* the track's own envelope: its own held, this one from 0 */
+        if (lay[l].engine == ENG_FM)
+            fm_hold(&v->fm, &fm_buf[l][fm_use[l]]);
+        else
+            an_vox[k].env_hold = 1;
+        v->est = AE_ATT;
+        v->elv = 0;
+    }
     v->sounding = 1;
 }
 static void voice_off(uint32_t l, uint32_t k)
 {
     voice_t *v = &vox[k];
+    if (v->est && v->est != AE_DONE) {            /* the track's own envelope: its release, the voice held meanwhile */
+        v->est = AE_REL;
+        return;
+    }
     if (lay[l].engine == ENG_FM)
         fm_note_off(&v->fm, &fm_buf[l][fm_use[l]]);
     else
@@ -353,6 +425,7 @@ static void voice_silence(uint32_t k)
     v->sounding = 0;
     v->fade = 0;
     v->fade_n = 0;
+    v->est = AE_OFF;
     v->fm.live = 0;
     an_vox[k].live = 0;
 }
@@ -379,6 +452,35 @@ static uint32_t voice_pick(uint32_t l, int own)
 /* a note to CALIGULA, while the layer is (or is becoming) it; else to the voices */
 static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
 {
+    if (eng_organism(lay[l].want_engine) && lay_env_on[l]) {   /* the track's own envelope on an organism */
+        int cal = lay[l].want_engine == ENG_CAL;
+        uint32_t held = cal ? cal_rt[l].nheld : rus_rt[l].nheld;
+        if (on) {
+            if (!held && !org_defer[l])
+                org_elv[l] = 0;
+            org_est[l] = AE_ATT;                  /* (from where it is) */
+            if (cal)
+                cal_note_on(&cal_rt[l], &cal_buf[l][cal_use[l]], note, src == SRC_LOOP ? 2u : 1u);
+            else
+                rus_note_on(&rus_rt[l], &rus_buf[l][rus_use[l]], note);
+            if (org_defer[l]) {                   /* (the note kept through a release: let go now, under the new) */
+                if (cal)
+                    cal_note_off(&cal_rt[l], org_defer[l] - 1u, org_dsrc[l]);
+                else
+                    rus_note_off(&rus_rt[l], org_defer[l] - 1u);
+                org_defer[l] = 0;
+            }
+            return 1;
+        }
+        if (held == 1u && !org_defer[l] && org_est[l]) {   /* the last one: held through the release (its note-on
+                                                         * under the envelope: one before it turned on, as it was) */
+            org_defer[l] = (uint8_t)(note + 1u);
+            org_dsrc[l] = (uint8_t)(src == SRC_LOOP ? 2u : 1u);
+            org_est[l] = AE_REL;
+            return 1;
+        }
+    }
+
     if (on && lay[l].want_engine == lay[l].engine && eng_organism(lay[l].engine)
         && !(lay[l].engine == ENG_CAL ? cal_rt[l].live : rus_rt[l].live))
         blk_new += eng_cost[lay[l].engine & 3u];  /* (the organism wakes: what it will cost, ahead) */
@@ -928,6 +1030,8 @@ static void events_take(void)        /* audio ISR, at a block start */
             y->want_engine = (uint8_t)(e.val < NENG ? e.val : 0);
             break;
         case EV_STOP:
+            org_defer[e.layer] = 0;
+            org_est[e.layer] = AE_OFF;
             cal_init(&cal_rt[e.layer], 0xC0u + e.layer);
             rus_init(&rus_rt[e.layer], 0x7A5u + e.layer);
             for (k = 0; k < NVOICE; k++) {
@@ -1040,6 +1144,24 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             memcpy(rus_rt[l].mac, felt, NMAC);
             live = (uint32_t)rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], buf);
         }
+        if (org_defer[l] && (!lay_env_on[l] || org_est[l] == AE_DONE)) {   /* (released: the note kept, let go) */
+            if (y->engine == ENG_CAL) {
+                cal_note_off(&cal_rt[l], org_defer[l] - 1u, org_dsrc[l]);
+                cal_rt[l].hush = 1;
+            } else
+                rus_note_off(&rus_rt[l], org_defer[l] - 1u);
+            org_defer[l] = 0;
+            org_est[l] = lay_env_on[l] ? AE_DONE : AE_OFF;   /* (its own release, silent: the envelope's is over) */
+        }
+        if (live && lay_env_on[l] && org_est[l]) {   /* the track's own envelope over the organism */
+            int32_t e0 = org_elv[l];
+            if (org_est[l] == AE_DONE)
+                memset(buf, 0, sizeof buf);
+            else {
+                env_step(&org_est[l], &org_elv[l], l);
+                env_apply(buf, e0, org_elv[l]);
+            }
+        }
         if (live) {
             any = 1;
             COST_ADD(y->engine);
@@ -1065,6 +1187,17 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             v->cost = (uint16_t)(c > 0xFFFFu ? 0xFFFFu : c);
             if (alive)
                 eng_cost[y->engine & 3u] = (eng_cost[y->engine & 3u] * 7u + c + 7u) / 8u;
+        }
+        if (alive && v->est) {                     /* the track's own envelope over the voice */
+            int32_t e0 = v->elv;
+            env_step(&v->est, &v->elv, l);
+            env_apply(vb, e0, v->elv);
+            if (v->est == AE_DONE) {               /* (its release over: the voice ends) */
+                alive = 0;
+                v->est = AE_OFF;
+                v->fm.live = 0;
+                an_vox[k].live = 0;
+            }
         }
         if (!alive) {
             v->sounding = 0;

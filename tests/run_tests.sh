@@ -31,6 +31,7 @@ build/host delay build/screens
 build/host glow
 build/host samefam
 build/host chords build/screens
+build/host env build/screens
 build/host ties
 build/host budget
 build/host anref | diff -q - tests/golden/anima_render.txt >/dev/null || { echo "FAIL anima: the render is no longer the same"; exit 1; }

@@ -51,6 +51,7 @@ track in its own colour.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
+- **Envelope**: attack, decay, sustain and release per track, on the ENVELOPE page, drawn on the screen.
 - **Latching**: hold notes, press SHIFT, and they sustain as drones while you play on top.
 - Per track: **DJ resonant filter**, **granulator** (dark ↔ scatter), **bit/rate crush**, level, pan and
   a send to a lush **master reverb** (Dattorro plate).
@@ -96,11 +97,12 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
+| the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up): KNOB 1–4 set the chosen track's attack, decay, sustain and release. With SHIFT: the sound's own envelope again. See [Envelope](#envelope). |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). |
 | the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
-| the other black keys | play no notes (kept for other functions to come). The black keys that have a function glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT and the unused ones stay dark. |
+| all black keys | play no notes. They glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT is lit only while held. |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
 | **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
@@ -152,6 +154,26 @@ The macros are chosen for each engine, and for some by the kind of sound:
 
 Each track keeps the macros of each of its four sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.
+
+### Envelope
+
+The 3rd black key from the right opens the **ENVELOPE** page (the key is lit while it is up; pressed again, or a
+track button, closes it). It shows the amplitude envelope of the chosen track's sound as attack, decay,
+sustain and release, drawn and with their values. As HOME drew the sound, the page reads its own envelope and
+says **AS DRAWN** (in grey): for FM, the envelope of the loudest carrier; for CALIGULA, the average of its
+pairs' attacks and releases; CALIGULA and RUSSOLO have no decay or sustain stage (shown as 5 ms and 100 %).
+
+While the page is up, the four knobs across the top set **ATTACK** (KNOB 1, 1 ms – 10 s), **DECAY** (KNOB 2,
+5 ms – 10 s), **SUSTAIN** (KNOB 3, 0–100 %) and **RELEASE** (KNOB 4, 5 ms – 20 s), on logarithmic scales. The
+first turn starts from the values shown and replaces the sound's own amplitude envelope with this one: the
+attack is linear, the decay and release are exponential, the release ending 60 dB down. FM's carrier envelopes
+and ANIMA's envelope are then held at full; CALIGULA and RUSSOLO are kept playing through the release and
+then let go. The change applies from the next note; once the track's envelope is in use, turning the knobs
+also changes the notes that are sounding.
+
+**SHIFT** + the key, **HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
+keeps an envelope for each of its four engines. Sessions store them, copying a track copies them, presets do
+not.
 
 ### Latched keys
 
@@ -211,7 +233,7 @@ button blinks. Choose another track and hold its button until **PASTED / TRACK n
 track's tone and loops. The clipboard is then empty: the next hold copies again. Holding the copied track's own
 button again copies it again (as it is now), pasting nothing.
 
-What is copied: the **tone** — the engine, the sounds of all four engines with their macros, the filter, the
+What is copied: the **tone** — the engine, the sounds of all four engines with their macros and envelopes, the filter, the
 granulator, the crush, the reverb send, the octave and the generative path — and **all the loops**, every
 overdub, those taken out still out, playing or stopped as they were (pasted, they start from their beginnings).
 The copy is taken when you hold the button: what the track does afterwards is not pasted. The track pasted
@@ -319,7 +341,7 @@ The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–
 A session stores in full the sound of the engine each track is on, and the other three as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
 sector of flash. A session is the whole machine: every track's engine and its four sounds, its path, octave, level, pan,
-reverb send, filter, granulator (and the character it was drawn with), crush, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
+reverb send, filter, granulator (and the character it was drawn with), crush, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the track chosen. They are kept in the
 FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
 left there**): dozens of typical sessions, at least ten even with six full loops.

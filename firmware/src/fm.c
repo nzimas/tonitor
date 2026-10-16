@@ -129,6 +129,50 @@ static void fm_note_on(fm_voice_t *v, const fm_patch_t *pt, int32_t note, int fr
     fm6_lfo_key(&v->lfo);
     v->live = 1;
 }
+/* the carriers to full and held there: the track's own envelope (layers.c) shapes the voice instead */
+static void fm_hold(fm_voice_t *v, const fm_patch_t *pt)
+{
+    uint32_t car = fm6_carriers(pt->p[FP_ALG] & 31u), k;
+    for (k = 0; k < 6u; k++)
+        if ((car >> k) & 1u) {
+            v->n.env[k].hold = 1;
+            fm6_env_advance(&v->n.env[k], pt->p + k * FP_OP, v->n.env[k].ix);
+        }
+}
+/* the patch's own envelope as A D S R (the ENVELOPE page, as drawn): its loudest carrier at middle C, timed --
+ * a[0] the first stage, a[1] the second and third, a[2] the third's level (0 .. 100 % of the highest), a[3] the
+ * release to 60 dB below it; ms */
+static void fm_env_adsr(const fm_patch_t *pt, int32_t *a)
+{
+    const uint8_t *p = pt->p, *op;
+    uint32_t car = fm6_carriers(p[FP_ALG] & 31u), k, best = 0, n;
+    int32_t bl = -1, note = 60 + p[FP_TRNSP] - 24, ol, peak = 0, lv;
+    fm6_env_t e;
+    for (k = 0; k < 6u; k++)
+        if ((car >> k) & 1u && (int32_t)p[k * FP_OP + FP_OL] > bl) {
+            bl = p[k * FP_OP + FP_OL];
+            best = k;
+        }
+    op = p + best * FP_OP;
+    ol = fm6_scaleout(op[FP_OL]) + fm6_scale_level(note, op);
+    ol = ((ol > 127 ? 127 : ol) << 5) + fm6_scale_vel(FM_VEL, op[FP_KVS]);
+    fm6_env_init(&e, op, ol < 0 ? 0 : ol, fm6_scale_rate(note, op[FP_RS]));
+    for (n = 0; e.ix == 0u && n < 14000u; n++)   /* (blocks: 0.7256 ms each) */
+        peak = maxi(peak, fm6_env_get(&e, op));
+    a[0] = (int32_t)(n * 7256u / 10000u);
+    for (n = 0; e.ix < 3u && n < 14000u; n++)
+        peak = maxi(peak, fm6_env_get(&e, op));
+    a[1] = (int32_t)(n * 7256u / 10000u);
+    peak = maxi(peak, e.level);
+    a[2] = (int32_t)((100u * exp2_q16(-((peak - e.level) >> 8))) >> 16);
+    fm6_env_key(&e, op, 0);
+    for (n = 0; e.ix < 4u && n < 28000u; n++) {
+        lv = fm6_env_get(&e, op);
+        if (lv <= peak - (10 << 24))
+            break;
+    }
+    a[3] = (int32_t)(n * 7256u / 10000u);
+}
 static void fm_note_off(fm_voice_t *v, const fm_patch_t *pt)
 {
     if (v->live && v->n.down)

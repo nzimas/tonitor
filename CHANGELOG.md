@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.37
+
+Added
+- ENVELOPE page on the 3rd black key from the right (lit while up): the chosen track's amplitude envelope as
+  attack, decay, sustain and release, drawn and with values. Until the knobs are turned it shows the sound's
+  own envelope (AS DRAWN; FM: the loudest carrier; CALIGULA: its pairs' times averaged; CALIGULA and
+  RUSSOLO: no decay or sustain stage). KNOB 1–4 set ATTACK (1 ms – 10 s), DECAY (5 ms – 10 s), SUSTAIN
+  (0–100 %) and RELEASE (5 ms – 20 s), logarithmic. The first turn starts from the values shown and replaces
+  the sound's amplitude envelope: FM carrier envelopes and the ANIMA envelope are held at full, CALIGULA and
+  RUSSOLO are held through the release and then let go. Applies from the next note; afterwards knob changes
+  also affect sounding notes. Linear attack, exponential decay and release (release ends at −60 dB).
+- SHIFT + the envelope key, HOME and preset loading return to the sound's own envelope. One envelope per
+  track and engine; stored in sessions (format 15) and copied with the track; not stored in presets.
+
+Changed
+- The XS font has a space character.
+
 ## 0.36
 
 Added
