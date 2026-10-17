@@ -3,7 +3,7 @@
 ## 0.41
 
 Added
-- BALLSY, a ball sequencer per track: SHIFT + EDIT turns it on (its page shown) or off; EDIT blinks while it
+- BALLSY, a physics sequencer per track: SHIFT + EDIT turns it on (its page shown) or off; EDIT blinks while it
   runs. Holding EDIT (0.6 s) while it runs shows or hides its page; with the page hidden the balls keep playing
   and the knobs, screen and other pages work as usual. A short press of EDIT is still EDIT (now acting on
   release). One to eight balls bounce in a box; each wall hit plays a note on the track as a key would (scale,

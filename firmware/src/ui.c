@@ -303,7 +303,7 @@ static void latch_move(uint32_t l, int32_t d)
     ui.latch[l] = latch;
 }
 
-#include "balls.c"                       /* (BALLSY, the ball sequencer: SHIFT + EDIT) */
+#include "balls.c"                       /* (BALLSY, the physics sequencer: SHIFT + EDIT) */
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
 static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
