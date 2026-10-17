@@ -8,7 +8,7 @@
 <p align="center"><b>An alternative firmware for the M-VAVE FM-1, for electroacoustic experimentation, live ambient music and sound exploration.</b></p>
 
 <p align="center">
-  <a href="https://nzimas.github.io/tonitor/install.html"><b>Install in your browser</b></a> ·
+  <a href="https://nzimas.github.io/tonitor/install.html"><b>Install via browser</b></a> ·
   <a href="https://nzimas.github.io/tonitor/manual.html">Manual</a> ·
   <a href="https://nzimas.github.io/tonitor/">Website</a> ·
   <a href="CHANGELOG.md">Changelog</a>
