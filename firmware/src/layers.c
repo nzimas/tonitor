@@ -1092,7 +1092,9 @@ static void trk_play(uint32_t l, loop_trk_t *t, looper_t *p, uint32_t e, int as_
 #if TELEMETRY
         tele_non++;
 #endif
-    } else if (!tied && !p->vary) {               /* (VARY: its own length, not the recorded) */
+    } else if (p->vary ? (t->snd[raw >> 5] >> (raw & 31u)) & 1u : !tied) {
+        /* (VARY: its notes have their own lengths -- but one struck as recorded before VARY came on, tied over the
+         * loop's end or not, is let go here, at its recorded end: else it would sound on for ever) */
         note_off(l, nt, SRC_LOOP);
         t->snd[raw >> 5] &= ~(1u << (raw & 31u));
     }
@@ -1140,7 +1142,8 @@ static void trk_step(uint32_t l, looper_t *p, loop_trk_t *t)
             if (LE_ON(e)) {
                 loop_strike(l, p, t, LE_NOTE(e));
                 t->rgo = 1;
-            } else if (!p->vary && ((t->snd[LE_NOTE(e) >> 5] >> (LE_NOTE(e) & 31u)) & 1u)) {   /* (only what it struck) */
+            } else if ((t->snd[LE_NOTE(e) >> 5] >> (LE_NOTE(e) & 31u)) & 1u) {   /* (only what it struck as
+                                                                                    * recorded -- VARY's, never) */
                 note_off(l, lx_map(LE_NOTE(e), lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
                 t->snd[LE_NOTE(e) >> 5] &= ~(1u << (LE_NOTE(e) & 31u));
             }

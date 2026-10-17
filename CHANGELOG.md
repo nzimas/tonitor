@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44
+
+Fixed
+- VARY switched on while a loop's notes were sounding (long notes, especially ones held over the loop's end) left
+  those notes sounding indefinitely: under VARY the recorded note-offs were ignored. A note struck as recorded
+  before VARY came on is now released at its recorded end; notes struck by VARY keep their own random lengths.
+
 ## 0.43
 
 Added

@@ -4787,11 +4787,45 @@ static int cmd_balls(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* VARY switched on while long notes sound -- pads held over the loop's end -- lets them go at their recorded ends:
+ * none hangs on */
+static int vary_hang(void)
+{
+    uint32_t fail = 0, b, k, longest = 0, held[NVOICE] = {0};
+    grain_reset();
+    press_btn(B_FX);
+    press_key(0, 1);                                  /* a pad held across the loop's end (tied), another inside it */
+    press_btn(B_REC);
+    run_blocks(400, 0);
+    press_key(2, 1);
+    run_blocks(1500, 0);
+    press_key(2, 0);
+    run_blocks(400, 0);
+    press_btn(B_REC);                                 /* (the loop closes, key 0 still down) */
+    run_blocks(800, 0);
+    press_key(0, 0);
+    run_blocks(1300, 0);                              /* round again: both sounding as recorded */
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_REC);                                 /* VARY on, mid-note */
+    press_phys(KEY_SHIFT, 0);
+    for (b = 0; b < 1378u * 12u; b++) {
+        run_blocks(1, 0);
+        for (k = 0; k < NVOICE; k++) {
+            held[k] = vox[k].gate && vox[k].src == SRC_LOOP ? held[k] + 1u : 0u;
+            longest = held[k] > longest ? held[k] : longest;
+        }
+    }
+    printf("vary: switched on over long notes: the longest held after, %.2f s (the loop %.2f s)\n", longest / 1378.0,
+           loop[0].trk[0].len / 1378.0);
+    if (longest > loop[0].trk[0].len + 1378u)
+        printf("FAIL vary: a note hangs on after VARY came on\n"), fail++;
+    return (int)fail;
+}
 /* VARY (SHIFT + REC): the loop's notes at levels and for lengths drawn at random (the recorded ones 1 s long);
  * REC itself untouched; sessions keep it; emptying the loops ends it */
 static int cmd_vary(void)
 {
-    uint32_t fail = 0, b, k, nlen = 0, shorter = 0, longer = 0, lvl[128] = {0}, nlvl = 0;
+    uint32_t fail = (uint32_t)vary_hang(), b, k, nlen = 0, shorter = 0, longer = 0, lvl[128] = {0}, nlvl = 0;
     uint32_t held[NVOICE] = {0};
     grain_reset();
     memset(host_flash, 0xFF, sizeof host_flash);
@@ -4824,12 +4858,12 @@ static int cmd_vary(void)
             } else if (held[k]) {
                 nlen++;
                 shorter += held[k] < 1100u;           /* (0.8 s) */
-                longer += held[k] > 1650u;            /* (1.2 s) */
+                longer += held[k] > 1240u;            /* (0.9 s) */
                 held[k] = 0;
             }
         }
     }
-    printf("vary: %u loop notes: %u shorter than 0.8 s, %u longer than 1.2 s, %u levels\n", nlen, shorter, longer, nlvl);
+    printf("vary: %u loop notes: %u shorter than 0.8 s, %u longer than 0.9 s, %u levels\n", nlen, shorter, longer, nlvl);
     if (nlen < 8u || shorter < 2u || longer < 1u || nlvl < 4u)
         printf("FAIL vary: the loop's notes are not varied in length and level\n"), fail++;
     {   /* forty times round: the notes struck beyond the recorded two, and whose pitch is not theirs (foreign,
