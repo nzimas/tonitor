@@ -203,7 +203,8 @@ def fragments():
     (DOCS / "index.html").write_text(page(
         "Tonitor — a firmware for the M-VAVE FM-1", "Home", (src / "home.html").read_text(),
         "Tonitor: a firmware for the M-VAVE FM-1 for electroacoustic experimentation, live ambient music and sound "
-        "exploration."))
+        "exploration.",
+        '\n<script src="js/demo.js" defer></script>'))
     (DOCS / "install.html").write_text(page(
         "Install Tonitor", "Install", (src / "install.html").read_text(),
         "Install Tonitor on an M-VAVE FM-1 from your browser, over USB MIDI.",
