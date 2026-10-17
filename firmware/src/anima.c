@@ -513,7 +513,7 @@ static void an_note_on(an_voice_t *v, const an_design_t *d, uint32_t inc, int fr
     v->inc = inc;
     v->ktmul = Q16;
     if (d->kt) {                                     /* the filter follows the keyboard, from middle C */
-        int32_t oct = log2_q16(inc) - log2_q16(pitch_inc(60 * 16));
+        int32_t oct = log2_q16(inc | 1u) - log2_q16(pitch_inc(60 * 16));   /* (| 1: never 0 -- and no folded constant for it) */
         v->ktmul = (int32_t)exp2_q16(clampi((int32_t)(((int64_t)oct * d->kt) >> 8), -3 * Q16, 3 * Q16));
     }
     v->incB = (uint32_t)(((uint64_t)inc * exp2_q16((d->intervalB * 16 + d->detuneB / 100) * 341)) >> 16);

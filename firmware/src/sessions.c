@@ -21,14 +21,14 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 16u           /* 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 17u           /* 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
 #define SES_SLOTS 64u            /* the slots: sessions 1 .. 64 */
 /* the largest session: the head, the globals, six layers with their sounds and full loopers (~54 KiB) */
 #define SES_BUF (32u + 8u + NLAYER * (16u + NENG * NMAC + 2u + 36u + sizeof(fm_patch_t) + sizeof(an_design_t) + sizeof(cal_design_t) + \
-                                      sizeof(rus_design_t) + \
+                                      sizeof(rus_design_t) + sizeof(dr_design_t) + \
                                       8u * LOOP_TRK + 4u * LOOP_N) + 4u + NLAYER + NLAYER * (2u + NKEY))
 
 /* the flash, for the target (main.c) or the host test (host.c); offsets from the flash's start */
@@ -43,7 +43,7 @@ typedef struct {
     uint32_t seq;
     uint16_t fm_size, an_size;
     uint16_t body_crc, cal_size; /* (cal_size: format 3) */
-    uint32_t rsv2;
+    uint16_t dr_size, rsv2;      /* (dr_size: format 17) */
     uint16_t rus_size, head_crc; /* (rus_size: format 9); CRC of the 30 bytes before it */
 } ses_head_t;
 typedef char ses_head_is_32[sizeof(ses_head_t) == 32u ? 1 : -1];
@@ -349,9 +349,11 @@ static void ses_emit(void)
                                                                                              * the spare bits) */
         {   /* (and, should the sound kept in full have to be drawn again: its generation and path) */
             uint32_t g = y.engine == ENG_FM ? fm_buf[l][fm_pub[l]].gen : y.engine == ENG_ANIMA ? an_buf[l][an_pub[l]].gen
-                         : y.engine == ENG_CAL ? cal_buf[l][cal_pub[l]].gen : rus_buf[l][rus_pub[l]].gen;
+                         : y.engine == ENG_CAL ? cal_buf[l][cal_pub[l]].gen : y.engine == ENG_RUS ? rus_buf[l][rus_pub[l]].gen
+                         : dr_buf[l][dr_pub[l]].gen;
             uint32_t pa = y.engine == ENG_FM ? fm_buf[l][fm_pub[l]].path : y.engine == ENG_ANIMA ? an_buf[l][an_pub[l]].path
-                          : y.engine == ENG_CAL ? cal_buf[l][cal_pub[l]].path : rus_buf[l][rus_pub[l]].path;
+                          : y.engine == ENG_CAL ? cal_buf[l][cal_pub[l]].path : y.engine == ENG_RUS ? rus_buf[l][rus_pub[l]].path
+                          : dr_buf[l][dr_pub[l]].path;
             y.loop_n = n | g << 16 | pa << 20;
         }
         ses_out(&y, sizeof y);
@@ -400,6 +402,13 @@ static void ses_emit(void)
                 c2[1] = ses_c2_word(rus_buf[l][rus_pub[l]].out, rus_buf[l][rus_pub[l]].gen, rus_buf[l][rus_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
+            if (y.engine == ENG_DRUID)                  /* (format 17) */
+                ses_out(&dr_buf[l][dr_pub[l]], sizeof(dr_design_t));
+            else {
+                c2[0] = dr_buf[l][dr_pub[l]].seed;
+                c2[1] = ses_c2_word(dr_buf[l][dr_pub[l]].out, dr_buf[l][dr_pub[l]].gen, dr_buf[l][dr_pub[l]].path);
+                ses_out(c2, sizeof c2);
+            }
         }
         for (k = 0; k < nt; k++) {
             uint32_t tl[2];
@@ -432,6 +441,7 @@ static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t
     h->an_size = sizeof(an_design_t);
     h->cal_size = sizeof(cal_design_t);
     h->rus_size = sizeof(rus_design_t);
+    h->dr_size = sizeof(dr_design_t);
     h->body_crc = crc;
     h->head_crc = ses_crc((const uint8_t *)h, 30u, 0);
 }
@@ -533,14 +543,16 @@ static int ses_save(uint32_t num)
 
 /* ------------------------------------------------------------- presets --- *
  * 64 an engine, P1 .. P64: each the sound as what draws it again bit for bit -- its seed, path and generation
- * (dsp.h GEN_NOW), its measured level and EDIT's macros -- 14 bytes, so all 256 are one record of the store,
+ * (dsp.h GEN_NOW), its measured level and EDIT's macros -- 12 bytes (format 4: whether it is used and the kind
+ * in the level word's top bits, beside the path), so all 320 are one record of the store,
  * number PRE_NUM, written as a session is (a new copy, then the old one killed). Read a slot at a time from the
- * flash; changed in ses_chunk. Formats: 3, four engines, 14 bytes a slot; 2, three engines, 16 (with macros);
- * 1, three engines, 12 (without): still read, and widened when a slot is saved */
+ * flash; changed in ses_chunk. Formats: 4, five engines, 12 bytes a slot (used and kind in one byte); 3, four
+ * engines, 14; 2, three engines, 16 (with macros); 1, three engines, 12 (without): still read, and rewritten
+ * in format 4 when a slot is saved */
 #define PRE_NUM 1000u
 #define PRE_SLOTS 64u
-#define PRE_FORMAT 3u
-#define PRE_STRIDE 14u
+#define PRE_FORMAT 4u
+#define PRE_STRIDE 12u
 typedef struct {
     uint32_t seed;
     uint32_t word;               /* ses_c2_word: level, generation, path */
@@ -556,10 +568,20 @@ static void pre_read_slot(uint32_t sect, uint32_t fmt, uint32_t k, pre_rec_t *r)
     uint32_t at = SES_LO + sect * SES_SECT + 32u;
     uint8_t b[16];
     memset(r, 0, sizeof *r);
-    if (fmt >= 3u) {
+    if (fmt >= 4u) {
         if (k >= NENG * PRE_SLOTS)
             return;
         ses_flash_read(at + k * PRE_STRIDE, b, PRE_STRIDE);
+        memcpy(&r->seed, b, 4u);
+        memcpy(&r->word, b + 4u, 4u);
+        r->used = (uint8_t)(r->word >> 31);
+        r->kind = (uint8_t)(r->word >> 26 & 31u);
+        r->word &= 0x03FFFFFFu;
+        memcpy(r->mac, b + 8u, NMAC);
+    } else if (fmt == 3u) {
+        if (k >= 4u * PRE_SLOTS)                      /* (four engines then) */
+            return;
+        ses_flash_read(at + k * 14u, b, 14u);
         memcpy(&r->seed, b, 4u);
         memcpy(&r->word, b + 4u, 4u);
         r->used = b[8];
@@ -573,14 +595,13 @@ static void pre_read_slot(uint32_t sect, uint32_t fmt, uint32_t k, pre_rec_t *r)
         r->rsv[0] = r->rsv[1] = 0;
     }
 }
-static void pre_put_slot(uint32_t k, const pre_rec_t *r)   /* into the table in ses_chunk (format 3) */
+static void pre_put_slot(uint32_t k, const pre_rec_t *r)   /* into the table in ses_chunk (format 4) */
 {
     uint8_t *b = ses_chunk + 32u + k * PRE_STRIDE;
+    uint32_t w = (r->word & 0x03FFFFFFu) | (uint32_t)(r->kind & 31u) << 26 | (uint32_t)(r->used == 1u) << 31;
     memcpy(b, &r->seed, 4u);
-    memcpy(b + 4u, &r->word, 4u);
-    b[8] = r->used;
-    b[9] = r->kind;
-    memcpy(b + 10u, r->mac, NMAC);
+    memcpy(b + 4u, &w, 4u);
+    memcpy(b + 8u, r->mac, NMAC);
 }
 
 /* engine e's slot (1 .. 64): 1 and *r if it holds a sound */
@@ -632,8 +653,11 @@ static int pre_save(uint32_t l, uint32_t e, uint32_t slot)
     } else if (e == ENG_CAL) {
         const cal_design_t *s_ = &cal_buf[l][cal_pub[l]];
         rec.seed = s_->seed, rec.word = ses_c2_word(s_->out, s_->gen, s_->path), rec.kind = s_->kind;
-    } else {
+    } else if (e == ENG_RUS) {
         const rus_design_t *s_ = &rus_buf[l][rus_pub[l]];
+        rec.seed = s_->seed, rec.word = ses_c2_word(s_->out, s_->gen, s_->path), rec.kind = s_->kind;
+    } else {
+        const dr_design_t *s_ = &dr_buf[l][dr_pub[l]];
         rec.seed = s_->seed, rec.word = ses_c2_word(s_->out, s_->gen, s_->path), rec.kind = s_->kind;
     }
     memcpy(rec.mac, ui.mac[l][e], NMAC);
@@ -720,7 +744,7 @@ static void ses_fresh(uint32_t num)
     memset(ui.env_on, 0, sizeof ui.env_on);
     memset(ui.dist, 0, sizeof ui.dist);
     for (l = 0; l < NLAYER; l++) {
-        uint32_t s = next_seed(), fk, ak, ck, rk;
+        uint32_t s = next_seed(), fk, ak, ck, rk, dk;
         loop[l].mute = 0;
         memset(ui.mac[l], 0, sizeof ui.mac[l]);
         memset(ui.latch_note[l], 0, sizeof ui.latch_note[l]);
@@ -737,10 +761,14 @@ static void ses_fresh(uint32_t num)
         sound_slot_free(&an_pub[l], &an_use[l]);
         sound_slot_free(&cal_pub[l], &cal_use[l]);
         sound_slot_free(&rus_pub[l], &rus_use[l]);
+        sound_slot_free(&dr_pub[l], &dr_use[l]);
         fk = fm_use[l] ^ 1u;
         ak = an_use[l] ^ 1u;
         ck = cal_use[l] ^ 1u;
         rk = rus_use[l] ^ 1u;
+        dk = dr_use[l] ^ 1u;
+        dr_design(&dr_buf[l][dk], -1, s * 19u + 11u, PATH_OPEN, GEN_NOW);
+        dr_measure(&dr_buf[l][dk]);
         fm_generate(&fm_buf[l][fk], -1, s, PATH_OPEN, GEN_NOW);    /* (as sounds_init draws them) */
         fm_measure(&fm_buf[l][fk]);
         an_design(&an_buf[l][ak], -1, s * 7u + 3u, PATH_OPEN, GEN_NOW);
@@ -752,6 +780,7 @@ static void ses_fresh(uint32_t num)
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)ck;
         rus_pub[l] = (uint8_t)rk;
+        dr_pub[l] = (uint8_t)dk;
         RING_PUBLISH();
         fm_pub[l] = (uint8_t)fk;
         an_pub[l] = (uint8_t)ak;
@@ -778,6 +807,7 @@ static struct {
     an_design_t an;
     cal_design_t cal;
     rus_design_t rus;
+    dr_design_t dr;
     uint8_t ntrk;
     uint16_t mute;
     uint32_t nev;
@@ -812,6 +842,7 @@ static void clip_copy(uint32_t l)
     clip.an = an_buf[l][an_pub[l]];
     clip.cal = cal_buf[l][cal_pub[l]];
     clip.rus = rus_buf[l][rus_pub[l]];
+    clip.dr = dr_buf[l][dr_pub[l]];
     clip.ntrk = (uint8_t)nt;
     clip.mute = p->mute;
     clip.play = p->play;
@@ -823,7 +854,7 @@ static void clip_copy(uint32_t l)
 static void clip_paste(uint32_t l)
 {
     looper_t *lp = &loop[l];
-    uint32_t fk, ak, ck, rk, k;
+    uint32_t fk, ak, ck, rk, dk, k;
     ui.latch[l] = 0;                                    /* silence there, its loops emptied, its latches let go */
     ev_post(EV_STOP, l, 0, 0);
     ev_post(EV_LOOP_CLEAR, l, 0, 0);
@@ -850,17 +881,21 @@ static void clip_paste(uint32_t l)
     sound_slot_free(&an_pub[l], &an_use[l]);
     sound_slot_free(&cal_pub[l], &cal_use[l]);
     sound_slot_free(&rus_pub[l], &rus_use[l]);
+    sound_slot_free(&dr_pub[l], &dr_use[l]);
     fk = fm_use[l] ^ 1u;
     ak = an_use[l] ^ 1u;
     ck = cal_use[l] ^ 1u;
     rk = rus_use[l] ^ 1u;
+    dk = dr_use[l] ^ 1u;
     fm_buf[l][fk] = clip.fm;
     an_buf[l][ak] = clip.an;
     cal_buf[l][ck] = clip.cal;
     rus_buf[l][rk] = clip.rus;
+    dr_buf[l][dk] = clip.dr;
     RING_PUBLISH();
     cal_pub[l] = (uint8_t)ck;
     rus_pub[l] = (uint8_t)rk;
+    dr_pub[l] = (uint8_t)dk;
     RING_PUBLISH();
     fm_pub[l] = (uint8_t)fk;
     an_pub[l] = (uint8_t)ak;
@@ -941,12 +976,13 @@ static int ses_load(uint32_t i)
     for (l = 0; l < NLAYER; l++) {
         ses_layer_t y;
         looper_t *lp = &loop[l];
-        uint32_t fk, ak, ck, rk, gseed;
+        uint32_t fk, ak, ck, rk, dk, gseed;
         ses_in(&y, sizeof y);
         memset(ui.mac[l], 0, sizeof ui.mac[l]);
         if (h.format >= 6u) {
             uint32_t j;
-            ses_in(ui.mac[l], (h.format >= 9u ? 4u : 3u) * NMAC);   /* (before format 9: three engines' macros) */
+            ses_in(ui.mac[l], (h.format >= 17u ? 5u : h.format >= 9u ? 4u : 3u) * NMAC);   /* (before format 9: three
+                                                                                     * engines' macros; 17, five) */
             for (j = 0; j < NENG * NMAC; j++)
                 (&ui.mac[l][0][0])[j] = (int8_t)clampi((&ui.mac[l][0][0])[j], -MAC_MAX, MAC_MAX);
         } else
@@ -972,7 +1008,7 @@ static int ses_load(uint32_t i)
         }
         lx_post();                                      /* (before its loops are set going: they start where they were) */
         ui.engine[l] = (uint8_t)(y.engine < NENG ? y.engine : 0);
-        if (h.format < 9u && ui.engine[l] == ENG_RUS)
+        if ((h.format < 9u && ui.engine[l] == ENG_RUS) || (h.format < 17u && ui.engine[l] == ENG_DRUID))
             ui.engine[l] = 0;
         ui.oct[l] = (int8_t)clampi(y.oct, -3, 3);
         ui.level[l] = (int8_t)clampi(y.level, 0, LEVEL_MAX);
@@ -991,7 +1027,9 @@ static int ses_load(uint32_t i)
         sound_slot_free(&an_pub[l], &an_use[l]);
         sound_slot_free(&cal_pub[l], &cal_use[l]);
         sound_slot_free(&rus_pub[l], &rus_use[l]);
+        sound_slot_free(&dr_pub[l], &dr_use[l]);
         rk = rus_use[l] ^ 1u;
+        dk = dr_use[l] ^ 1u;
         fk = fm_use[l] ^ 1u;
         ak = an_use[l] ^ 1u;
         ck = cal_use[l] ^ 1u;
@@ -1056,10 +1094,28 @@ static int ses_load(uint32_t i)
                 rus_design(&rus_buf[l][rk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 rus_buf[l][rk].out = ses_c2_level(&h, c2[1]);
             }
+            if (h.format < 17u) {                       /* (before DRUID: one drawn anew) */
+                dr_design(&dr_buf[l][dk], -1, ui.seed = ui.seed * 1664525u + 1013904223u + fm1_ticks(), ui.path[l], GEN_NOW);
+                dr_measure(&dr_buf[l][dk]);
+            } else if (ui.engine[l] == ENG_DRUID) {
+                if (h.dr_size == sizeof(dr_design_t))
+                    ses_in(&dr_buf[l][dk], sizeof(dr_design_t));
+                else {
+                    ses_in(c2, 4u);
+                    ses_in(0, h.dr_size - 4u);
+                    dr_design(&dr_buf[l][dk], -1, c2[0], ses_full_path(&h, y.loop_n), ses_full_gen(&h, y.loop_n));
+                    dr_measure(&dr_buf[l][dk]);
+                }
+            } else {
+                ses_in(c2, sizeof c2);
+                dr_design(&dr_buf[l][dk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                dr_buf[l][dk].out = ses_c2_level(&h, c2[1]);
+            }
         }
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)ck;
         rus_pub[l] = (uint8_t)rk;
+        dr_pub[l] = (uint8_t)dk;
         RING_PUBLISH();
         fm_pub[l] = (uint8_t)fk;
         an_pub[l] = (uint8_t)ak;
@@ -1152,8 +1208,15 @@ static int ses_load(uint32_t i)
     memset(ui.env_on, 0, sizeof ui.env_on);
     if (h.format >= 15u) {
         uint32_t e;
-        ses_in(ui.env, sizeof ui.env);
-        ses_in(ui.env_on, sizeof ui.env_on);
+        if (h.format >= 17u) {
+            ses_in(ui.env, sizeof ui.env);
+            ses_in(ui.env_on, sizeof ui.env_on);
+        } else {                                        /* (four engines' then) */
+            for (l = 0; l < NLAYER; l++)
+                ses_in(ui.env[l], 4u * 4u);
+            for (l = 0; l < NLAYER; l++)
+                ses_in(ui.env_on[l], 4u);
+        }
         for (l = 0; l < NLAYER; l++)
             for (e = 0; e < NENG; e++) {
                 ui.env_on[l][e] = (uint8_t)(ui.env_on[l][e] != 0);

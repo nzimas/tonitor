@@ -534,7 +534,9 @@ static void env_native(uint32_t l, int8_t *v)
         }
         a[1] = 5;
         a[2] = 100;
-    } else {
+    } else if (e == ENG_DRUID)
+        dr_env_adsr(&dr_buf[l][dr_pub[l]], a);
+    else {
         const rus_design_t *d = &rus_buf[l][rus_pub[l]];
         a[0] = d->att;
         a[1] = 5;
@@ -561,7 +563,8 @@ static const char *mac_name(uint32_t l, uint32_t j)
 {
     uint32_t e = ui.engine[l];
     return e == ENG_FM ? fm_mac_name(&fm_buf[l][fm_pub[l]], j) : e == ENG_ANIMA ? an_mac_name(&an_buf[l][an_pub[l]], j)
-           : e == ENG_CAL ? cal_mac_name(&cal_buf[l][cal_pub[l]], j) : rus_mac_name(&rus_buf[l][rus_pub[l]], j);
+           : e == ENG_CAL ? cal_mac_name(&cal_buf[l][cal_pub[l]], j) : e == ENG_RUS ? rus_mac_name(&rus_buf[l][rus_pub[l]], j)
+           : dr_mac_name(&dr_buf[l][dr_pub[l]], j);
 }
 
 /* HOME: a new sound for the layer chosen */
@@ -573,14 +576,16 @@ static void new_sound(int same)                  /* same: of the family (kind, s
                : ui.engine[l] == ENG_FM    ? (int32_t)fm_buf[l][fm_pub[l]].family
                : ui.engine[l] == ENG_ANIMA ? (int32_t)an_buf[l][an_pub[l]].kind
                : ui.engine[l] == ENG_CAL   ? (int32_t)cal_buf[l][cal_pub[l]].kind
-                                           : (int32_t)rus_buf[l][rus_pub[l]].kind;
+               : ui.engine[l] == ENG_RUS   ? (int32_t)rus_buf[l][rus_pub[l]].kind
+                                           : (int32_t)dr_buf[l][dr_pub[l]].kind;
     say(same ? "SAME FAMILY" : "NEW", 900);
     ui.home_until = fm1_ms + 400u;
     ui_draw();                                   /* the message first: an FM patch takes ~30 ms to measure */
     ok = ui.engine[l] == ENG_FM      ? new_fm(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_ANIMA ? new_anima(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_CAL   ? new_cal(l, next_seed(), ui.path[l])
-                                     : new_rus(l, next_seed(), ui.path[l]);
+         : ui.engine[l] == ENG_RUS   ? new_rus(l, next_seed(), ui.path[l])
+                                     : new_druid(l, next_seed(), ui.path[l]);
     new_kind = -1;
     if (!ok)
         say("BUSY", 900);
@@ -1613,7 +1618,7 @@ static void cv_text_in(int32_t x, int32_t w, int32_t band_h, const char *t, uint
 static const char *kind_name(uint32_t e, int32_t k)
 {
     return e == ENG_FM ? FF_NAME[k % FF_N] : e == ENG_ANIMA ? AK_NAME[k % AK_N] : e == ENG_CAL ? CS_NAME[k % CS_N]
-                                                                                                : RK_NAME[k % RK_N];
+           : e == ENG_RUS ? RK_NAME[k % RK_N] : DK_NAME[k % DK_N];
 }
 /* the PRESETS page: the engine's name over four slots (the page of the one chosen), the chosen one in white; a
  * full slot's number in red with its sound's name, an empty one grey. Or, asked: OVERWRITE?, the slot, NO | YES */
@@ -1863,8 +1868,10 @@ static void sounds_init(void)
         cal_measure(&cal_buf[l][0]);
         rus_design(&rus_buf[l][0], -1, s * 17u + 9u, PATH_OPEN, GEN_NOW);
         rus_measure(&rus_buf[l][0]);
+        dr_design(&dr_buf[l][0], -1, s * 19u + 11u, PATH_OPEN, GEN_NOW);
+        dr_measure(&dr_buf[l][0]);
         fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
-        cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = 0;
+        cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = dr_pub[l] = dr_use[l] = 0;
         gran_profile(l, next_seed());            /* the granulator's character, drawn */
     }
 }

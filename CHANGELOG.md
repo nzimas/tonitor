@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.40
+
+Added
+- A fifth engine, DRUID, after the resonators of Mutable Instruments Rings (Émilie Gillet, MIT licence),
+  ported to fixed point. Three resonators: a Karplus-Strong string (Hermite-interpolated delay, all-pass
+  dispersion, delay noise, a buzzing bridge, FIR and state-variable damping with the decay set as a time to
+  −60 dB, a pickup comb at the position), sympathetic strings (a string and three more tuned to intervals of
+  it, driven by its sound), and a modal resonator (up to 16 two-pole resonators at stretched partials). Four
+  internal exciters: pluck (Rings' plucker), strike, bow (noise while the key is held) and dust (random impacts
+  while the key is held). Ten kinds: PLUCK, BOWED, STRUCK, SITAR, RATTLE, HARP, DRONE, BELL, BOWL, PLATE. EDIT's
+  macros are Rings' controls: STRUCTURE, BRIGHTNESS, DAMPING, POSITION. Releasing a key damps the sound by an
+  amount set per sound. Voices come from the shared pool; each uses the memory of an ANIMA voice (no new
+  memory). Fifth position on the PRESETS knob.
+
+Changed
+- Sessions: format 17 (a fifth sound per track; macros and envelopes for five engines). Older sessions load
+  with a new DRUID sound drawn for each track.
+- Presets: format 4 (12 bytes a slot, 64 slots for each of five engines in one 4 KB sector). Presets saved
+  before still load.
+
 ## 0.39
 
 Changed

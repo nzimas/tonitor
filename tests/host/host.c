@@ -85,6 +85,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 #include "anima.c"
 #include "cal.c"
 #include "russolo.c"
+#include "druid.c"
 #include "reverb.c"
 #define MQ 64u
 static uint32_t midi_in_q[MQ];
@@ -4469,6 +4470,172 @@ static int cmd_dist(void)
     return fail ? 1 : 0;
 }
 
+/* DRUID: every kind, C3 held 1.5 s then let go 2 s -- it sounds, at the note's pitch (autocorrelation), within
+ * full scale, dies away once let go (all but the long rings), and its cost a block; WAVs to listen to */
+static int dr_ac_period(const int32_t *x, uint32_t n)   /* the first lag within 10 % of the best correlation */
+{
+    static double ac[1200];
+    uint32_t lag, i;
+    double bv = 0;
+    for (lag = 40; lag < 1200u; lag++) {
+        double a = 0, e1 = 0, e2 = 0;
+        for (i = 0; i + lag < n; i++) {
+            a += (double)x[i] * x[i + lag];
+            e1 += (double)x[i] * x[i];
+            e2 += (double)x[i + lag] * x[i + lag];
+        }
+        ac[lag] = a / sqrt(e1 * e2 + 1);
+        bv = ac[lag] > bv ? ac[lag] : bv;
+    }
+    for (lag = 41; lag < 1199u; lag++)
+        if (ac[lag] >= bv * 0.9 && ac[lag] >= ac[lag - 1] && ac[lag] >= ac[lag + 1])
+            return (int)lag;
+    return 0;
+}
+static int cmd_druid(const char *dir)
+{
+    static dr_voice_t v;
+    static int32_t rec[44100 * 4];
+    uint32_t fail = 0, k, s;
+    char path[512];
+    wav_ch = 1;
+    for (k = 0; k < DK_N; k++)
+        for (s = 0; s < 2u; s++) {
+            dr_design_t d;
+            uint32_t b, i, n = 0;
+            int32_t out[CTL], pk = 0;
+            double held = 0, tail = 0, ns;
+            struct timespec t0, t1;
+            int per;
+            dr_design(&d, (int32_t)k, 500u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
+            dr_measure(&d);
+            dr_init(&v, 99u);
+            dr_note_on(&v, &d, 48, 1);
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            for (b = 0; b < 44100u * 7u / 2u / CTL; b++) {
+                if (b == 2067u)
+                    dr_note_off(&v);
+                if (!dr_render(&v, &d, out, CTL))
+                    memset(out, 0, sizeof out);
+                for (i = 0; i < CTL; i++) {
+                    rec[n++] = out[i];
+                    wav_put(out[i]);
+                    pk = absi(out[i]) > pk ? absi(out[i]) : pk;
+                }
+            }
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            ns = ((t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec)) / (double)(n / CTL);
+            for (i = 8820; i < 44100u; i++)
+                held += (double)rec[i] * rec[i];
+            held = sqrt(held / (44100 - 8820));
+            for (i = 44100u * 3u; i < n; i++)
+                tail += (double)rec[i] * rec[i];
+            tail = sqrt(tail / (n - 44100u * 3u));
+            per = dr_ac_period(rec + 4410, 8820);
+            snprintf(path, sizeof path, "%s/druid-%s-%s.wav", dir, DK_NAME[k], s ? "exp" : "amb");
+            wav_write(path);
+            printf("druid %-7s %s: out x%.2f, held %6.1f dB, peak %6.1f dB, 1.5 s after release %6.1f dB, period %4d "
+                   "(C3 337), %.2f us a block\n", DK_NAME[k], s ? "exp" : "amb", d.out / 4096.0, dbp(held), dbp(pk),
+                   dbp(tail), per, ns / 1000.0);
+            if (held < 30.0 || pk >= 32767)
+                printf("FAIL druid: %s does not sound, or clips\n", DK_NAME[k]), fail++;
+            if (d.model != DM_MODAL && k != DK_RATTLE && k != DK_STRUCK && abs(per - 337) > 6 && abs(per - 674) > 12 && abs(per - 168) > 4)
+                printf("FAIL druid: %s is not at the note's pitch (%d)\n", DK_NAME[k], per), fail++;
+        }
+    {   /* through a track: DRUID on track 1 (four steps of PRESETS), notes on it; then ANIMA on the same voices'
+         * memory, clean; the sound kept by a session, a preset, the clipboard */
+        uint32_t g, b, i;
+        int32_t pk = 0, apk = 0;
+        uint32_t seed;
+        grain_reset();
+        memset(host_flash, 0xFF, sizeof host_flash);
+        ses_scan(1);
+        ui.send[0] = 0;
+        level_pan_apply(0);
+        press_btn(B_FX);
+        for (g = 0; ui.engine[0] != ENG_DRUID && g < 10u; g++) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        if (ui.engine[0] != ENG_DRUID || lay[0].engine != ENG_DRUID || strcmp(ENG_NAME[ENG_DRUID], "DRUID"))
+            printf("FAIL druid: PRESETS does not reach DRUID\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        for (i = 0; i < 3u; i++)
+            press_key(i * 2u, 1);
+        for (b = 0; b < 600u; b++) {
+            run_blocks(1, 0);
+            for (i = 0; i < 2u * CTL; i++)
+                pk = absi(mix_out[i]) > pk ? absi(mix_out[i]) : pk;
+        }
+        for (i = 0; i < 3u; i++)
+            press_key(i * 2u, 0);
+        run_blocks(3000, 0);
+        printf("druid: a chord on track 1 (%s): peak %.1f dB\n", sound_name(0, ENG_DRUID), dbp(pk));
+        if (pk < 300)
+            printf("FAIL druid: a track on DRUID does not sound\n"), fail++;
+        for (g = 0; ui.engine[0] != ENG_ANIMA && g < 10u; g++) {   /* ANIMA, on voices DRUID has had */
+            host_enc[PANEL_ENC[EN_PRESET]] = -1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        press_key(0, 1);
+        for (b = 0; b < 300u; b++) {
+            run_blocks(1, 0);
+            for (i = 0; i < 2u * CTL; i++)
+                apk = absi(mix_out[i]) > apk ? absi(mix_out[i]) : apk;
+        }
+        press_key(0, 0);
+        run_blocks(2000, 0);
+        if (ui.engine[0] != ENG_ANIMA || apk < 100 || apk >= 32767)
+            printf("FAIL druid: ANIMA after DRUID on the same voices is wrong (peak %d)\n", apk), fail++;
+        for (g = 0; ui.engine[0] != ENG_DRUID && g < 10u; g++) {   /* back to DRUID: session, preset, clipboard */
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        ui.mac[0][ENG_DRUID][1] = 20;
+        seed = dr_buf[0][dr_pub[0]].seed;
+        if (ses_save(1) != SES_OK)
+            printf("FAIL druid: not saved\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        ses_load_slot(1);
+        run_blocks(10, 0);
+        if (ui.engine[0] != ENG_DRUID || dr_buf[0][dr_pub[0]].seed != seed || ui.mac[0][ENG_DRUID][1] != 20)
+            printf("FAIL druid: a session does not keep it\n"), fail++;
+        if (pre_save(0, ENG_DRUID, 5) != SES_OK)
+            printf("FAIL druid: the preset is not saved\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        if (pre_load(0, ENG_DRUID, 5) != SES_OK || dr_buf[0][dr_pub[0]].seed != seed || pre_kind(ENG_DRUID, 5) != dr_buf[0][dr_pub[0]].kind)
+            printf("FAIL druid: the preset does not give it back\n"), fail++;
+        clip_copy(0);
+        clip_paste(3);
+        if (ui.engine[3] != ENG_DRUID || dr_buf[3][dr_pub[3]].seed != seed)
+            printf("FAIL druid: the clipboard does not copy it\n"), fail++;
+    }
+    {   /* (for scale: an ANIMA voice's cost on the host, the same note) */
+        static an_voice_t av;
+        an_design_t ad;
+        int32_t out[CTL];
+        struct timespec t0, t1;
+        uint32_t b;
+        an_design(&ad, -1, 77u, PATH_OPEN, GEN_NOW);
+        an_init(&av, 5u);
+        an_note_on(&av, &ad, pitch_inc(48 * 16), 1);
+        clock_gettime(CLOCK_MONOTONIC, &t0);
+        for (b = 0; b < 2067u; b++)
+            an_render(&av, &ad, out, CTL);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        printf("druid: an ANIMA voice, for scale: %.2f us a block\n",
+               ((t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec)) / 2067.0 / 1000.0);
+    }
+    printf("druid: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -4583,7 +4750,7 @@ static int cmd_voices(void)
     if (nsounding(1) != 1u || nsounding(0) != 11u)
         printf("FAIL voices: layer 2's note did not take a voice from layer 1 (%u, %u)\n", nsounding(1), nsounding(0)), fail++;
     for (k = 0; k < NVOICE; k++)                     /* .. and sounds as ANIMA */
-        if (vox[k].layer == 1u && vox[k].sounding && !an_vox[k].live)
+        if (vox[k].layer == 1u && vox[k].sounding && !vmem[k].an.live)
             printf("FAIL voices: the voice layer 2 took does not sound as ANIMA\n"), fail++;
     press_btn(B_FX);                                 /* layer 1's keys up: their tails ring; layer 2 keeps its note */
     for (i = 0; i <= 12u; i++)
@@ -4864,6 +5031,8 @@ int main(int argc, char **argv)
         return cmd_env(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "dist"))
         return cmd_dist();
+    if (argc >= 3 && !strcmp(argv[1], "druid"))
+        return cmd_druid(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

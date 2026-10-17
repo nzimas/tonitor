@@ -29,8 +29,8 @@
 
 #define NLAYER 6
 #define NVOICE 12                /* the voices of all the layers (FM and ANIMA) */
-enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, NENG };
-static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO"};
+enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, ENG_DRUID, NENG };
+static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO", "DRUID"};
 
 static fm_patch_t fm_buf[NLAYER][2];
 static an_design_t an_buf[NLAYER][2];
@@ -43,10 +43,19 @@ static cal_t cal_rt[NLAYER];
 static rus_design_t rus_buf[NLAYER][2];
 static volatile uint8_t rus_pub[NLAYER], rus_use[NLAYER];
 static rus_t rus_rt[NLAYER];
+/* DRUID (druid.c): strings and resonant bodies, voices of the pool as FM and ANIMA */
+static dr_design_t dr_buf[NLAYER][2];
+static volatile uint8_t dr_pub[NLAYER], dr_use[NLAYER];
 /* an organism engine (one for the layer, outside the voices' pool) */
 static int eng_organism(uint32_t e) { return e == ENG_CAL || e == ENG_RUS; }
 
-static an_voice_t an_vox[NVOICE] POOL;   /* the pool's ANIMA voices, ~4.8 KiB each: the resonator */
+/* the pool's voices' own memory, ~4.8 KiB each: an ANIMA voice (its resonator) or a DRUID one (its strings) --
+ * a voice is one engine at a time (voice_t.eng) */
+typedef union { an_voice_t an; dr_voice_t dr; } vmem_t;
+typedef char dr_fits_an_voice[sizeof(dr_voice_t) <= sizeof(an_voice_t) ? 1 : -1];
+static vmem_t vmem[NVOICE] POOL;
+static void dr_measure(dr_design_t *d) { dr_measure_on(d, (dr_voice_t *)(void *)&an_probe); }   /* (ANIMA's probe:
+                                                                                               * never both at once) */
 
 #define FADE 12u                 /* blocks of a fade (~9 ms) */
 enum { SRC_KEY, SRC_LOOP };      /* who plays a note: the keys (and MIDI), or the looper */
@@ -60,6 +69,7 @@ typedef struct {
     uint32_t age;                /* note-on order */
     uint32_t born;               /* blk_clock at its note-on */
     uint16_t cost;               /* what a block of it took, last time (ticks) */
+    uint8_t eng;                 /* the engine its memory (vmem) is playing */
     uint8_t est;                 /* the track's own envelope (AE_*): where this voice is in it, its level Q24 */
     int32_t elv;
     uint8_t fade_n;              /* the fade's length, when not FADE (the budget's quick one) */
@@ -126,9 +136,9 @@ static uint8_t org_defer[NLAYER], org_dsrc[NLAYER];   /* the last note let go, k
  * the block's time makes room first (the oldest release tails let go, quickly) instead of the audio arriving
  * late -- a burst. On the host a model stands in for the clock (tests set it) */
 #ifdef HOST
-static uint32_t host_cost_clock, host_cost_model[4];
+static uint32_t host_cost_clock, host_cost_model[8];
 #define COST_NOW() host_cost_clock
-#define COST_ADD(e) (host_cost_clock += host_cost_model[(e) & 3u])
+#define COST_ADD(e) (host_cost_clock += host_cost_model[(e) & 7u])
 #define BLK_TICKS 1000u
 #else
 #define COST_NOW() fm1_ticks()
@@ -137,7 +147,7 @@ static uint32_t host_cost_clock, host_cost_model[4];
 #endif
 #define BUDGET (BLK_TICKS * 82u / 100u)  /* what a block may be expected to take (the rest: the panel, USB, the screen) */
 #define QUICK 3u                         /* blocks of the budget's fade (~2 ms) */
-static uint32_t eng_cost[4];             /* a voice (an organism) of each engine: its usual cost, ticks */
+static uint32_t eng_cost[8];             /* a voice (an organism) of each engine: its usual cost, ticks */
 static uint32_t org_cost[NLAYER];        /* each layer's organism, last block */
 static uint32_t blk_last, blk_new;       /* the last block's cost; what has just started since */
 static voice_t vox[NVOICE];
@@ -482,21 +492,30 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
     if (v->layer != l)
         fresh = 1;                                /* (another layer's voice: from silence) */
     if (!v->sounding || v->layer != l)
-        blk_new += eng_cost[lay[l].engine & 3u];   /* (a new voice: what it will cost, ahead) */
+        blk_new += eng_cost[lay[l].engine & 7u];   /* (a new voice: what it will cost, ahead) */
     v->layer = (uint8_t)l;
     v->age = ++lay_age;
     v->born = blk_clock;
+    if (lay[l].engine != v->eng) {
+        fresh = 1;                                /* (its memory another engine's: from silence) */
+        if (lay[l].engine == ENG_ANIMA)
+            an_init(&vmem[k].an, 0xA11u + k * 131u + lay_age);
+    }
+    v->eng = lay[l].engine;
     if (lay[l].engine == ENG_FM)
         fm_note_on(&v->fm, &fm_buf[l][fm_use[l]], v->note, fresh || !v->sounding);
-    else
-        an_note_on(&an_vox[k], &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
-    an_vox[k].env_hold = 0;
+    else if (lay[l].engine == ENG_DRUID)
+        dr_note_on(&vmem[k].dr, &dr_buf[l][dr_use[l]], (int32_t)v->note, fresh || !v->sounding);
+    else {
+        an_note_on(&vmem[k].an, &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
+        vmem[k].an.env_hold = 0;
+    }
     v->est = AE_OFF;
     if (lay_env_on[l]) {                          /* the track's own envelope: its own held, this one from 0 */
         if (lay[l].engine == ENG_FM)
             fm_hold(&v->fm, &fm_buf[l][fm_use[l]]);
-        else
-            an_vox[k].env_hold = 1;
+        else if (lay[l].engine == ENG_ANIMA)
+            vmem[k].an.env_hold = 1;
         v->est = AE_ATT;
         v->elv = 0;
     }
@@ -511,8 +530,10 @@ static void voice_off(uint32_t l, uint32_t k)
     }
     if (lay[l].engine == ENG_FM)
         fm_note_off(&v->fm, &fm_buf[l][fm_use[l]]);
+    else if (v->eng == ENG_DRUID)
+        dr_note_off(&vmem[k].dr);
     else
-        an_note_off(&an_vox[k]);
+        an_note_off(&vmem[k].an);
 }
 static void voice_silence(uint32_t k)
 {
@@ -522,7 +543,10 @@ static void voice_silence(uint32_t k)
     v->fade_n = 0;
     v->est = AE_OFF;
     v->fm.live = 0;
-    an_vox[k].live = 0;
+    if (v->eng == ENG_DRUID)
+        vmem[k].dr.live = 0;
+    else
+        vmem[k].an.live = 0;
 }
 /* a voice for a note on layer l: a free one; else the oldest tail (any layer's); else the layer's own oldest held
  * note; else the oldest held of all. own: only free ones or the layer's own (it is fading for a change) */
@@ -578,7 +602,7 @@ static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
 
     if (on && lay[l].want_engine == lay[l].engine && eng_organism(lay[l].engine)
         && !(lay[l].engine == ENG_CAL ? cal_rt[l].live : rus_rt[l].live))
-        blk_new += eng_cost[lay[l].engine & 3u];  /* (the organism wakes: what it will cost, ahead) */
+        blk_new += eng_cost[lay[l].engine & 7u];  /* (the organism wakes: what it will cost, ahead) */
     if (lay[l].want_engine == ENG_RUS) {
         if (on)
             rus_note_on(&rus_rt[l], &rus_buf[l][rus_use[l]], note);
@@ -668,10 +692,13 @@ static int change_due(uint32_t l)
         cal_use[l] = cal_pub[l];
     if (y->engine != ENG_RUS && y->want_engine != ENG_RUS)
         rus_use[l] = rus_pub[l];
+    if (y->engine != ENG_DRUID && y->want_engine != ENG_DRUID)
+        dr_use[l] = dr_pub[l];
     if (y->want_engine != y->engine)
         return 1;
     return y->engine == ENG_FM ? fm_pub[l] != fm_use[l] : y->engine == ENG_ANIMA ? an_pub[l] != an_use[l]
-           : y->engine == ENG_CAL ? cal_pub[l] != cal_use[l] : rus_pub[l] != rus_use[l];
+           : y->engine == ENG_CAL ? cal_pub[l] != cal_use[l] : y->engine == ENG_RUS ? rus_pub[l] != rus_use[l]
+           : dr_pub[l] != dr_use[l];
 }
 /* what was asked, now (the voices silent), and the notes still held played again with it */
 static void change_apply(uint32_t l)
@@ -722,6 +749,7 @@ static void change_apply(uint32_t l)
         an_use[l] = an_pub[l];
         cal_use[l] = cal_pub[l];
         rus_use[l] = rus_pub[l];
+        dr_use[l] = dr_pub[l];
         if (y->engine == ENG_CAL)
             for (j = 0; j < n; j++)
                 cal_note_on(c, &cal_buf[l][cal_use[l]], nn[j], ns[j]);
@@ -1273,15 +1301,18 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             uint32_t c0 = COST_NOW(), c;
             if (y->engine == ENG_FM)
                 alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, mac);
-            else {
-                memcpy(an_vox[k].mac, mac, NMAC);
-                alive = an_render(&an_vox[k], &an_buf[l][an_use[l]], vb, CTL);
+            else if (y->engine == ENG_DRUID) {
+                memcpy(vmem[k].dr.mac, felt, NMAC);
+                alive = dr_render(&vmem[k].dr, &dr_buf[l][dr_use[l]], vb, CTL);
+            } else {
+                memcpy(vmem[k].an.mac, mac, NMAC);
+                alive = an_render(&vmem[k].an, &an_buf[l][an_use[l]], vb, CTL);
             }
             COST_ADD(y->engine);
             c = COST_NOW() - c0;
             v->cost = (uint16_t)(c > 0xFFFFu ? 0xFFFFu : c);
             if (alive)
-                eng_cost[y->engine & 3u] = (eng_cost[y->engine & 3u] * 7u + c + 7u) / 8u;
+                eng_cost[y->engine & 7u] = (eng_cost[y->engine & 7u] * 7u + c + 7u) / 8u;
         }
         if (alive && v->est) {                     /* the track's own envelope over the voice */
             int32_t e0 = v->elv;
@@ -1291,7 +1322,10 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
                 alive = 0;
                 v->est = AE_OFF;
                 v->fm.live = 0;
-                an_vox[k].live = 0;
+                if (v->eng == ENG_DRUID)
+                    vmem[k].dr.live = 0;
+                else
+                    vmem[k].an.live = 0;
             }
         }
         if (!alive) {
@@ -1520,6 +1554,7 @@ static void layers_init(void)
     eng_cost[ENG_ANIMA] = BLK_TICKS * 9u / 100u;
     eng_cost[ENG_CAL] = BLK_TICKS * 20u / 100u;
     eng_cost[ENG_RUS] = BLK_TICKS * 4u / 100u;
+    eng_cost[ENG_DRUID] = BLK_TICKS * 6u / 100u;
 #else
     memcpy(eng_cost, host_cost_model, sizeof eng_cost);
 #endif
@@ -1528,7 +1563,8 @@ static void layers_init(void)
         dist[l].g = dist[l].gp = Q16;
     blk_last = blk_new = 0;
     for (k = 0; k < NVOICE; k++) {
-        an_init(&an_vox[k], 0xA11u + k * 131u);
+        an_init(&vmem[k].an, 0xA11u + k * 131u);
+        vox[k].eng = ENG_ANIMA;
         vox[k].layer = (uint8_t)(k % NLAYER);
     }
     for (l = 0; l < NLAYER; l++) {
@@ -1656,6 +1692,14 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         cal_buf[l][k].out = level;
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)k;
+    } else if (e == ENG_DRUID) {
+        if (!sound_slot_free(&dr_pub[l], &dr_use[l]))
+            return 0;
+        k = dr_use[l] ^ 1u;
+        dr_design(&dr_buf[l][k], -1, seed, path, gen);
+        dr_buf[l][k].out = level;
+        RING_PUBLISH();
+        dr_pub[l] = (uint8_t)k;
     } else {
         if (!sound_slot_free(&rus_pub[l], &rus_use[l]))
             return 0;
@@ -1684,6 +1728,23 @@ static int new_rus(uint32_t l, uint32_t seed, uint32_t path)
     rus_pub[l] = (uint8_t)k;
     return 1;
 }
+static int new_druid(uint32_t l, uint32_t seed, uint32_t path)
+{
+    uint32_t k, tries;
+    int32_t was = dr_buf[l][dr_use[l]].kind;
+    if (!sound_slot_free(&dr_pub[l], &dr_use[l]))
+        return 0;
+    k = dr_use[l] ^ 1u;
+    for (tries = 0; tries < 4u; tries++) {
+        dr_design(&dr_buf[l][k], new_kind, seed + tries * 7919u, path, GEN_NOW);
+        if (new_kind >= 0 || dr_buf[l][k].kind != was)
+            break;
+    }
+    dr_measure(&dr_buf[l][k]);
+    RING_PUBLISH();
+    dr_pub[l] = (uint8_t)k;
+    return 1;
+}
 /* the name of what layer l plays on engine e */
 static const char *sound_name(uint32_t l, uint32_t e)
 {
@@ -1691,6 +1752,8 @@ static const char *sound_name(uint32_t l, uint32_t e)
         return CS_NAME[cal_buf[l][cal_pub[l]].kind % CS_N];
     if (e == ENG_RUS)
         return RK_NAME[rus_buf[l][rus_pub[l]].kind % RK_N];
+    if (e == ENG_DRUID)
+        return DK_NAME[dr_buf[l][dr_pub[l]].kind % DK_N];
     if (e == ENG_FM)
         return FF_NAME[fm_buf[l][fm_pub[l]].family % FF_N];
     return AK_NAME[an_buf[l][an_pub[l]].kind % AK_N];

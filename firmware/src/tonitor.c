@@ -10,7 +10,7 @@
 #define TONITOR_ID "FM-1_700"    /* the package identity (tools/build.py sets it) */
 #endif
 #ifndef TONITOR_VERSION
-#define TONITOR_VERSION "0.39"
+#define TONITOR_VERSION "0.40"
 #endif
 #define FELUCCA_ID TONITOR_ID
 #ifndef TELEMETRY
@@ -46,6 +46,7 @@ bootguard_t bootguard __attribute__((section(".noinit")));
 #include "anima.c"
 #include "cal.c"
 #include "russolo.c"
+#include "druid.c"
 #include "usb.c"
 #include "reverb.c"
 #include "layers.c"

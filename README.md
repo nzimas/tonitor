@@ -38,7 +38,7 @@ track in its own colour.
 
 ### Highlights
 
-- **Four sound engines**, chosen per track:
+- **Five sound engines**, chosen per track:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a lo-fi synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
@@ -48,6 +48,8 @@ track in its own colour.
   - **RUSSOLO** — noise, logic and broken buffers: sample-and-hold and dusty noise, oscillators combined
     bit by bit, generated buffers read with their address bits bent, chance-driven tones; crushed and
     sample-held like a small DAC.
+  - **DRUID** — strings and resonant bodies after Mutable Instruments Rings: a Karplus-Strong string with
+    dispersion, sympathetic strings, and a modal resonator, plucked, struck, bowed or rattled.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
@@ -88,7 +90,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | Control | What it does |
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1 2 3 4 5 6**. The chosen track's button is lit; the others glow while they sound. **Held** (0.8 s): **copy** the track, or **paste** the copy onto it — see [Copying a track](#copying-a-track). |
-| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA** or **RUSSOLO**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO** or **DRUID**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
 | **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **SHIFT + HOME** | a **new sound of the same family** (kind, species) as the chosen track's sound — to explore a family you like. The screen says SAME FAMILY. |
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
@@ -151,9 +153,10 @@ The macros are chosen for each engine, and for some by the kind of sound:
 | **FM** | **BRIGHTNESS**: the modulation index about 27 dB either way (down: towards pure sines; up: the feedback too), the carriers tilted (the higher partials up) | **DETUNE**: the carriers pulled apart ±40 cents and the modulators ±25 cents off them — beating, chorus, the partials off their places — or **INHARMONIC** for metallic and noisy families (every partial off its ratio: clangour) | **SATURATION**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
 | **ANIMA** | **TONE**: every filter four octaves up or down (sharper when up), the FM brighter or darker | what the kind is about, from nothing to far more: **GRAINS**, **NOISE**, **FM** (the index), **FORMANT** (sharper when up) or **DRIVE** (folded hard; turned down, a pure tone: the second voice, FM, noise and grains drawn out) | **RESONATOR**: much wetter and ringing longer (brought in if the sound had none), or dry | **MOTION**: the hand four times quicker, a tremolo pulsing — or nearly still, no tremolo |
 | **CALIGULA** | **WAVEFORM**: triangles to squares | **MOD DEPTH**: how deeply the pairs modulate each other | **FEEDBACK** (total feedback and drive) — or **DELAY** for SPORE, VEIL, LITANY and MOTH | **TOUCHES**: how busy the hand is, its touches and bursts — or **GATE RATE** (the gates' speed) for HIVE, MOTH and WIRE |
+| **DRUID** | **STRUCTURE**: on a string, its dispersion (below a quarter, a buzzing bridge; above, the partials stretched, then noise in the period); on sympathetic strings, the intervals they are tuned to; on a body, how its partials are spaced, from squeezed through harmonic to bell-like | **BRIGHTNESS**: the exciter's low-pass and the string's or body's high-frequency loss | **DAMPING**: how long it rings, from ~70 ms to ~18 s to -60 dB, and above 0.95 on without decay | **POSITION**: where it is plucked or struck and where it is picked up — which partials sound |
 | **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **RANDOMNESS**: how much chance drives it; above the middle, stutters too |
 
-Each track keeps the macros of each of its four sounds. **HOME** draws a new sound as it comes (its macros
+Each track keeps the macros of each of its five sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.
 
 ### Envelope
@@ -173,7 +176,7 @@ then let go. The change applies from the next note; once the track's envelope is
 also changes the notes that are sounding.
 
 **SHIFT** + the key, **HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
-keeps an envelope for each of its four engines. Sessions store them, copying a track copies them, presets do
+keeps an envelope for each of its five engines. Sessions store them, copying a track copies them, presets do
 not.
 
 ### Latched keys
@@ -234,7 +237,7 @@ button blinks. Choose another track and hold its button until **PASTED / TRACK n
 track's tone and loops. The clipboard is then empty: the next hold copies again. Holding the copied track's own
 button again copies it again (as it is now), pasting nothing.
 
-What is copied: the **tone** — the engine, the sounds of all four engines with their macros and envelopes, the filter, the
+What is copied: the **tone** — the engine, the sounds of all five engines with their macros and envelopes, the filter, the
 granulator, the crush, the reverb send, the octave and the generative path — and **all the loops**, every
 overdub, those taken out still out, playing or stopped as they were (pasted, they start from their beginnings).
 The copy is taken when you hold the button: what the track does afterwards is not pasted. The track pasted
@@ -341,7 +344,7 @@ The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–
 
 A session stores in full the sound of the engine each track is on, and the other three as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
-sector of flash. A session is the whole machine: every track's engine and its four sounds, its path, octave, level, pan,
+sector of flash. A session is the whole machine: every track's engine and its five sounds, its path, octave, level, pan,
 reverb send, filter, granulator (and the character it was drawn with), crush, distortion, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the track chosen. They are kept in the
 FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
@@ -575,6 +578,44 @@ CALIGULA it is one organism a track, outside the pool of voices. **HOME** draws 
 Each kind has two parameters of its own, the first two macros; **CRUSH** and **CHAOS** are the other two.
 Its level is measured when it is drawn, and never raised so far that its loudest click could clip.
 
+### DRUID — strings and resonant bodies
+
+The fifth engine is a fixed-point port of the resonators of **Mutable Instruments Rings** by Émilie Gillet
+(MIT licence). It plays from the shared pool of voices, like FM and ANIMA. Each kind is one of Rings'
+resonators and an exciter:
+
+| Resonator | |
+| --- | --- |
+| **String** | a Karplus-Strong string: a delay line read with Hermite interpolation, damped by a short FIR filter (brightness) and a state-variable low-pass, its decay set as a time to −60 dB. Dispersion (STRUCTURE) stretches the partials with an all-pass stage, adds noise to the period near the top, or below a quarter of the range bends the bridge so the string buzzes. The output is picked up at the position along the string |
+| **Sympathetic strings** | a string and three more tuned to intervals of its note (octaves, fifths, a twelfth, chosen by STRUCTURE), driven only by the first string's sound; their pickup positions drift slowly |
+| **Modal** | up to 16 two-pole resonators at the partials of a bar or plate, stretched or squeezed by STRUCTURE; each partial's level depends on the position |
+
+| Exciter | |
+| --- | --- |
+| **Pluck** | Rings' plucker: a burst of noise as long as the position's share of the period, through a comb filter and a low-pass |
+| **Strike** | a short pulse, longer and softer as the brightness goes down |
+| **Bow** | noise for as long as the key is held, swelling in and dying away when released |
+| **Dust** | random impacts for as long as the key is held |
+
+| Kind | Resonator | Exciter |
+| --- | --- | --- |
+| **PLUCK** | string | pluck |
+| **BOWED** | string | bow |
+| **STRUCK** | string, stretched partials | strike |
+| **SITAR** | string, buzzing bridge | pluck |
+| **RATTLE** | string | dust |
+| **HARP** | sympathetic strings | pluck |
+| **DRONE** | sympathetic strings | bow |
+| **BELL** | modal | strike |
+| **BOWL** | modal | bow |
+| **PLATE** | modal | dust |
+
+AMBIENT favours BOWED, HARP, DRONE, BELL and BOWL, with long decays that carry on after the key is released;
+EXPERIMENTAL favours RATTLE and PLATE, with shorter decays, faster dust, extreme positions and a stronger damping
+when the key is released. Releasing a key damps the sound by an amount set per sound, from ringing on to stopping
+short. Each voice's delay lines are 16-bit and use the memory an ANIMA voice would use: a string reaches
+down to about 29 Hz, and sympathetic strings that would not fit their shorter lines are tuned an octave up.
+
 # Building from source
 
 Once:
@@ -615,7 +656,7 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 ## How it is built
 
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
-`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
+`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `druid.c` (DRUID), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). Based on Felucca and earlier open FM-1 firmware work: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
@@ -629,7 +670,7 @@ browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` 
 - **The website, the logo and the documentation** written for Tonitor (`docs/` except `docs/js/fm1ota.js`
   and the firmware package, and this README's text) are under the **MIT licence**
   ([`LICENSES/MIT.txt`](LICENSES/MIT.txt)).
-- Third-party parts keep their own licences: msfa (Apache-2.0), the LIRA-8 architecture (BSD 3-clause), Noisferatu's techniques (GPL-3.0), the
+- Third-party parts keep their own licences: msfa (Apache-2.0), the LIRA-8 architecture (BSD 3-clause), Noisferatu's techniques (GPL-3.0), Rings (MIT), the
   fonts (SIL OFL 1.1), the JieLi SDK files placed in the package (Apache-2.0).
 
 [`LICENSING.md`](LICENSING.md) lists every file and its licence.
@@ -646,6 +687,8 @@ Tonitor is by Nuno Zimas. It stands on the work of others:
   Moreno (BSD), an emulation of SOMA Laboratory's LYRA-8.
 - **RUSSOLO** re-makes, in fixed point, the techniques of
   [**Noisferatu**](https://github.com/rob-scape/noisferatu) by Robert Heel (GPL-3.0).
+- **DRUID** is a fixed-point port of the resonators of [**Mutable Instruments Rings**](https://github.com/pichenettes/eurorack)
+  by Émilie Gillet (MIT).
 - **Atkinson Hyperlegible** by the Braille Institute (SIL OFL 1.1) and **Terminus** (SIL OFL 1.1).
 
 M-VAVE and FM-1 are trademarks of their owner, used here only to say which device Tonitor runs on.
