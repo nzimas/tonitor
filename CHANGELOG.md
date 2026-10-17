@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.43
+
+Added
+- VARY also modulates the loops' pace: a slow sine undulation (0.07–0.35 Hz, depth ±15–40 %, redrawn every few
+  seconds), and on average every ~6 s one event: halt (0.15–1 s, abrupt stop and resume), burst (2–3× for
+  0.2–0.8 s), grind (slowing to a stop over 0.4–1.5 s, held up to 0.4 s, then back at once) or swoop (rising to
+  2–2.5× over 0.8–2 s, then 0.4× for 0.3 s). Note lengths stay in real time. Not applied while REC records.
+
 ## 0.42
 
 Added

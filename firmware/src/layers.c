@@ -1237,8 +1237,79 @@ static void loop_mode(uint32_t l, uint32_t what, uint32_t val)
     if (!p->rnd)
         p->rnd = 0x9E3779B9u ^ (blk_clock * 2654435761u) ^ l;
 }
+/* VARY's time: the loops' pace no longer steady -- a slow undulation (a sine, its rate and depth redrawn now and
+ * then), and every ~6 s on average one of: a halt (stopped dead 0.15 .. 1 s, then on at once), a burst (2 .. 3
+ * times as fast for 0.2 .. 0.8 s), a grind (slowing to a stop over 0.4 .. 1.5 s, held up to 0.4 s, then back at
+ * once), a swoop (rising to 2 .. 2.5 times over 0.8 .. 2 s, then dropping to 0.4 for 0.3 s). Not while REC records
+ * (its pace steady, to play in time to) */
+enum { VT_RUN, VT_HALT, VT_BURST, VT_GRIND, VT_SWOOP };
+static struct {
+    uint8_t ev, phase;
+    uint32_t left, len;          /* blocks of the event (its phase) left, and its length */
+    int32_t top;                 /* the event's speed, Q16 */
+    uint32_t lph, lrate;         /* the undulation: phase, step a block */
+    int32_t depth;               /* .. its depth, Q16 */
+    uint32_t acc;                /* blocks of loop time to come, Q16 */
+} vt[NLAYER];
+static int32_t vt_speed(uint32_t l, looper_t *p)   /* a block on: the pace, Q16 (1.0 = as recorded) */
+{
+    int32_t m = Q16;
+    if (!vt[l].lrate || (lv_rnd(p) >> 8) % 4000u == 0u) {   /* (the undulation redrawn, every ~3 s) */
+        vt[l].lrate = lv_in(p, 70, 350) * 3117u;            /* 0.07 .. 0.35 Hz: x 2^32 / 1378 / 1000 */
+        vt[l].depth = (int32_t)lv_in(p, 9830, 26214);       /* 0.15 .. 0.4 */
+    }
+    vt[l].lph += vt[l].lrate;
+    m += (int32_t)(((int64_t)sin_ph(vt[l].lph) * vt[l].depth) >> 15);
+    if (vt[l].ev == VT_RUN && (lv_rnd(p) >> 8) % 8268u == 0u) {   /* (one a block in 6 x 1378: every ~6 s) */
+        uint32_t w = lv_in(p, 0, 99);
+        vt[l].ev = (uint8_t)(w < 30u ? VT_HALT : w < 55u ? VT_BURST : w < 80u ? VT_GRIND : VT_SWOOP);
+        vt[l].phase = 0;
+        if (vt[l].ev == VT_HALT)
+            vt[l].left = lv_blocks(lv_in(p, 150, 1000));
+        else if (vt[l].ev == VT_BURST) {
+            vt[l].left = lv_blocks(lv_in(p, 200, 800));
+            vt[l].top = (int32_t)lv_in(p, 131072, 196608);  /* x 2 .. 3 */
+        } else if (vt[l].ev == VT_GRIND)
+            vt[l].left = lv_blocks(lv_in(p, 400, 1500));
+        else {
+            vt[l].left = lv_blocks(lv_in(p, 800, 2000));
+            vt[l].top = (int32_t)lv_in(p, 131072, 163840);  /* x 2 .. 2.5 */
+        }
+        vt[l].len = vt[l].left ? vt[l].left : 1u;
+    }
+    if (vt[l].ev != VT_RUN) {
+        uint32_t done = vt[l].len - vt[l].left;             /* (blocks of this phase gone) */
+        int32_t f = (int32_t)((done << 16) / vt[l].len);   /* 0 .. 1, Q16 (done < 2^15: 32 bits) */
+        switch (vt[l].ev) {
+        case VT_HALT:
+            m = 0;
+            break;
+        case VT_BURST:
+            m = vt[l].top;
+            break;
+        case VT_GRIND:                                     /* down to a stop, then held */
+            m = vt[l].phase ? 0 : (int32_t)(((int64_t)m * (Q16 - f)) >> 16);
+            break;
+        default:                                           /* up, then the drop */
+            m = vt[l].phase ? 26214 : m + (int32_t)(((int64_t)(vt[l].top - m) * f) >> 16);
+            break;
+        }
+        if (!vt[l].left || !--vt[l].left) {                /* the phase over: the next, or back to running */
+            if (vt[l].phase == 0 && (vt[l].ev == VT_GRIND || vt[l].ev == VT_SWOOP)) {
+                vt[l].phase = 1;
+                vt[l].left = vt[l].ev == VT_GRIND ? lv_blocks(lv_in(p, 0, 400)) : lv_blocks(300);
+                vt[l].len = vt[l].left ? vt[l].left : 1u;
+                if (!vt[l].left)
+                    vt[l].ev = VT_RUN;
+            } else
+                vt[l].ev = VT_RUN;
+        }
+    }
+    return m < 0 ? 0 : m;
+}
+
 /* one block of every loop that plays: as many blocks of loop time as the speed has passed (at half speed every
- * other block, at double two) */
+ * other block, at double two; VARY's time on top) */
 static void loops_run(void)
 {
     uint32_t l, k;
@@ -1250,6 +1321,12 @@ static void loops_run(void)
         lv_tick(l);
         if (!p->play)
             continue;
+        if (p->vary && p->rec != LR_REC) {                 /* VARY's time: the steps through its pace */
+            uint32_t base = p->rate == LS_HALF ? 32768u : p->rate == LS_DOUBLE ? 131072u : 65536u;
+            vt[l].acc += (uint32_t)(((uint64_t)base * (uint32_t)vt_speed(l, p)) >> 16);
+            steps = vt[l].acc >> 16;
+            vt[l].acc &= 0xFFFFu;
+        }
         for (k = 0; k < p->ntrk; k++) {
             loop_trk_t *t = &p->trk[k];
             uint32_t s;

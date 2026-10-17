@@ -4861,6 +4861,23 @@ static int cmd_vary(void)
         if (ons < 90u || ons > 200u || other < 15u || !octs || off_scale)
             printf("FAIL vary: the effects are not as meant\n"), fail++;
     }
+    {   /* its time: the loop's way through loop time, in 0.25 s windows over 60 s -- halts, slow and fast stretches */
+        uint32_t w, lo = 0xFFFFFFFFu, hi = 0, nom = 345u, zero = 0;
+        for (w = 0; w < 240u; w++) {
+            int32_t p0 = loop[0].trk[0].pos, d;
+            run_blocks(345, 0);
+            d = loop[0].trk[0].pos - p0;
+            if (d < 0)
+                d += (int32_t)loop[0].trk[0].len;
+            lo = (uint32_t)d < lo ? (uint32_t)d : lo;
+            hi = (uint32_t)d > hi ? (uint32_t)d : hi;
+            zero += d < 20;
+        }
+        printf("vary: the loop's pace over 60 s, 0.25 s at a time: %.2f .. %.2f of steady, %u windows near a halt\n",
+               lo / (double)nom, hi / (double)nom, zero);
+        if (hi < nom * 3u / 2u || lo > nom / 2u || !zero)
+            printf("FAIL vary: the loop's pace is not modulated\n"), fail++;
+    }
     if (ses_save(1) != SES_OK)
         printf("FAIL vary: not saved\n"), fail++;
     ev_post(EV_LOOP_MODE, 0, 2, 0);
