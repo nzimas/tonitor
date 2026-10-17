@@ -64,8 +64,8 @@
   <dd>Each with its own engine, sound, octave, level and pan.</dd>
   <dt>Voices</dt>
   <dd>Twelve voices shared by all tracks: each track takes as many as its notes need.</dd>
-  <dt>Four engines</dt>
-  <dd>FM, ANIMA, CALIGULA and RUSSOLO, chosen per track (described <a href="#engines">below</a>).</dd>
+  <dt>Five engines</dt>
+  <dd>FM, ANIMA, CALIGULA, RUSSOLO and DRUID, chosen per track (described <a href="#engines">below</a>).</dd>
   <dt>Sound generation</dt>
   <dd>HOME generates a new sound for the track from the engine's families of sounds.</dd>
   <dt>Generative paths</dt>
@@ -154,6 +154,19 @@
 <p>Macros: two parameters specific to the kind (for example <b>RATIO</b> and <b>DRIFT</b>, or <b>DENSITY</b> and
   <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>RANDOMNESS</b> (how much chance drives it; above the
   middle it also stutters).</p>
+
+<h3>DRUID</h3>
+<p>Strings and resonant bodies: a fixed-point port of the resonators of Mutable Instruments Rings by Émilie
+  Gillet. Three resonators: a Karplus-Strong string (Hermite-interpolated delay line, FIR and state-variable
+  damping, dispersion that stretches the partials or, at low settings, makes the bridge buzz like a sitar's);
+  sympathetic strings (a string and three more tuned to intervals of it, driven by its sound); and a modal
+  resonator of up to 16 partials. As the FM-1 has no audio input, the resonators are excited internally: plucked
+  (Rings' plucker), struck, bowed with noise while the key is held, or rattled by random impacts. Ten kinds:
+  PLUCK, BOWED, STRUCK, SITAR, RATTLE, HARP, DRONE, BELL, BOWL, PLATE. Releasing a key damps the sound by an amount
+  set per sound. Polyphonic, from the shared pool of voices.</p>
+<p>Macros: Rings' four controls, <b>STRUCTURE</b> (dispersion, the sympathetic strings' intervals, or the spacing
+  of the partials), <b>BRIGHTNESS</b>, <b>DAMPING</b> (from about 70 ms to 18 s, and no decay at the top) and
+  <b>POSITION</b> (where it is excited and picked up).</p>
 
 <h2>Install</h2>
 <p>The installer runs in a desktop Chrome, Edge or Opera and talks to the FM-1 over USB MIDI. Nothing to
