@@ -20,8 +20,8 @@
   <dd>Each with its own engine, sound, octave, level and pan.</dd>
   <dt>Voices</dt>
   <dd>Twelve voices shared by all tracks: each track takes as many as its notes need.</dd>
-  <dt>Five engines</dt>
-  <dd>FM, ANIMA, CALIGULA, RUSSOLO and DRUID, chosen per track (described <a href="#engines">below</a>).</dd>
+  <dt>Six engines</dt>
+  <dd>FM, ANIMA, CALIGULA, RUSSOLO, DRUID and BAYAREA, chosen per track (described <a href="#engines">below</a>).</dd>
   <dt>Sound generation</dt>
   <dd>HOME generates a new sound for the track from the engine's families of sounds.</dd>
   <dt>Generative paths</dt>
@@ -40,7 +40,9 @@
     with a random level and length. Knobs set the number of balls, their speed, the octaves and how unsteady
     their motion is.</dd>
   <dt>Varied loops</dt>
-  <dd>Per track, the loops can play each note at a random level and for a random length.</dd>
+  <dd>Per track, the loops can play each note at a random level and for a random length, and now and then change
+    or add notes: echoes, harmonies, octave jumps, notes that were not recorded, grace notes, ratchets, strummed
+    chords, drops and slight lateness, all in the scale.</dd>
   <dt>Latching</dt>
   <dd>Notes held when SHIFT is pressed keep sounding after the keys are released.</dd>
   <dt>Filter, grains, crush</dt>
@@ -129,6 +131,15 @@
 <p>Macros: Rings' four controls, <b>STRUCTURE</b> (dispersion, the sympathetic strings' intervals, or the spacing
   of the partials), <b>BRIGHTNESS</b>, <b>DAMPING</b> (from about 70 ms to 18 s, and no decay at the top) and
   <b>POSITION</b> (where it is excited and picked up).</p>
+
+<h3>BAYAREA</h3>
+<p>A West Coast voice, ported from the bayarea opcode of Vascular: an oscillator morphing from sine through
+  triangle and square to saw, frequency-modulated through zero by two sines at ratios of it, a wavefolder, then a
+  low-pass gate (a resonant filter and an amplifier struck together) or a sustaining envelope over two resonant
+  low-passes, a saturating output and a bank of three resonators. An LFO moves the shape, folds, FM depths, the
+  envelope and the filter peak by amounts drawn with each sound. Six kinds: BONGO, PLUCK, CHIME, FOLDED, SWELL,
+  DRONE. Polyphonic, from the shared pool of voices.</p>
+<p>Macros: <b>SHAPE</b>, <b>FOLDS</b>, <b>FM</b> (both modulators' depth) and <b>DECAY</b>.</p>
 
 <h2>Install</h2>
 <p>The installer runs in a desktop Chrome, Edge or Opera and talks to the FM-1 over USB MIDI. Nothing to

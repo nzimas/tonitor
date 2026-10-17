@@ -42,6 +42,19 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="042">0.42</h2>
+<p>Added</p>
+<ul>
+<li>A sixth engine, BAYAREA: a West Coast voice, ported to fixed point from the bayarea opcode of Vascular. Per voice: an oscillator morphing sine → triangle → square → saw with two linear (through-zero) FM modulators (ratios 0.66 and 3.3 by default, each wandering slowly), a wavefolder, a 12 kHz Butterworth smoothing filter, then a low-pass gate (resonant low-pass and amplifier struck by one-shot envelopes) or a sustaining envelope over two resonant low-passes, a saturating output stage, a bank of three resonators, and an LFO on eight destinations. Six kinds: BONGO, PLUCK, CHIME, FOLDED (gate); SWELL, DRONE (sustain). Macros: SHAPE, FOLDS, FM, DECAY. Square and saw band-limited with polyBLEP (the opcode sums 44 partials); the opcode's reverb is left to the track's sends, its resonator bank kept. Polyphonic from the shared voice pool; each voice uses the memory of an ANIMA voice. Sixth position on the PRESETS knob.</li>
+</ul>
+<ul>
+<li>VARY (SHIFT + REC) also changes or adds notes, each at fixed odds per loop note: drop (5 %), 5–40 ms late (25 %), octave up or down (8 %), a note not recorded — ±1–2 scale steps or a fifth, replacing or added (8 %), a grace note a step away 50–90 ms before (4 %), ratchet of 2–4 hits 50–110 ms apart (4 %), a third or fifth above added (10 %), 1–4 echoes 120–400 ms apart at 60 % level each, sometimes climbing or falling a scale step each (15 %), chord notes strummed 20–60 ms apart (12 %). All notes stay in the scale; up to 32 notes queued per track.</li>
+</ul>
+<p>Changed</p>
+<ul>
+<li>Sessions: format 19 (a sixth sound per track; macros and envelopes for six engines). Older sessions load with a new BAYAREA sound drawn for each track.</li>
+<li>Presets: BAYAREA's 64 slots are kept in a second preset record; the first is unchanged.</li>
+</ul>
 <h2 id="041">0.41</h2>
 <p>Added</p>
 <ul>
