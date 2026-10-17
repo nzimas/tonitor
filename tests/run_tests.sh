@@ -34,6 +34,7 @@ build/host chords build/screens
 build/host env build/screens
 build/host dist
 build/host druid build/sounds
+build/host bayarea build/sounds
 build/host balls build/screens
 build/host vary
 build/host ties

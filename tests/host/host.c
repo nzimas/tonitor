@@ -86,6 +86,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 #include "cal.c"
 #include "russolo.c"
 #include "druid.c"
+#include "bayarea.c"
 #include "reverb.c"
 #define MQ 64u
 static uint32_t midi_in_q[MQ];
@@ -4831,6 +4832,35 @@ static int cmd_vary(void)
     printf("vary: %u loop notes: %u shorter than 0.8 s, %u longer than 1.2 s, %u levels\n", nlen, shorter, longer, nlvl);
     if (nlen < 8u || shorter < 2u || longer < 1u || nlvl < 4u)
         printf("FAIL vary: the loop's notes are not varied in length and level\n"), fail++;
+    {   /* forty times round: the notes struck beyond the recorded two, and whose pitch is not theirs (foreign,
+         * harmony, octave, echo, grace) -- all in the scale */
+        uint32_t n0 = scale_note(0, 0), n4 = scale_note(4, 0), ons = 0, other = 0, octs = 0, off_scale = 0, i;
+        uint8_t was[NVOICE] = {0};
+        uint32_t m = 0;
+        for (i = 0; i < 12u; i++)
+            m |= 0u;
+        for (b = 0; b < 3445u * 40u; b++) {
+            run_blocks(1, 0);
+            for (k = 0; k < NVOICE; k++) {
+                if (vox[k].gate && vox[k].src == SRC_LOOP && !was[k]) {
+                    uint32_t nn = vox[k].note;
+                    ons++;
+                    if (nn != n0 && nn != n4) {
+                        other++;
+                        octs += nn == n0 + 12u || nn == n0 - 12u || nn == n4 + 12u || nn == n4 - 12u;
+                    }
+                    if (!((lx_mask >> (nn % 12u)) & 1u))
+                        off_scale++;
+                }
+                was[k] = vox[k].gate && vox[k].src == SRC_LOOP;
+            }
+        }
+        (void)m;
+        printf("vary: 40 times round (80 notes recorded): %u struck, %u at other pitches (%u octaves), %u off the scale\n",
+               ons, other, octs, off_scale);
+        if (ons < 90u || ons > 200u || other < 15u || !octs || off_scale)
+            printf("FAIL vary: the effects are not as meant\n"), fail++;
+    }
     if (ses_save(1) != SES_OK)
         printf("FAIL vary: not saved\n"), fail++;
     ev_post(EV_LOOP_MODE, 0, 2, 0);
@@ -4844,6 +4874,119 @@ static int cmd_vary(void)
     if (loop[0].vary)
         printf("FAIL vary: emptying the loops does not end it\n"), fail++;
     printf("vary: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* BAYAREA: every kind, C3 held 1.5 s then let go 2 s -- it sounds within full scale, the gates die away, the
+ * sustains hold while held; its cost; WAVs. Then through a track: sessions, a preset (the second record), the
+ * clipboard */
+static int cmd_bayarea(const char *dir)
+{
+    static ba_voice_t v;
+    static int32_t rec[44100 * 4];
+    uint32_t fail = 0, k, s, g;
+    char path[512];
+    wav_ch = 1;
+    for (k = 0; k < BK_N; k++)
+        for (s = 0; s < 2u; s++) {
+            ba_design_t d;
+            uint32_t b, i, n = 0;
+            int32_t out[CTL], pk = 0;
+            double held = 0, late = 0, tail = 0, ns;
+            struct timespec t0, t1;
+            ba_design(&d, (int32_t)k, 700u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
+            ba_measure(&d);
+            ba_init(&v, 99u);
+            ba_note_on(&v, &d, 48, 127, 1);
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            for (b = 0; b < 44100u * 7u / 2u / CTL; b++) {
+                if (b == 2067u)
+                    ba_note_off(&v, &d);
+                if (!ba_render(&v, &d, out, CTL))
+                    memset(out, 0, sizeof out);
+                for (i = 0; i < CTL; i++) {
+                    rec[n++] = out[i];
+                    wav_put(out[i]);
+                    pk = absi(out[i]) > pk ? absi(out[i]) : pk;
+                }
+            }
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            ns = ((t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec)) / (double)(n / CTL);
+            for (i = 0; i < 8820u; i++)
+                held += (double)rec[i] * rec[i];
+            held = sqrt(held / 8820);
+            for (i = 44100u; i < 66150u; i++)
+                late += (double)rec[i] * rec[i];
+            late = sqrt(late / 22050);
+            for (i = 44100u * 3u; i < n; i++)
+                tail += (double)rec[i] * rec[i];
+            tail = sqrt(tail / (n - 44100u * 3u));
+            snprintf(path, sizeof path, "%s/bayarea-%s-%s.wav", dir, BK_NAME[k], s ? "exp" : "amb");
+            wav_write(path);
+            printf("bayarea %-6s %s (%s): out x%.2f, first 0.2 s %6.1f dB, 1 .. 1.5 s %6.1f dB, peak %6.1f dB, 1.5 s after "
+                   "release %6.1f dB, %.2f us a block\n", BK_NAME[k], s ? "exp" : "amb", d.asr ? "sustain" : "gate",
+                   d.out / 4096.0, dbp(held), dbp(late), dbp(pk), dbp(tail), ns / 1000.0);
+            if (held < 30.0 || pk >= 32767)
+                printf("FAIL bayarea: %s does not sound, or clips\n", BK_NAME[k]), fail++;
+            if (d.asr && late < held / 8.0 && held > 300)
+                printf("FAIL bayarea: %s (sustaining) does not hold while held\n", BK_NAME[k]), fail++;
+            if (tail > (d.asr ? late : held) / 8.0 && tail > 100.0)
+                printf("FAIL bayarea: %s does not die away once let go\n", BK_NAME[k]), fail++;
+        }
+    {   /* through a track */
+        int32_t pk = 0;
+        uint32_t b, i, seed;
+        grain_reset();
+        memset(host_flash, 0xFF, sizeof host_flash);
+        ses_scan(1);
+        ui.send[0] = 0;
+        level_pan_apply(0);
+        press_btn(B_FX);
+        for (g = 0; ui.engine[0] != ENG_BAY && g < 10u; g++) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        if (ui.engine[0] != ENG_BAY || lay[0].engine != ENG_BAY)
+            printf("FAIL bayarea: PRESETS does not reach BAYAREA\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        for (i = 0; i < 3u; i++)
+            press_key(i * 2u, 1);
+        for (b = 0; b < 600u; b++) {
+            run_blocks(1, 0);
+            for (i = 0; i < 2u * CTL; i++)
+                pk = absi(mix_out[i]) > pk ? absi(mix_out[i]) : pk;
+        }
+        for (i = 0; i < 3u; i++)
+            press_key(i * 2u, 0);
+        run_blocks(3000, 0);
+        printf("bayarea: a chord on track 1 (%s): peak %.1f dB\n", sound_name(0, ENG_BAY), dbp(pk));
+        if (pk < 300)
+            printf("FAIL bayarea: a track on BAYAREA does not sound\n"), fail++;
+        ui.mac[0][ENG_BAY][1] = 30;
+        seed = ba_buf[0][ba_pub[0]].seed;
+        if (ses_save(1) != SES_OK)
+            printf("FAIL bayarea: not saved\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        ses_load_slot(1);
+        run_blocks(10, 0);
+        if (ui.engine[0] != ENG_BAY || ba_buf[0][ba_pub[0]].seed != seed || ui.mac[0][ENG_BAY][1] != 30)
+            printf("FAIL bayarea: a session does not keep it\n"), fail++;
+        if (pre_save(0, ENG_BAY, 7) != SES_OK || pre_save(0, ENG_DRUID, 7) != SES_OK)
+            printf("FAIL bayarea: the presets are not saved\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        if (pre_load(0, ENG_BAY, 7) != SES_OK || ba_buf[0][ba_pub[0]].seed != seed ||
+            pre_kind(ENG_BAY, 7) != ba_buf[0][ba_pub[0]].kind || pre_kind(ENG_DRUID, 7) < 0 || pre_kind(ENG_BAY, 8) >= 0)
+            printf("FAIL bayarea: the preset does not give it back (or DRUID's is lost)\n"), fail++;
+        clip_copy(0);
+        clip_paste(3);
+        if (ui.engine[3] != ENG_BAY || ba_buf[3][ba_pub[3]].seed != seed)
+            printf("FAIL bayarea: the clipboard does not copy it\n"), fail++;
+    }
+    printf("bayarea: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
 
@@ -5248,6 +5391,8 @@ int main(int argc, char **argv)
         return cmd_balls(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "vary"))
         return cmd_vary();
+    if (argc >= 3 && !strcmp(argv[1], "bayarea"))
+        return cmd_bayarea(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

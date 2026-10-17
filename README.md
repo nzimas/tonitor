@@ -38,7 +38,7 @@ track in its own colour.
 
 ### Highlights
 
-- **Five sound engines**, chosen per track:
+- **Six sound engines**, chosen per track:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a lo-fi synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
@@ -50,6 +50,8 @@ track in its own colour.
     sample-held like a small DAC.
   - **DRUID** — strings and resonant bodies after Mutable Instruments Rings: a Karplus-Strong string with
     dispersion, sympathetic strings, and a modal resonator, plucked, struck, bowed or rattled.
+  - **BAYAREA** — a West Coast voice: a morphing oscillator with two FM modulators, a wavefolder, and a low-pass
+    gate or a sustaining envelope over resonant low-passes.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
@@ -90,7 +92,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | Control | What it does |
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1 2 3 4 5 6**. The chosen track's button is lit; the others glow while they sound. **Held** (0.8 s): **copy** the track, or **paste** the copy onto it — see [Copying a track](#copying-a-track). |
-| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO** or **DRUID**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID** or **BAYAREA**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
 | **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **SHIFT + HOME** | a **new sound of the same family** (kind, species) as the chosen track's sound — to explore a family you like. The screen says SAME FAMILY. |
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
@@ -107,7 +109,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | all black keys | play no notes. They glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT is lit only while held. |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
-| **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one. Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
+| **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one, and now and then, at odds of its own, it is changed or joined: dropped this time round (5 %), late by 5–40 ms (25 %), an octave up or down (8 %), replaced or joined by a note that was not recorded — a step or two of the scale away, or a fifth (8 %), preceded by a grace note a step away (4 %), struck 2–4 times quickly (4 %), joined by a third or fifth above (10 %), echoed 1–4 times 120–400 ms apart, each quieter, sometimes climbing or falling a step each time (15 %); the notes of a chord are sometimes strummed 20–60 ms apart (12 %). Every note stays in the scale. Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
 | **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
 | **PLAY** | pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit while they play. **SHIFT and PLAY**, from any track: if any loop plays, every loop on every track stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen track's own. |
 | **SELECT** knob | the chosen track's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a track starts at 87 % (0 dB). |
@@ -155,9 +157,10 @@ The macros are chosen for each engine, and for some by the kind of sound:
 | **ANIMA** | **TONE**: every filter four octaves up or down (sharper when up), the FM brighter or darker | what the kind is about, from nothing to far more: **GRAINS**, **NOISE**, **FM** (the index), **FORMANT** (sharper when up) or **DRIVE** (folded hard; turned down, a pure tone: the second voice, FM, noise and grains drawn out) | **RESONATOR**: much wetter and ringing longer (brought in if the sound had none), or dry | **MOTION**: the hand four times quicker, a tremolo pulsing — or nearly still, no tremolo |
 | **CALIGULA** | **WAVEFORM**: triangles to squares | **MOD DEPTH**: how deeply the pairs modulate each other | **FEEDBACK** (total feedback and drive) — or **DELAY** for SPORE, VEIL, LITANY and MOTH | **TOUCHES**: how busy the hand is, its touches and bursts — or **GATE RATE** (the gates' speed) for HIVE, MOTH and WIRE |
 | **DRUID** | **STRUCTURE**: on a string, its dispersion (below a quarter, a buzzing bridge; above, the partials stretched, then noise in the period); on sympathetic strings, the intervals they are tuned to; on a body, how its partials are spaced, from squeezed through harmonic to bell-like | **BRIGHTNESS**: the exciter's low-pass and the string's or body's high-frequency loss | **DAMPING**: how long it rings, from ~70 ms to ~18 s to -60 dB, and above 0.95 on without decay | **POSITION**: where it is plucked or struck and where it is picked up — which partials sound |
+| **BAYAREA** | **SHAPE**: the oscillator from sine through triangle and square to saw | **FOLDS**: the wavefolder's drive | **FM**: both modulators' depth | **DECAY**: the gate's decay, or the sustain's release, from an eighth to eight times the sound's own |
 | **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **RANDOMNESS**: how much chance drives it; above the middle, stutters too |
 
-Each track keeps the macros of each of its five sounds. **HOME** draws a new sound as it comes (its macros
+Each track keeps the macros of each of its six sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.
 
 ### Envelope
@@ -177,7 +180,7 @@ then let go. The change applies from the next note; once the track's envelope is
 also changes the notes that are sounding.
 
 **SHIFT** + the key, **HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
-keeps an envelope for each of its five engines. Sessions store them, copying a track copies them, presets do
+keeps an envelope for each of its six engines. Sessions store them, copying a track copies them, presets do
 not.
 
 ### BALLSY
@@ -274,7 +277,7 @@ button blinks. Choose another track and hold its button until **PASTED / TRACK n
 track's tone and loops. The clipboard is then empty: the next hold copies again. Holding the copied track's own
 button again copies it again (as it is now), pasting nothing.
 
-What is copied: the **tone** — the engine, the sounds of all five engines with their macros and envelopes, the filter, the
+What is copied: the **tone** — the engine, the sounds of all six engines with their macros and envelopes, the filter, the
 granulator, the crush, the reverb send, the octave and the generative path — and **all the loops**, every
 overdub, those taken out still out, playing or stopped as they were (pasted, they start from their beginnings).
 The copy is taken when you hold the button: what the track does afterwards is not pasted. The track pasted
@@ -381,7 +384,7 @@ The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–
 
 A session stores in full the sound of the engine each track is on, and the other three as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
-sector of flash. A session is the whole machine: every track's engine and its five sounds, its path, octave, level, pan,
+sector of flash. A session is the whole machine: every track's engine and its six sounds, its path, octave, level, pan,
 reverb send, filter, granulator (and the character it was drawn with), crush, distortion, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the track chosen. They are kept in the
 FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
@@ -653,6 +656,41 @@ when the key is released. Releasing a key damps the sound by an amount set per s
 short. Each voice's delay lines are 16-bit and use the memory an ANIMA voice would use: a string reaches
 down to about 29 Hz, and sympathetic strings that would not fit their shorter lines are tuned an octave up.
 
+### BAYAREA — a West Coast voice
+
+The sixth engine is a fixed-point port of the bayarea opcode of Vascular, contributed by its author. It plays
+from the shared pool of voices, like FM, ANIMA and DRUID. Each voice has:
+
+- an oscillator that morphs from sine through triangle and square to saw (SHAPE), its frequency modulated
+  linearly, through zero, by two sines at ratios of it (0.66 and 3.3 by default, other ratios on some sounds),
+  each ratio wandering slightly and slowly;
+- a wavefolder (FOLDS), reflecting the wave back into range;
+- a 12 kHz smoothing low-pass and a trace of noise;
+- either a **low-pass gate**, where a resonant low-pass and an amplifier are struck together by one-shot
+  envelopes (an attack of 2–3 ms and a decay), or a **sustaining envelope** over two resonant low-passes (an
+  attack while the key is held, a release when it is let go). The filters sweep from 300 Hz to the sound's peak
+  frequency, higher for louder notes;
+- a saturating output stage (tanh, then a soft clip) with its own drive;
+- a bank of three resonators (508, 270 and 1153 Hz, ringing for 1–1.4 s), mixed in by the sound's amount;
+- an LFO (triangle, ramp, square or random steps) that moves the shape, the folds, the two FM depths, the
+  attack, the peak, the decay and the resonator mix, by amounts drawn with the sound.
+
+Changed from the opcode: the square and saw are band-limited with polyBLEP instead of being summed from 44
+partials (too costly for this chip), and the opcode's reverb is replaced by the track's sends to the master
+delay and reverb, keeping only its resonator bank.
+
+| Kind | Envelope | |
+| --- | --- | --- |
+| **BONGO** | gate | low peak, short decay, little folding |
+| **PLUCK** | gate | brighter, square to saw, short to medium decay |
+| **CHIME** | gate | the upper modulator deep, long decay, resonators |
+| **FOLDED** | gate | heavy folding |
+| **SWELL** | sustain | slow attack (0.3–3 s), long release |
+| **DRONE** | sustain | slower attack (0.5–4 s), the lower modulator deep, long release |
+
+AMBIENT favours BONGO, CHIME, SWELL and DRONE; EXPERIMENTAL favours PLUCK and FOLDED, with more drive and folding
+and other FM ratios more often.
+
 # Building from source
 
 Once:
@@ -693,7 +731,7 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 ## How it is built
 
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
-`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `druid.c` (DRUID), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
+`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `druid.c` (DRUID), `bayarea.c` (BAYAREA), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). Based on Felucca and earlier open FM-1 firmware work: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
@@ -724,6 +762,7 @@ Tonitor is by Nuno Zimas. It stands on the work of others:
   Moreno (BSD), an emulation of SOMA Laboratory's LYRA-8.
 - **RUSSOLO** re-makes, in fixed point, the techniques of
   [**Noisferatu**](https://github.com/rob-scape/noisferatu) by Robert Heel (GPL-3.0).
+- **BAYAREA** is ported from the bayarea opcode of Vascular.
 - **DRUID** is a fixed-point port of the resonators of [**Mutable Instruments Rings**](https://github.com/pichenettes/eurorack)
   by Émilie Gillet (MIT).
 - **Atkinson Hyperlegible** by the Braille Institute (SIL OFL 1.1) and **Terminus** (SIL OFL 1.1).

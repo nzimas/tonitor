@@ -29,8 +29,8 @@
 
 #define NLAYER 6
 #define NVOICE 12                /* the voices of all the layers (FM and ANIMA) */
-enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, ENG_DRUID, NENG };
-static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO", "DRUID"};
+enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, ENG_DRUID, ENG_BAY, NENG };
+static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO", "DRUID", "BAYAREA"};
 
 static fm_patch_t fm_buf[NLAYER][2];
 static an_design_t an_buf[NLAYER][2];
@@ -46,15 +46,19 @@ static rus_t rus_rt[NLAYER];
 /* DRUID (druid.c): strings and resonant bodies, voices of the pool as FM and ANIMA */
 static dr_design_t dr_buf[NLAYER][2];
 static volatile uint8_t dr_pub[NLAYER], dr_use[NLAYER];
+/* BAYAREA (bayarea.c): a West Coast voice, voices of the pool as well */
+static ba_design_t ba_buf[NLAYER][2];
+static volatile uint8_t ba_pub[NLAYER], ba_use[NLAYER];
 /* an organism engine (one for the layer, outside the voices' pool) */
 static int eng_organism(uint32_t e) { return e == ENG_CAL || e == ENG_RUS; }
 
 /* the pool's voices' own memory, ~4.8 KiB each: an ANIMA voice (its resonator) or a DRUID one (its strings) --
  * a voice is one engine at a time (voice_t.eng) */
-typedef union { an_voice_t an; dr_voice_t dr; } vmem_t;
-typedef char dr_fits_an_voice[sizeof(dr_voice_t) <= sizeof(an_voice_t) ? 1 : -1];
+typedef union { an_voice_t an; dr_voice_t dr; ba_voice_t ba; } vmem_t;
+typedef char dr_fits_an_voice[sizeof(dr_voice_t) <= sizeof(an_voice_t) && sizeof(ba_voice_t) <= sizeof(an_voice_t) ? 1 : -1];
 static vmem_t vmem[NVOICE] POOL;
-static void dr_measure(dr_design_t *d) { dr_measure_on(d, (dr_voice_t *)(void *)&an_probe); }   /* (ANIMA's probe:
+static void dr_measure(dr_design_t *d) { dr_measure_on(d, (dr_voice_t *)(void *)&an_probe); }
+static void ba_measure(ba_design_t *d) { ba_measure_on(d, (ba_voice_t *)(void *)&an_probe); }   /* (ANIMA's probe:
                                                                                                * never both at once) */
 
 #define FADE 12u                 /* blocks of a fade (~9 ms) */
@@ -210,8 +214,13 @@ typedef struct {
     uint32_t ev[LOOP_N];
 } looper_t;
 static looper_t loop[NLAYER] POOL;
-#define LV_N 24u                 /* VARY's notes waiting to be let go, a looper's (layers.c loop_strike) */
-static struct { uint8_t trk, raw; uint16_t left; } lv_off[NLAYER][LV_N];
+#define VQ_N 32u                 /* VARY: a looper's notes waiting to be struck, and struck waiting to be let go */
+typedef struct { uint16_t wait, len; uint8_t note, vel; } vq_t;   /* (len 0: a free place) */
+static vq_t vq[NLAYER][VQ_N];
+static struct { uint8_t note; uint16_t left; } vo[NLAYER][VQ_N];
+static uint32_t vs_blk[NLAYER];          /* VARY's strum: the block a loop note was last struck in, the strum's */
+static uint8_t vs_idx[NLAYER], vs_on[NLAYER];
+static uint16_t vs_gap[NLAYER];
 static uint32_t blk_clock;
 #if TELEMETRY
 static uint32_t tele_ev;                 /* this half: the events taken (bit = type), loop notes (bit 20), wraps (21) */
@@ -510,6 +519,10 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
         fm_note_on(&v->fm, &fm_buf[l][fm_use[l]], v->note, fresh || !v->sounding);
     else if (lay[l].engine == ENG_DRUID)
         dr_note_on(&vmem[k].dr, &dr_buf[l][dr_use[l]], (int32_t)v->note, fresh || !v->sounding);
+    else if (lay[l].engine == ENG_BAY) {
+        ba_note_on(&vmem[k].ba, &ba_buf[l][ba_use[l]], (int32_t)v->note, v->vel ? v->vel : 127, fresh || !v->sounding);
+        vmem[k].ba.hold = 0;
+    }
     else {
         an_note_on(&vmem[k].an, &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
         vmem[k].an.env_hold = 0;
@@ -520,6 +533,8 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
             fm_hold(&v->fm, &fm_buf[l][fm_use[l]]);
         else if (lay[l].engine == ENG_ANIMA)
             vmem[k].an.env_hold = 1;
+        else if (lay[l].engine == ENG_BAY)
+            vmem[k].ba.hold = 1;
         v->est = AE_ATT;
         v->elv = 0;
     }
@@ -536,6 +551,8 @@ static void voice_off(uint32_t l, uint32_t k)
         fm_note_off(&v->fm, &fm_buf[l][fm_use[l]]);
     else if (v->eng == ENG_DRUID)
         dr_note_off(&vmem[k].dr);
+    else if (v->eng == ENG_BAY)
+        ba_note_off(&vmem[k].ba, &ba_buf[l][ba_use[l]]);
     else
         an_note_off(&vmem[k].an);
 }
@@ -549,6 +566,8 @@ static void voice_silence(uint32_t k)
     v->fm.live = 0;
     if (v->eng == ENG_DRUID)
         vmem[k].dr.live = 0;
+    else if (v->eng == ENG_BAY)
+        vmem[k].ba.live = 0;
     else
         vmem[k].an.live = 0;
 }
@@ -700,11 +719,13 @@ static int change_due(uint32_t l)
         rus_use[l] = rus_pub[l];
     if (y->engine != ENG_DRUID && y->want_engine != ENG_DRUID)
         dr_use[l] = dr_pub[l];
+    if (y->engine != ENG_BAY && y->want_engine != ENG_BAY)
+        ba_use[l] = ba_pub[l];
     if (y->want_engine != y->engine)
         return 1;
     return y->engine == ENG_FM ? fm_pub[l] != fm_use[l] : y->engine == ENG_ANIMA ? an_pub[l] != an_use[l]
            : y->engine == ENG_CAL ? cal_pub[l] != cal_use[l] : y->engine == ENG_RUS ? rus_pub[l] != rus_use[l]
-           : dr_pub[l] != dr_use[l];
+           : y->engine == ENG_DRUID ? dr_pub[l] != dr_use[l] : ba_pub[l] != ba_use[l];
 }
 /* what was asked, now (the voices silent), and the notes still held played again with it */
 static void change_apply(uint32_t l)
@@ -756,6 +777,7 @@ static void change_apply(uint32_t l)
         cal_use[l] = cal_pub[l];
         rus_use[l] = rus_pub[l];
         dr_use[l] = dr_pub[l];
+        ba_use[l] = ba_pub[l];
         if (y->engine == ENG_CAL)
             for (j = 0; j < n; j++)
                 cal_note_on(c, &cal_buf[l][cal_use[l]], nn[j], ns[j]);
@@ -856,7 +878,8 @@ static void loop_cmd(uint32_t l, uint32_t type)
         p->dmode = LD_FWD;                        /* (emptied: forwards, at its speed, as played, again) */
         p->rate = LS_NORMAL;
         p->vary = 0;
-        memset(lv_off[l], 0, sizeof lv_off[l]);
+        memset(vq[l], 0, sizeof vq[l]);
+        memset(vo[l], 0, sizeof vo[l]);
         p->play = 0;
         p->mute = 0;
         p->ntrk = 0;
@@ -915,8 +938,13 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
         p->mute |= (uint16_t)bit;
     }
 }
-/* VARY (SHIFT + REC): the loop notes struck at a random level, let go after a random length (50 ms .. 1.5 s) --
- * their recorded ends not waited for; what is waiting, a looper's (loop, note as recorded, blocks left) */
+/* VARY (SHIFT + REC): each loop note struck at a random level (-10 dB .. full), for a random length (50 ms ..
+ * 1.5 s, the recorded end not waited for) -- and now and then, at odds of its own, changed or joined:
+ *   dropped (5 %), late by 5 .. 40 ms (25 %), an octave up or down (8 %), a neighbouring step of the scale, a
+ *   fifth instead or as well (8 %), a grace note a step away just before it (4 %), struck 2 .. 4 times quickly
+ *   (4 %), a third or a fifth above with it (10 %), echoed 1 .. 4 times 120 .. 400 ms apart, each quieter, some
+ *   climbing or falling a step each (15 %), and the notes of a chord spread out 20 .. 60 ms apart (12 %).
+ * Each looper's notes to come wait in vq[], those struck in vo[] until their time is up */
 static uint32_t lv_rnd(looper_t *p)
 {
     if (!p->rnd)
@@ -926,52 +954,127 @@ static uint32_t lv_rnd(looper_t *p)
     p->rnd ^= p->rnd << 5;
     return p->rnd;
 }
-static void lv_let_go(uint32_t l, loop_trk_t *t, uint32_t raw)   /* (if loop t still sounds it) */
+static int lv_odds(looper_t *p, uint32_t pct) { return (lv_rnd(p) >> 8) % 1000u < pct * 10u; }
+static uint32_t lv_in(looper_t *p, uint32_t lo, uint32_t hi) { return lo + (lv_rnd(p) >> 8) % (hi - lo + 1u); }
+static uint32_t lv_blocks(uint32_t ms) { return (ms * 1378u) >> 10; }
+/* a note of track l struck now (the same note still sounding let go first), let go after len blocks */
+static void vq_strike(uint32_t l, uint32_t note, uint32_t vel, uint32_t len)
 {
-    if ((t->snd[raw >> 5] >> (raw & 31u)) & 1u) {
-        note_off(l, lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
-        t->snd[raw >> 5] &= ~(1u << (raw & 31u));
-    }
-}
-/* a loop note struck: as recorded, or (VARY) at a random level, its end set */
-static void loop_strike(uint32_t l, looper_t *p, loop_trk_t *t, uint32_t raw)
-{
-    uint32_t nt = lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), k = (uint32_t)(t - p->trk), i, slot = LV_N;
-    if (!p->vary) {
-        note_on(l, nt, SRC_LOOP);
-        t->snd[raw >> 5] |= 1u << (raw & 31u);
-        return;
-    }
-    for (i = 0; i < LV_N; i++) {                  /* (the same note waiting: let go first; else a free place) */
-        if (lv_off[l][i].left && lv_off[l][i].trk == k && lv_off[l][i].raw == raw) {
-            lv_let_go(l, t, raw);
-            lv_off[l][i].left = 0;
+    uint32_t i, slot = VQ_N;
+    for (i = 0; i < VQ_N; i++) {
+        if (vo[l][i].left && vo[l][i].note == note) {
+            note_off(l, note, SRC_LOOP);
+            vo[l][i].left = 0;
         }
-        if (!lv_off[l][i].left && slot == LV_N)
+        if (!vo[l][i].left && slot == VQ_N)
             slot = i;
     }
-    if (slot == LV_N) {                           /* (all waiting: the soonest let go now) */
+    if (slot == VQ_N) {                           /* (all sounding: the soonest let go now) */
         slot = 0;
-        for (i = 1; i < LV_N; i++)
-            if (lv_off[l][i].left < lv_off[l][slot].left)
+        for (i = 1; i < VQ_N; i++)
+            if (vo[l][i].left < vo[l][slot].left)
                 slot = i;
-        lv_let_go(l, &p->trk[lv_off[l][slot].trk % LOOP_TRK], lv_off[l][slot].raw);
+        note_off(l, vo[l][slot].note, SRC_LOOP);
     }
-    note_vel = (uint8_t)(40u + (lv_rnd(p) >> 8) % 87u);   /* (-10 dB .. full) */
-    note_on(l, nt, SRC_LOOP);
+    note_vel = (uint8_t)clampi((int32_t)vel, 1, 126);
+    note_on(l, note, SRC_LOOP);
     note_vel = 127;
-    t->snd[raw >> 5] |= 1u << (raw & 31u);
-    lv_off[l][slot].trk = (uint8_t)k;
-    lv_off[l][slot].raw = (uint8_t)raw;
-    lv_off[l][slot].left = (uint16_t)((((50u * exp2_q16((int32_t)((lv_rnd(p) >> 8) % 322000u))) >> 16) * 1378u) >> 10);
+    vo[l][slot].note = (uint8_t)note;
+    vo[l][slot].left = (uint16_t)clampi((int32_t)len, 1, 0xFFFF);
 }
-/* a block: the VARY notes whose time is up let go */
+/* .. or in wait blocks */
+static void vq_add(uint32_t l, uint32_t wait, uint32_t note, uint32_t vel, uint32_t len)
+{
+    uint32_t i;
+    if (!wait) {
+        vq_strike(l, note, vel, len);
+        return;
+    }
+    for (i = 0; i < VQ_N; i++)
+        if (!vq[l][i].len) {
+            vq[l][i].wait = (uint16_t)clampi((int32_t)wait, 1, 0xFFFF);
+            vq[l][i].len = (uint16_t)clampi((int32_t)len, 1, 0xFFFF);
+            vq[l][i].note = (uint8_t)note;
+            vq[l][i].vel = (uint8_t)vel;
+            return;
+        }
+}
+/* a loop note under VARY */
+static void vary_strike(uint32_t l, looper_t *p, loop_trk_t *t, uint32_t raw)
+{
+    uint32_t nt = lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), wait = 0, vel, len, k;
+    if (lv_odds(p, 5))
+        return;                                   /* dropped, this time round */
+    vel = lv_in(p, 40, 126);
+    len = lv_blocks((50u * exp2_q16((int32_t)((lv_rnd(p) >> 8) % 322000u))) >> 16);   /* 50 ms .. 1.5 s */
+    if (vs_blk[l] == blk_clock) {                 /* (with another struck at the same moment: a chord) */
+        if (vs_on[l])
+            wait += (uint32_t)++vs_idx[l] * vs_gap[l];   /* strummed */
+    } else {
+        vs_blk[l] = blk_clock;
+        vs_idx[l] = 0;
+        vs_on[l] = (uint8_t)lv_odds(p, 12);
+        vs_gap[l] = (uint16_t)lv_blocks(lv_in(p, 20, 60));
+    }
+    if (lv_odds(p, 25))                           /* late */
+        wait += lv_blocks(lv_in(p, 5, 40));
+    if (lv_odds(p, 8)) {                          /* an octave up or down */
+        int32_t o = lv_odds(p, 50) ? 12 : -12;
+        nt = (uint32_t)((int32_t)nt + o >= 12 && (int32_t)nt + o <= 120 ? (int32_t)nt + o : (int32_t)nt - o);
+    }
+    if (lv_odds(p, 8)) {                          /* a note not recorded: a step or two away, or a fifth */
+        static const int8_t ST[5] = {-2, -1, 1, 2, 4};
+        uint32_t f = lx_map(nt, ST[lv_in(p, 0, 4)], lx_mask);
+        if (lv_odds(p, 60))
+            nt = f;
+        else
+            vq_add(l, wait, f, vel * 4u / 5u, len);
+    }
+    if (lv_odds(p, 4)) {                          /* a grace note just before */
+        vq_add(l, wait, lx_map(nt, lv_odds(p, 50) ? 1 : -1, lx_mask), vel * 7u / 10u, lv_blocks(lv_in(p, 40, 80)));
+        wait += lv_blocks(lv_in(p, 50, 90));
+    }
+    if (lv_odds(p, 4)) {                          /* ratchet: struck 2 .. 4 times, quickly */
+        uint32_t n = lv_in(p, 2, 4), sp = lv_blocks(lv_in(p, 50, 110));
+        for (k = 0; k < n; k++)
+            vq_add(l, wait + k * sp, nt, vel, sp * 4u / 5u);
+    } else
+        vq_add(l, wait, nt, vel, len);
+    if (lv_odds(p, 10))                           /* a third or a fifth above, with it */
+        vq_add(l, wait, lx_map(nt, lv_odds(p, 50) ? 2 : 4, lx_mask), vel * 4u / 5u, len);
+    if (lv_odds(p, 15)) {                         /* echoes, quieter each, some climbing or falling */
+        uint32_t n = lv_in(p, 1, 4), d = lv_blocks(lv_in(p, 120, 400)), v = vel;
+        int32_t dir = lv_odds(p, 40) ? (lv_odds(p, 50) ? 1 : -1) : 0;
+        for (k = 1; k <= n; k++) {
+            v = v * 3u / 5u;
+            vq_add(l, wait + k * d, lx_map(nt, dir * (int32_t)k, lx_mask), v > 8u ? v : 8u, len < d ? len : d);
+        }
+    }
+}
+/* a loop note struck: as recorded, or under VARY */
+static void loop_strike(uint32_t l, looper_t *p, loop_trk_t *t, uint32_t raw)
+{
+    if (p->vary) {
+        vary_strike(l, p, t, raw);
+        return;
+    }
+    note_on(l, lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
+    t->snd[raw >> 5] |= 1u << (raw & 31u);
+}
+/* a block: VARY's notes due struck, those whose time is up let go (the loops stopped: nothing more struck) */
 static void lv_tick(uint32_t l)
 {
     uint32_t i;
-    for (i = 0; i < LV_N; i++)
-        if (lv_off[l][i].left && !--lv_off[l][i].left)
-            lv_let_go(l, &loop[l].trk[lv_off[l][i].trk % LOOP_TRK], lv_off[l][i].raw);
+    for (i = 0; i < VQ_N; i++) {
+        vq_t *q = &vq[l][i];
+        if (q->len && (!loop[l].play || !--q->wait)) {
+            if (loop[l].play)
+                vq_strike(l, q->note, q->vel, q->len);
+            q->len = 0;
+        }
+        if (vo[l][i].left && !--vo[l][i].left)
+            note_off(l, vo[l][i].note, SRC_LOOP);
+    }
 }
 /* an event of loop t played: as recorded, or (backwards) turned round -- its start an end, its end a start. A note
  * tied over the loop's end is never let go there, nor struck again just after (forwards: its start is the loop's
@@ -1375,6 +1478,9 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             else if (y->engine == ENG_DRUID) {
                 memcpy(vmem[k].dr.mac, felt, NMAC);
                 alive = dr_render(&vmem[k].dr, &dr_buf[l][dr_use[l]], vb, CTL);
+            } else if (y->engine == ENG_BAY) {
+                memcpy(vmem[k].ba.mac, felt, NMAC);
+                alive = ba_render(&vmem[k].ba, &ba_buf[l][ba_use[l]], vb, CTL);
             } else {
                 memcpy(vmem[k].an.mac, mac, NMAC);
                 alive = an_render(&vmem[k].an, &an_buf[l][an_use[l]], vb, CTL);
@@ -1395,6 +1501,8 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
                 v->fm.live = 0;
                 if (v->eng == ENG_DRUID)
                     vmem[k].dr.live = 0;
+                else if (v->eng == ENG_BAY)
+                    vmem[k].ba.live = 0;
                 else
                     vmem[k].an.live = 0;
             }
@@ -1631,6 +1739,7 @@ static void layers_init(void)
     eng_cost[ENG_CAL] = BLK_TICKS * 20u / 100u;
     eng_cost[ENG_RUS] = BLK_TICKS * 4u / 100u;
     eng_cost[ENG_DRUID] = BLK_TICKS * 6u / 100u;
+    eng_cost[ENG_BAY] = BLK_TICKS * 6u / 100u;
 #else
     memcpy(eng_cost, host_cost_model, sizeof eng_cost);
 #endif
@@ -1768,6 +1877,14 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         cal_buf[l][k].out = level;
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)k;
+    } else if (e == ENG_BAY) {
+        if (!sound_slot_free(&ba_pub[l], &ba_use[l]))
+            return 0;
+        k = ba_use[l] ^ 1u;
+        ba_design(&ba_buf[l][k], -1, seed, path, gen);
+        ba_buf[l][k].out = level;
+        RING_PUBLISH();
+        ba_pub[l] = (uint8_t)k;
     } else if (e == ENG_DRUID) {
         if (!sound_slot_free(&dr_pub[l], &dr_use[l]))
             return 0;
@@ -1821,6 +1938,23 @@ static int new_druid(uint32_t l, uint32_t seed, uint32_t path)
     dr_pub[l] = (uint8_t)k;
     return 1;
 }
+static int new_bay(uint32_t l, uint32_t seed, uint32_t path)
+{
+    uint32_t k, tries;
+    int32_t was = ba_buf[l][ba_use[l]].kind;
+    if (!sound_slot_free(&ba_pub[l], &ba_use[l]))
+        return 0;
+    k = ba_use[l] ^ 1u;
+    for (tries = 0; tries < 4u; tries++) {
+        ba_design(&ba_buf[l][k], new_kind, seed + tries * 7919u, path, GEN_NOW);
+        if (new_kind >= 0 || ba_buf[l][k].kind != was)
+            break;
+    }
+    ba_measure(&ba_buf[l][k]);
+    RING_PUBLISH();
+    ba_pub[l] = (uint8_t)k;
+    return 1;
+}
 /* the name of what layer l plays on engine e */
 static const char *sound_name(uint32_t l, uint32_t e)
 {
@@ -1830,6 +1964,8 @@ static const char *sound_name(uint32_t l, uint32_t e)
         return RK_NAME[rus_buf[l][rus_pub[l]].kind % RK_N];
     if (e == ENG_DRUID)
         return DK_NAME[dr_buf[l][dr_pub[l]].kind % DK_N];
+    if (e == ENG_BAY)
+        return BK_NAME[ba_buf[l][ba_pub[l]].kind % BK_N];
     if (e == ENG_FM)
         return FF_NAME[fm_buf[l][fm_pub[l]].family % FF_N];
     return AK_NAME[an_buf[l][an_pub[l]].kind % AK_N];
