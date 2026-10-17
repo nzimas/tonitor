@@ -173,7 +173,7 @@ static void say(const char *s, uint32_t ms)
 #define LEVEL_MAX 23
 #define LEVEL_UNITY 20
 #define PAN_MAX 20
-static const int8_t PAN_DEF[NLAYER] = {-10, 10, -5, 5, -2, 2};
+static const int8_t PAN_DEF[NLAYER] = {0, 10, -5, 5, -2, 2};   /* (track 1 in the middle) */
 #define SEND_DEF 40
 enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_DSEND, DIAL_DIST, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
 
@@ -593,6 +593,9 @@ static void new_sound(int same)                  /* same: of the family (kind, s
 
 /* --------------------------------------------------------------- input --- */
 static int32_t enc_take(uint32_t role) { return fm1_enc_take(PANEL_ENC[role]); }
+/* KNOB 1 .. 4 for their own functions: with SHIFT held, KNOB 3 and 4 are SHIFT's (distortion, delay send) -- a
+ * click arriving between SHIFT's read and this one must not reach the crush or the reverb send */
+static int32_t knob_take(uint32_t role, int sh) { return sh && (role == EN_K3 || role == EN_K4) ? 0 : enc_take(role); }
 static int btn_bit(uint32_t mask, uint32_t label) { return (int)((mask >> PANEL_BTN[label]) & 1u); }
 
 static void midi_take(void)                      /* USB MIDI notes (usb.c's ring) */
@@ -623,6 +626,7 @@ static void ui_input(void)
 {
     uint32_t rel, press = fm1_input_edges(&rel), keys, ch, k, l;
     int32_t s;
+    int sh;
     (void)rel;
     for (l = 0; l < NLAYER; l++)
         if (btn_bit(press, LAYER_BTN[l])) {
@@ -706,13 +710,14 @@ static void ui_input(void)
             save_long();
         }
     }
-    if ((fm1_in.notes >> KEY_SHIFT) & 1u && (s = enc_take(EN_K4)) != 0) {   /* SHIFT + KNOB 4: the track's delay send */
+    sh = (int)((fm1_in.notes >> KEY_SHIFT) & 1u);  /* (SHIFT read once: the knobs below all see the same) */
+    if (sh && (s = enc_take(EN_K4)) != 0) {   /* SHIFT + KNOB 4: the track's delay send */
         ui.dsend[ui.sel] = (int8_t)clampi(ui.dsend[ui.sel] + 2 * s, 0, 100);
         level_pan_apply(ui.sel);
         ui.dial = DIAL_DSEND;
         ui.dial_until = fm1_ms + 1000u;
     }
-    if ((fm1_in.notes >> KEY_SHIFT) & 1u && (s = enc_take(EN_K3)) != 0) {   /* SHIFT + KNOB 3: the track's distortion */
+    if (sh && (s = enc_take(EN_K3)) != 0) {   /* SHIFT + KNOB 3: the track's distortion */
         ui.dist[ui.sel] = (int8_t)clampi(ui.dist[ui.sel] + 2 * s, 0, 100);
         level_pan_apply(ui.sel);
         ui.dial = DIAL_DIST;
@@ -723,7 +728,7 @@ static void ui_input(void)
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j, l = ui.sel, e = ui.engine[l];
         for (j = 0; j < 4u; j++) {
-            s = enc_take(K[j]);
+            s = knob_take(K[j], sh);
             if (s) {
                 if (!ui.env_on[l][e]) {
                     memcpy(ui.env[l][e], env_shown(), 4);
@@ -740,7 +745,7 @@ static void ui_input(void)
         uint32_t j;
         int8_t *pv = ui.fx ? ui.dlp : ui.rvp;
         for (j = 0; j < 4u; j++) {
-            s = enc_take(K[j]);
+            s = knob_take(K[j], sh);
             if (s) {
                 pv[j] = (int8_t)clampi(pv[j] + 2 * s, 0, 100);
                 if (ui.fx)
@@ -755,7 +760,7 @@ static void ui_input(void)
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
         for (j = 0; j < NMAC; j++) {
-            s = enc_take(K[j]);
+            s = knob_take(K[j], sh);
             if (s) {
                 int8_t *m = &ui.mac[ui.sel][ui.engine[ui.sel]][j];
                 *m = (int8_t)clampi(*m + 2 * s, -MAC_MAX, MAC_MAX);
@@ -779,14 +784,14 @@ static void ui_input(void)
             ui.dial = DIAL_GR;
             ui.dial_until = fm1_ms + 1000u;
         }
-        s = enc_take(EN_K3);                     /* KNOB 3: the layer's crush */
+        s = knob_take(EN_K3, sh);                /* KNOB 3: the layer's crush */
         if (s) {
             ui.cr[ui.sel] = (int8_t)clampi(ui.cr[ui.sel] + 2 * s, -FLT_MAX, FLT_MAX);
             level_pan_apply(ui.sel);
             ui.dial = DIAL_CR;
             ui.dial_until = fm1_ms + 1000u;
         }
-        s = enc_take(EN_K4);                     /* KNOB 4: the layer's send */
+        s = knob_take(EN_K4, sh);                /* KNOB 4: the layer's send */
         if (s) {
             ui.send[ui.sel] = (int8_t)clampi(ui.send[ui.sel] + 2 * s, 0, 100);
             level_pan_apply(ui.sel);

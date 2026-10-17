@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.39
+
+Changed
+- Track 1 starts with its pan in the middle (was half left), at power-on and in an empty session. The other
+  tracks' starting pans are unchanged. Saved sessions keep their pans.
+
+Fixed
+- With SHIFT held, a KNOB 3 or KNOB 4 click arriving while the panel was being read could go to the knob's
+  own function: the crush or the reverb send changed by one step and its dial showed briefly. While SHIFT is
+  held, KNOB 3 and 4 now go only to the distortion and the delay send.
+
 ## 0.38
 
 Added
