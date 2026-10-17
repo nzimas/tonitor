@@ -100,7 +100,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up): KNOB 1–4 set the chosen track's attack, decay, sustain and release. With SHIFT: the sound's own envelope again. See [Envelope](#envelope). |
-| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's **ball sequencer**, on and off (EDIT blinks while it runs); **held** (0.6 s) while it runs, its page up or down. A short press is always EDIT. See [Ball sequencer](#ball-sequencer). |
+| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's ball sequencer, **BALLSY**, on and off (EDIT blinks while it runs); **held** (0.6 s) while it runs, its page up or down. A short press is always EDIT. See [BALLSY](#ballsy). |
 | the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
@@ -180,9 +180,9 @@ also changes the notes that are sounding.
 keeps an envelope for each of its five engines. Sessions store them, copying a track copies them, presets do
 not.
 
-### Ball sequencer
+### BALLSY
 
-**SHIFT + EDIT** turns on a sequencer of bouncing balls for the chosen track and shows its page; EDIT blinks
+**SHIFT + EDIT** turns on BALLSY, a sequencer of bouncing balls, for the chosen track and shows its page; EDIT blinks
 while it runs, and SHIFT + EDIT again turns it off. Each track has its own, and they run at the same time.
 **Holding EDIT** (0.6 s) while the chosen track's balls run puts their page down or up: with the page down the
 balls keep playing and the knobs, the screen and the other pages work as usual; a track button or another page

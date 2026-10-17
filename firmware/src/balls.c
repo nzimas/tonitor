@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * TONITOR: BALLS, a sequencer of bouncing balls, one per track (SHIFT + EDIT, on and off; EDIT blinks while the
+ * TONITOR: BALLSY, a sequencer of bouncing balls, one per track (SHIFT + EDIT, on and off; EDIT blinks while the
  * chosen track's is on). One to eight balls move in a box; each time one hits a wall it plays a note on the
  * track. Each wall holds the scale's notes, one segment a step, an octave apart: from the bottom (the lowest)
  * clockwise -- left, top, right -- the pitch rising all the way round (the bottom from right to left, the left
