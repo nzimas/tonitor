@@ -53,7 +53,7 @@ track in its own colour.
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
 - **Envelope**: attack, decay, sustain and release per track, on the ENVELOPE page, drawn on the screen.
 - **Latching**: hold notes, press SHIFT, and they sustain as drones while you play on top.
-- Per track: **DJ resonant filter**, **granulator** (dark ↔ scatter), **bit/rate crush**, level, pan and
+- Per track: **DJ resonant filter**, **granulator** (dark ↔ scatter), **bit/rate crush**, **distortion**, level, pan and
   a send to a lush **master reverb** (Dattorro plate).
 - **Scales** on the white keys (major, minors, dorian, pentatonic, whole tone, enigmatic, Japanese *in*),
   any root.
@@ -117,6 +117,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SAVE held** (0.8 s) | **save** into the session loaded or chosen, at once; the whole screen flashes SAVED and the number. With none loaded or chosen yet (just after switching on), the first empty slot is offered: **PRESETS** chooses **NO** / **YES**, **SAVE** answers. **On the SESSIONS page**, SAVE held saves into the slot shown, whatever is loaded: an empty one asks SAVE NEW; one holding a session asks **OVERWRITE?** in red, on **NO** until PRESETS turns it to YES; SAVE answers. |
 | **SEQ** | the **REVERB page** (SEQ lit). There **KNOB 1–4** are **SIZE**, **DECAY**, **DAMP**, **MIX**. SEQ again, or a track button, goes back. |
 | **SHIFT + SEQ** | the **DELAY page** (SEQ lit). There **KNOB 1–4** are **TIME** (20 ms – 2 s), **FEEDBACK**, **DAMP**, **MIX**. SHIFT + SEQ again, SEQ (to the REVERB page) or a track button goes back. See [The delay](#the-delay). |
+| **SHIFT + KNOB 3** | the chosen track's **distortion**, 0–100 (0, off, at the start); its dial reads DISTORTION n and the amount. See [The distortion](#the-distortion). |
 | **SHIFT + KNOB 4** | the chosen track's **delay send**, 0–100 (0 at the start); its dial reads DELAY n / SEND. |
 | **ALGORITHM** knob | the chosen track's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Tracks start spread out: 1 and 2 half left and right, 3 and 4 a quarter, 5 and 6 near the middle. |
 | USB MIDI in | notes play the chosen track, as the keys do. |
@@ -341,7 +342,7 @@ The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–
 A session stores in full the sound of the engine each track is on, and the other three as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
 sector of flash. A session is the whole machine: every track's engine and its four sounds, its path, octave, level, pan,
-reverb send, filter, granulator (and the character it was drawn with), crush, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
+reverb send, filter, granulator (and the character it was drawn with), crush, distortion, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the track chosen. They are kept in the
 FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
 left there**): dozens of typical sessions, at least ten even with six full loops.
@@ -359,6 +360,26 @@ drawn at random when the FM-1 starts and every time a session is loaded: the int
 pitched to, how often they reverse, stutter, drop out or freeze, the shape of its scattered grains, how far
 its feedback and darkening go, how it drifts. The knob's position is saved with the session; the character
 is drawn anew. When the track's notes end, its grains ring on for about two seconds.
+
+### The distortion
+
+Each track has a distortion, set with **SHIFT + KNOB 3** (0–100; 0 is off). It comes after the track's filter,
+granulator, crush and limiter, and before its level, pan and sends, so the delay and the reverb receive the
+distorted sound.
+
+- Two gain stages in series: the first symmetric (odd harmonics), the second asymmetric (even harmonics).
+  The amount sets the drive into the first stage (×0.5 to ×32, up to +36 dB) and the second stage's gain and
+  bias.
+- A bias in proportion to the input's own level is added before the first stage, so the clipped wave stays
+  asymmetric and keeps its even harmonics at any drive. At low amounts the second harmonic dominates; higher
+  amounts add more harmonics (on a sine, up to 14 of the first 15 above −60 dB).
+- The highs are raised 6 dB before the stages and lowered 6 dB after, so the mids and highs distort more than
+  the bass. The stages run at twice the sample rate to reduce aliasing. A low-pass after them goes from 16 kHz
+  down to 6.5 kHz as the amount goes up.
+- The output level is matched to the dry signal's RMS level (measured over about 0.2 s), so turning the
+  amount up changes the drive and the harmonics, not the loudness.
+
+Stored in sessions and copied with the track.
 
 ### The delay
 

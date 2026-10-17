@@ -328,6 +328,101 @@ static int32_t flt_oct(int32_t v)
         return 936005 + ((600310 * v) >> 6);                             /* log2 20000 = 14.288 */
     return 262144 + ((629146 * v) >> 6);                                 /* log2 16 = 4, up 9.6 octaves */
 }
+/* each track's distortion (SHIFT + KNOB 3), 0 .. 100, 0 off: after the track's limiter, before its level, pan and
+ * sends, so before the delay and the reverb. Two gain stages in series, as in a valve preamp: the first
+ * symmetric (odd harmonics), the second asymmetric (it clips sooner on one side: even harmonics), both at twice
+ * the sample rate (linear interpolation up, a [1/4 1/2 1/4] half-band down: fewer aliases). The highs are lifted
+ * 6 dB before the stages and lowered as much after (the mids and highs distort more than the bass: less
+ * intermodulation, less mud); then a DC blocker and a low-pass that comes down from 16 kHz to 6.5 kHz as the
+ * amount goes up. The level is brought back to the dry signal's: the mean squares of both followed (~0.2 s),
+ * the wet scaled by the square root of their ratio, so turning it up adds drive and harmonics, not loudness and
+ * not a drop in it. The amount sets the drive into the first stage (x 0.5 .. x 32, +36 dB), the second stage's
+ * gain (x 1 .. x 2.5) and bias, and the bias into the first stage, a share (0.15 .. 0.35) of the input's own peak,
+ * so that however hard it is driven the clipped wave stays lopsided and keeps its even harmonics; below 6 the
+ * amount also fades the stage in */
+static volatile int8_t lay_dist[NLAYER];
+typedef struct {
+    int32_t amt;                 /* the amount as it glides, x 256 */
+    int32_t pre, post;           /* the emphasis's low-passes (700 Hz), before and after */
+    int32_t dc;                  /* the DC blocker's low-pass, x 256 */
+    int32_t lp;                  /* the tone's low-pass */
+    int32_t env;                 /* the emphasised input's peak, falling over ~0.1 s (the bias follows it) */
+    int32_t ep, ymp, yp, dryp;   /* the last emphasised input; the last mid-point's and sample's stage output; the
+                                  * last dry sample (the half-band's one sample of delay) */
+    int64_t ein, eout;           /* the mean squares, dry and wet, as they follow (x 256) */
+    int32_t g, gp;               /* the level brought back, Q16: wanted, and as the last block ended (it glides) */
+} dist_t;
+static dist_t dist[NLAYER];
+#define DS_EMPH 3110             /* 1 - e^(-2 pi 700 / FS), Q15 */
+AINL int32_t ds_asym(int32_t u)  /* the first stage's curve: tanh, clipping at 5/8 below */
+{
+    return u >= 0 ? tanh_q15(u) : (tanh_q15((u * 8) / 5) * 5) / 8;
+}
+AINL int32_t ds_stage(int32_t e, int32_t g1, int32_t b, int32_t fb, int32_t g2)   /* the two stages (e biased) */
+{
+    int32_t u = tanh_q15((int32_t)(((int64_t)e * g1) >> 12));
+    return ds_asym(mulq12(u, g2) + b) - fb;
+}
+static int32_t ds_log2(int64_t v)            /* log2 of a mean square, Q16 */
+{
+    int32_t e = 0;
+    while (v > 0x7FFFFFFFLL) {
+        v >>= 1;
+        e++;
+    }
+    return log2_q16((uint32_t)(v > 0 ? v : 1)) + (e << 16);
+}
+static void dist_block(dist_t *d, int32_t *x, uint32_t n, int32_t want)
+{
+    int32_t a, g1, b, fb, g2, tone, w, beta, g0 = d->gp, gs, i;
+    int64_t sin = 0, sout = 0;
+    d->amt += ((want << 8) - d->amt) >> 2;
+    if (!want && d->amt < 64) {                  /* (off: from silence when it comes in again) */
+        memset(d, 0, sizeof *d);
+        d->g = d->gp = Q16;
+        return;
+    }
+    a = d->amt >> 8;
+    g1 = (int32_t)((2048u * (uint64_t)exp2_q16(d->amt * 6 / 100 * 256)) >> 16);   /* x 0.5 .. x 32, Q12 */
+    b = 3277 + d->amt * 6554 / 25600;            /* the bias, 0.1 .. 0.3 */
+    fb = ds_asym(b);
+    g2 = 4096 + d->amt * 6144 / 25600;           /* x 1 .. x 2.5, Q12 */
+    beta = 4915 + d->amt * 6554 / 25600;         /* the first stage's bias: 0.15 .. 0.35 of the input's peak */
+    tone = 29430 - d->amt * (29430 - 19800) / 25600;   /* 16 kHz .. 6.5 kHz */
+    w = a >= 6 ? Q15 : d->amt * Q15 / (6 * 256);
+    gs = (d->g - g0) / (int32_t)n;
+    for (i = 0; i < (int32_t)n; i++) {
+        int32_t dry = x[i], e, ym, y, o;
+        d->pre += mulq15(dry - d->pre, DS_EMPH);
+        e = 2 * dry - d->pre;                    /* the highs +6 dB */
+        d->env = absi(e) > d->env ? absi(e) : d->env - (d->env >> 12);
+        e += mulq15(d->env, beta);               /* (a bias in step with the level: the clipping stays lopsided --
+                                                  * even harmonics -- however hard it is driven) */
+        ym = ds_stage((d->ep + e) >> 1, g1, b, fb, g2);
+        y = ds_stage(e, g1, b, fb, g2);
+        o = (d->ymp + 2 * d->yp + ym) >> 2;      /* (one sample late) */
+        d->ep = e;
+        d->ymp = ym;
+        d->yp = y;
+        d->post += mulq15(o - d->post, DS_EMPH);
+        o = (o + d->post) >> 1;                  /* the highs -6 dB again */
+        d->dc += (((o << 8) - d->dc) * 37) >> 15;   /* (~8 Hz) */
+        o -= d->dc >> 8;
+        d->lp += mulq15(o - d->lp, tone);
+        o = d->lp;
+        sin += (int64_t)d->dryp * d->dryp;
+        sout += (int64_t)o * o;
+        o = (int32_t)(((int64_t)o * (g0 + gs * (i + 1))) >> 16);
+        x[i] = d->dryp + mulq15(o - d->dryp, w);
+        d->dryp = dry;
+    }
+    d->gp = d->g;
+    d->ein += (sin - d->ein) >> 8;
+    d->eout += (sout - d->eout) >> 8;
+    if (d->ein > 32 * 1000 && d->eout > 32 * 100)   /* (sounding: else the level as it was) */
+        d->g = (int32_t)exp2_q16(clampi((ds_log2(d->ein) - ds_log2(d->eout)) / 2, -(5 << 16), 1 << 16));   /* x 1/32 .. x 2 */
+}
+
 #define LAYER_GAIN 7373          /* Q12, x 1.8: one layer at 0.1 RMS reads -15 dBFS */
 
 /* A layer's limiter, after its engine: a resonance the hand finds, an index that swells long after the
@@ -1272,6 +1367,7 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
     for (i = 0; i < CTL; i++)
         buf[i] = mulq12(buf[i], LAYER_GAIN);
     lim_block(&y->lim_env, &y->lim_g, buf, CTL);
+    dist_block(&dist[l], buf, CTL, lay_dist[l]);         /* the distortion (before the level and the sends) */
     {   /* the layer's level, then its pan, gliding from the last block's to the knobs' */
         int32_t g1 = lay_gain[l], pl1 = lay_pl[l], pr1 = lay_pr[l], sd1 = lay_send[l], dd1 = lay_dsend[l];
         int32_t dg = (g1 - y->g) / CTL, dl = (pl1 - y->pl) / CTL, dr = (pr1 - y->pr) / CTL, ds = (sd1 - y->sd) / CTL;
@@ -1427,6 +1523,9 @@ static void layers_init(void)
 #else
     memcpy(eng_cost, host_cost_model, sizeof eng_cost);
 #endif
+    memset(dist, 0, sizeof dist);
+    for (l = 0; l < NLAYER; l++)
+        dist[l].g = dist[l].gp = Q16;
     blk_last = blk_new = 0;
     for (k = 0; k < NVOICE; k++) {
         an_init(&an_vox[k], 0xA11u + k * 131u);

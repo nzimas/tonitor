@@ -138,6 +138,7 @@ static struct {
     int8_t rvp[4];               /* the reverb: SIZE DECAY DAMP MIX, 0 .. 100 */
     int8_t dlp[4];               /* the delay: TIME FEEDBACK DAMP MIX, 0 .. 100 */
     int8_t dsend[NLAYER];        /* each track's send to the delay, 0 .. 100 (SHIFT + KNOB 4) */
+    int8_t dist[NLAYER];         /* each track's distortion, 0 .. 100, 0 off (SHIFT + KNOB 3) */
     uint8_t rv_page;             /* the REVERB page is up -- or the DELAY page, fx 1 (SEQ; SHIFT + SEQ) */
     uint8_t fx;
     int8_t rv_touched;           /* the row just turned (-1 none), until rv_touch_until */
@@ -174,7 +175,7 @@ static void say(const char *s, uint32_t ms)
 #define PAN_MAX 20
 static const int8_t PAN_DEF[NLAYER] = {-10, 10, -5, 5, -2, 2};
 #define SEND_DEF 40
-enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_DSEND, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
+enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_DSEND, DIAL_DIST, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
 
 /* the scales: the white keys play their degrees, from the root, up */
 #define NSCALE 9
@@ -313,6 +314,7 @@ static void level_pan_apply(uint32_t l)
     lay_pr[l] = sin_ph((uint32_t)ph);
     lay_send[l] = ui.send[l] * 32767 / 100;
     lay_dsend[l] = ui.dsend[l] * 32767 / 100;
+    lay_dist[l] = ui.dist[l];
     lay_flt[l] = ui.flt[l];
     lay_gr[l] = ui.gr[l];
     lay_cr[l] = ui.cr[l];
@@ -708,6 +710,12 @@ static void ui_input(void)
         ui.dsend[ui.sel] = (int8_t)clampi(ui.dsend[ui.sel] + 2 * s, 0, 100);
         level_pan_apply(ui.sel);
         ui.dial = DIAL_DSEND;
+        ui.dial_until = fm1_ms + 1000u;
+    }
+    if ((fm1_in.notes >> KEY_SHIFT) & 1u && (s = enc_take(EN_K3)) != 0) {   /* SHIFT + KNOB 3: the track's distortion */
+        ui.dist[ui.sel] = (int8_t)clampi(ui.dist[ui.sel] + 2 * s, 0, 100);
+        level_pan_apply(ui.sel);
+        ui.dial = DIAL_DIST;
         ui.dial_until = fm1_ms + 1000u;
     }
     if (ui.env_page) {                           /* KNOB 1 .. 4: the track's own envelope, A D S R; the first turn
@@ -1427,12 +1435,12 @@ static int32_t dial_value(void)
     if (ui.dial >= DIAL_MAC)
         return ui.mac[ui.sel][ui.engine[ui.sel]][(ui.dial - DIAL_MAC) & 3u];
     return ui.dial == DIAL_FLT ? ui.flt[ui.sel] : ui.dial == DIAL_GR ? ui.gr[ui.sel] : ui.dial == DIAL_CR ? ui.cr[ui.sel]
-           : ui.dial == DIAL_DSEND ? ui.dsend[ui.sel] : ui.send[ui.sel];
+           : ui.dial == DIAL_DSEND ? ui.dsend[ui.sel] : ui.dial == DIAL_DIST ? ui.dist[ui.sel] : ui.send[ui.sel];
 }
 static void draw_dial(void)
 {
     static const int32_t BAND[3][2] = {{0, 112}, {112, 112}, {224, 16}};
-    static const char *const NAME[5] = {"FILTER  ", "GRAIN  ", "REVERB  ", "CRUSH  ", "DELAY  "};
+    static const char *const NAME[6] = {"FILTER  ", "GRAIN  ", "REVERB  ", "CRUSH  ", "DELAY  ", "DISTORTION  "};
     int32_t v = dial_value(), b, k, from, to;    /* the arc lit, in steps of 3 degrees from 12 o'clock */
     uint32_t av;
     char t[16], m[16];
@@ -1445,12 +1453,19 @@ static void draw_dial(void)
         str_cpy(t, NAME[ui.dial], sizeof t);
     t[str_len(t) - 1] = (char)('1' + ui.sel);
     tf = text_w(&FONT_M, t) <= 236 ? &FONT_M : &FONT_S;   /* (a long name, SATURATION 1: a size smaller) */
-    if (ui.dial == DIAL_SEND || ui.dial == DIAL_DSEND) {   /* 0 .. 100: from 7 o'clock round */
+    if (ui.dial == DIAL_SEND || ui.dial == DIAL_DSEND || ui.dial == DIAL_DIST) {   /* 0 .. 100: from 7 o'clock round */
         from = -45;
         to = -45 + v * 90 / 100;
         av = 0xA0000000u + (0xC0000000u / 100u) * (uint32_t)v;   /* -135 degrees, + 270 x v / 100 */
-        str_cpy(m, "SEND ", sizeof m);
-        fmt_int(m + 5, v);
+        if (ui.dial == DIAL_DIST) {              /* (the distortion: its amount, OFF at 0) */
+            if (v)
+                fmt_int(m, v);
+            else
+                str_cpy(m, "OFF", sizeof m);
+        } else {
+            str_cpy(m, "SEND ", sizeof m);
+            fmt_int(m + 5, v);
+        }
     } else {                                     /* -64 .. 64: either way from 12 o'clock */
         from = 0;
         to = v * 45 / FLT_MAX;

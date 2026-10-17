@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 15u           /* 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 16u           /* 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -418,6 +418,7 @@ static void ses_emit(void)
         ses_out(ui.latch_form[l], NKEY);
     ses_out(ui.env, sizeof ui.env);                     /* (format 15: each track's own envelopes, and which are on) */
     ses_out(ui.env_on, sizeof ui.env_on);
+    ses_out(ui.dist, NLAYER);                           /* (format 16: each track's distortion) */
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -717,6 +718,7 @@ static void ses_fresh(uint32_t num)
     memset(ui.latch_form, 0, sizeof ui.latch_form);
     memset(ui.env, 0, sizeof ui.env);
     memset(ui.env_on, 0, sizeof ui.env_on);
+    memset(ui.dist, 0, sizeof ui.dist);
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed(), fk, ak, ck, rk;
         loop[l].mute = 0;
@@ -765,7 +767,7 @@ static void ses_fresh(uint32_t num)
  * Level and pan stay with the track pasted onto (its place in the mix) */
 static struct {
     uint8_t full, from, engine, path, play;
-    int8_t oct, send, flt, gr, cr, lxt, dsend;
+    int8_t oct, send, flt, gr, cr, lxt, dsend, dist;
     uint8_t chord_on, chord_form;
     uint8_t dmode, rate;
     int8_t env[NENG][4];
@@ -793,6 +795,7 @@ static void clip_copy(uint32_t l)
     clip.oct = ui.oct[l];
     clip.send = ui.send[l];
     clip.dsend = ui.dsend[l];
+    clip.dist = ui.dist[l];
     clip.chord_on = ui.chord_on[l];
     clip.chord_form = ui.chord_form[l];
     clip.flt = ui.flt[l];
@@ -830,6 +833,7 @@ static void clip_paste(uint32_t l)
     ui.oct[l] = clip.oct;
     ui.send[l] = clip.send;
     ui.dsend[l] = clip.dsend;
+    ui.dist[l] = clip.dist;
     ui.chord_on[l] = clip.chord_on;
     ui.chord_form[l] = clip.chord_form;
     ui.flt[l] = clip.flt;
@@ -1157,8 +1161,16 @@ static int ses_load(uint32_t i)
                     ui.env[l][e][k] = (int8_t)clampi(ui.env[l][e][k], 0, 100);
             }
     }
-    for (l = 0; l < NLAYER; l++)
+    memset(ui.dist, 0, sizeof ui.dist);                 /* each track's distortion (before format 16: off) */
+    if (h.format >= 16u) {
+        ses_in(ui.dist, NLAYER);
+        for (l = 0; l < NLAYER; l++)
+            ui.dist[l] = (int8_t)clampi(ui.dist[l], 0, 100);
+    }
+    for (l = 0; l < NLAYER; l++) {
         mac_apply(l);
+        level_pan_apply(l);
+    }
     ses.current = ses.num[i];
     return SES_OK;
 }

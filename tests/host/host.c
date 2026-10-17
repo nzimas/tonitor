@@ -4366,6 +4366,109 @@ static int cmd_env(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* each track's distortion: harmonics that grow with the amount, odd and even; the level kept (RMS within 1.5 dB
+ * of the dry); bounded; a host cost; the knob (SHIFT + KNOB 3), sessions, the clipboard */
+static double ds_bin(const int32_t *x, uint32_t n, double f)
+{
+    double re = 0, im = 0;
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        double w = 0.5 - 0.5 * cos(2 * M_PI * i / n);
+        re += x[i] * w * cos(2 * M_PI * f * i / 44100.0);
+        im += x[i] * w * sin(2 * M_PI * f * i / 44100.0);
+    }
+    return sqrt(re * re + im * im);
+}
+static int cmd_dist(void)
+{
+    static const int AMT[5] = {0, 15, 40, 70, 100};
+    static int32_t buf[44100 * 2];
+    uint32_t fail = 0, k, i, b;
+    double prev_thd = -1;
+    for (k = 0; k < 5u; k++) {
+        dist_t d;
+        double ri = 0, ro = 0, h[16], thd = 0;
+        int32_t pk = 0;
+        uint32_t n = 44100u * 2u, nh = 0;
+        memset(&d, 0, sizeof d);
+        d.g = d.gp = Q16;
+        for (i = 0; i < n; i++)
+            buf[i] = (int32_t)(12000.0 * sin(2 * M_PI * 220.0 * i / 44100.0));
+        for (i = 0; i + 4410u < n && i < 44100u; i++)
+            ri += (double)buf[i + 44100u] * buf[i + 44100u];
+        for (b = 0; b < n / CTL; b++)
+            dist_block(&d, buf + b * CTL, CTL, AMT[k]);
+        for (i = 44100u; i < n; i++) {
+            ro += (double)buf[i] * buf[i];
+            pk = absi(buf[i]) > pk ? absi(buf[i]) : pk;
+        }
+        for (i = 1; i <= 15u; i++) {
+            h[i] = ds_bin(buf + 44100u, 44100u, 220.0 * i);
+            if (i > 1u)
+                thd += h[i] * h[i];
+            if (i > 1u && h[i] > h[1] * 0.001)
+                nh++;
+        }
+        thd = sqrt(thd) / h[1];
+        printf("dist: amount %3d: level %+5.2f dB, peak %5d, THD %5.1f %%, H2 %6.1f dB, H3 %6.1f dB, H5 %6.1f dB, "
+               "harmonics above -60 dB %u\n", AMT[k], 10 * log10(ro / ri), pk, thd * 100, 20 * log10(h[2] / h[1] + 1e-9),
+               20 * log10(h[3] / h[1] + 1e-9), 20 * log10(h[5] / h[1] + 1e-9), nh);
+        if (fabs(10 * log10(ro / ri)) > 1.5)
+            printf("FAIL dist: amount %d changes the level\n", AMT[k]), fail++;
+        if (pk > 32767)
+            printf("FAIL dist: amount %d goes past full scale\n", AMT[k]), fail++;
+        if (k && (thd <= prev_thd || h[2] < h[1] * 0.003))
+            printf("FAIL dist: amount %d: the harmonics do not grow, or no even ones\n", AMT[k]), fail++;
+        if (!k && thd > 0.001)
+            printf("FAIL dist: at 0 it is not off\n"), fail++;
+        prev_thd = thd;
+    }
+    {   /* the cost, on the host */
+        dist_t d;
+        struct timespec t0, t1;
+        memset(&d, 0, sizeof d);
+        d.g = d.gp = Q16;
+        for (i = 0; i < 44100u; i++)
+            buf[i] = (int32_t)(12000.0 * sin(2 * M_PI * 220.0 * i / 44100.0));
+        clock_gettime(CLOCK_MONOTONIC, &t0);
+        for (b = 0; b < 44100u / CTL; b++)
+            dist_block(&d, buf + b * CTL, CTL, 100);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        printf("dist: %.2f us a block on the host\n", ((t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec)) / 1e3 / (44100.0 / CTL));
+    }
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    {
+        int8_t cr = ui.cr[0];
+        press_phys(KEY_SHIFT, 1);
+        host_enc[PANEL_ENC[EN_K3]] = 20;
+        ui_input();
+        press_phys(KEY_SHIFT, 0);
+        if (ui.dist[0] != 40 || lay_dist[0] != 40 || ui.cr[0] != cr || ui.dial != DIAL_DIST)
+            printf("FAIL dist: SHIFT + KNOB 3 does not set it (%d)\n", ui.dist[0]), fail++;
+    }
+    press_key(0, 1);
+    run_blocks(200, 0);
+    press_key(0, 0);
+    if (ses_save(1) != SES_OK)
+        printf("FAIL dist: not saved\n"), fail++;
+    ui.dist[0] = 0;
+    ses_load_slot(1);
+    if (ui.dist[0] != 40 || lay_dist[0] != 40)
+        printf("FAIL dist: a session does not keep it\n"), fail++;
+    clip_copy(0);
+    clip_paste(2);
+    if (ui.dist[2] != 40 || lay_dist[2] != 40)
+        printf("FAIL dist: the clipboard does not copy it\n"), fail++;
+    ses_fresh(9);
+    if (ui.dist[0] || lay_dist[0])
+        printf("FAIL dist: a fresh session keeps it\n"), fail++;
+    printf("dist: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -4759,6 +4862,8 @@ int main(int argc, char **argv)
         return cmd_samefam();
     if (argc >= 3 && !strcmp(argv[1], "env"))
         return cmd_env(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "dist"))
+        return cmd_dist();
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

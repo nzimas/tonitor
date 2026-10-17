@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.38
+
+Added
+- Per-track distortion on SHIFT + KNOB 3 (0–100, 0 off), after the track's limiter and before its level, pan
+  and the delay and reverb sends. Two gain stages: symmetric, then asymmetric; drive ×0.5 to ×32 (+36 dB). A
+  bias proportional to the input's peak level is added before the first stage, so even harmonics remain at
+  high drive. Highs +6 dB before the stages and −6 dB after; the stages run at 2× the sample rate (linear
+  interpolation up, [¼ ½ ¼] half-band down); a DC blocker; a one-pole low-pass from 16 kHz down to 6.5 kHz as
+  the amount increases. The output is matched to the dry signal's RMS level (about 0.2 s), so the loudness
+  does not change with the amount. Stored in sessions (format 16) and copied with the track.
+
 ## 0.37
 
 Added
