@@ -102,6 +102,10 @@ static struct {
     uint8_t key_form[NKEY];      /* a key down: the chord it holds (form + 1; 0: a note) */
     uint8_t latch_form[NLAYER][NKEY];   /* .. a latched key's */
     uint8_t cho_down, cho_done;  /* the chord key down since cho_t0; held long enough: done */
+    uint8_t edit_down, edit_done;   /* EDIT down since edit_t0 (let go soon: EDIT; held: the balls' page) */
+    uint32_t edit_t0;
+    uint8_t bb_page;             /* the chosen track's balls' page is up (it closes as the other pages do) */
+    uint8_t vary_shown;          /* (VARY just set: what the screen shows until the ISR has taken it, + 1) */
     uint32_t cho_t0;
     int8_t sc_touched;           /* 0 the root just turned, 1 the scale, -1 none (until sc_touch_until) */
     uint32_t sc_touch_until;
@@ -160,7 +164,8 @@ static struct {
 } ui;
 
 /* ------------------------------------------------------------ notes --- */
-static void note_press(uint32_t l, uint32_t note) { ev_post(EV_ON, l, note, 0); }
+static uint8_t press_vel;                /* the level of the notes pressed now, 1 .. 126 (0: full) -- the balls set it */
+static void note_press(uint32_t l, uint32_t note) { ev_post(EV_ON, l, note, press_vel); }
 static void note_release(uint32_t l, uint32_t note) { ev_post(EV_OFF, l, note, 0); }
 
 static void ui_draw(void);
@@ -297,6 +302,8 @@ static void latch_move(uint32_t l, int32_t d)
             ui.latch_form[l][k] = 0;
     ui.latch[l] = latch;
 }
+
+#include "balls.c"                       /* (the ball sequencer: SHIFT + EDIT) */
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
 static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
@@ -418,7 +425,7 @@ static void save_long(void)
     }
     if (ui.ses_page == SP_ASK)
         return;
-    ui.rv_page = ui.env_page = 0;
+    ui.rv_page = ui.env_page = ui.bb_page = 0;
     if (ui.ses_page == SP_LIST && ui.ses_ix != ses_current()) {   /* in the list: into the slot shown, asked */
         ui.ses_new = ui.ses_ix;
         ui.ses_over = (uint8_t)ses_has(ui.ses_ix);
@@ -482,7 +489,7 @@ static void save_short(void)
         }
         return;
     }
-    ui.rv_page = ui.env_page = 0;               /* the SESSIONS page, on the session chosen if any */
+    ui.rv_page = ui.env_page = ui.bb_page = 0;   /* the SESSIONS page, on the session chosen if any */
     ui.sc_page = 0;
     ui.ses_page = SP_LIST;
     ui.ses_ix = (uint8_t)(ses_current() ? ses_current() : 1);
@@ -632,6 +639,9 @@ static void ui_input(void)
     uint32_t rel, press = fm1_input_edges(&rel), keys, ch, k, l;
     int32_t s;
     int sh;
+    bb_tick();                                   /* (the balls: their time, their notes) */
+    if (ui.vary_shown && loop[ui.sel].vary == ui.vary_shown - 1u)
+        ui.vary_shown = 0;                       /* (VARY taken by the ISR: shown from the looper again) */
     (void)rel;
     for (l = 0; l < NLAYER; l++)
         if (btn_bit(press, LAYER_BTN[l])) {
@@ -639,10 +649,12 @@ static void ui_input(void)
             ui.trk_t0 = fm1_ms;
             ui.trk_done = 0;
             ui.sel = (uint8_t)l;
+            ui.vary_shown = 0;
             ui.env_nat_ok = 0;
-            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page) {   /* a layer chosen: back to it */
+            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page) {   /* a layer chosen:
+                                                                                                    * back to it */
                 ui.rv_page = 0;
-                ui.env_page = 0;
+                ui.env_page = ui.bb_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
                 ui.pre_page = 0;
@@ -675,7 +687,7 @@ static void ui_input(void)
         uint8_t fx = (uint8_t)((fm1_in.notes >> KEY_SHIFT) & 1u);
         ui.rv_page = (uint8_t)!(ui.rv_page && ui.fx == fx);
         ui.fx = fx;
-        ui.env_page = 0;
+        ui.env_page = ui.bb_page = 0;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.sc_page = 0;
@@ -684,7 +696,7 @@ static void ui_input(void)
     if (btn_bit(press, B_ARP)) {
         ui.sc_page = (uint8_t)!ui.sc_page;
         ui.rv_page = 0;
-        ui.env_page = 0;
+        ui.env_page = ui.bb_page = 0;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.force = 1;
@@ -697,7 +709,7 @@ static void ui_input(void)
             ui.pre_eng = ui.engine[ui.sel];
             if (!ui.pre_ix)
                 ui.pre_ix = 1;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = 0;
         }
         ui.force = 1;
     } else if (btn_bit(press, B_SAVE)) {
@@ -745,6 +757,12 @@ static void ui_input(void)
                 ui.env_touch_until = fm1_ms + 1500u;
             }
         }
+    } else if (ui.bb_page && bb.on[ui.sel]) {    /* the chosen track's balls' page: KNOB 1 .. 4 theirs */
+        static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t j;
+        for (j = 0; j < 4u; j++)
+            if ((s = knob_take(K[j], sh)) != 0)
+                bb_knob(ui.sel, j, s);
     } else if (ui.rv_page) {                     /* KNOB 1..4: the reverb, or the delay */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
@@ -806,7 +824,13 @@ static void ui_input(void)
     }
     if (btn_bit(press, B_HOME))                  /* a new sound; with SHIFT, of the same family */
         new_sound((int)((fm1_in.notes >> KEY_SHIFT) & 1u));
-    if (btn_bit(press, B_REC)) {                 /* the looper: at once (the loop ends exactly here) */
+    if (btn_bit(press, B_REC) && sh) {           /* SHIFT and REC: the chosen track's loops VARY (or as played) */
+        uint32_t v = !loop[ui.sel].vary;
+        ev_post(EV_LOOP_MODE, ui.sel, 2, v);
+        say(v ? "VARY" : "VARY OFF", 1200);
+        ui.vary_shown = (uint8_t)(v + 1u);
+        ui.force = 1;
+    } else if (btn_bit(press, B_REC)) {          /* the looper: at once (the loop ends exactly here) */
         const looper_t *p = &loop[ui.sel];
         char m[12] = "LOOP ";
         ev_post(EV_LOOP_REC, ui.sel, 0, 0);
@@ -1006,13 +1030,39 @@ static void ui_input(void)
             say("AS DRAWN", 900);
         } else {
             ui.env_page = (uint8_t)!ui.env_page;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.bb_page = 0;
         }
         ui.force = 1;
     }
-    if ((ch & keys) >> KEY_EDIT & 1u) {          /* EDIT on or off */
-        ui.edit = (uint8_t)!ui.edit;
-        say(ui.edit ? "EDIT" : "EDIT OFF", 900);
+    if ((ch & keys) >> KEY_EDIT & 1u) {          /* with SHIFT: the chosen track's balls on (their page up) or off */
+        if ((keys >> KEY_SHIFT) & 1u) {
+            bb_toggle(ui.sel);
+            ui.bb_page = bb.on[ui.sel];
+            if (ui.bb_page)
+                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = 0;
+            say(bb.on[ui.sel] ? "BALLS" : "BALLS OFF", 900);
+            ui.force = 1;
+            ui.edit_down = 0;
+        } else {
+            ui.edit_down = 1;
+            ui.edit_done = 0;
+            ui.edit_t0 = fm1_ms;
+        }
+    }
+    if (ui.edit_down && (keys >> KEY_EDIT & 1u) && !ui.edit_done && bb.on[ui.sel] &&
+        (uint32_t)(fm1_ms - ui.edit_t0) >= 600u) {   /* held, the balls running: their page up or down */
+        ui.edit_done = 1;
+        ui.bb_page = (uint8_t)!ui.bb_page;
+        if (ui.bb_page)
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = 0;
+        ui.force = 1;
+    }
+    if (ui.edit_down && !(keys >> KEY_EDIT & 1u)) {   /* let go soon: EDIT on or off */
+        ui.edit_down = 0;
+        if (!ui.edit_done) {
+            ui.edit = (uint8_t)!ui.edit;
+            say(ui.edit ? "EDIT" : "EDIT OFF", 900);
+        }
     }
     for (k = KEY_AMB; k <= KEY_EXP; k += KEY_EXP - KEY_AMB)
         if ((ch & keys) >> k & 1u) {              /* a path for the layer chosen: its next sounds lean to it */
@@ -1114,7 +1164,7 @@ static void ui_leds(void)
     fm1_led_key(14u + KEY_SHIFT, (ui.keys >> KEY_SHIFT) & 1u);
     fm1_led_key(14u + KEY_AMB, ui.path[ui.sel] == PATH_AMBIENT);
     fm1_led_key(14u + KEY_EXP, ui.path[ui.sel] == PATH_EXP);
-    fm1_led_key(14u + KEY_EDIT, ui.edit);
+    fm1_led_key(14u + KEY_EDIT, bb.on[ui.sel] ? (fm1_ms / 250u) & 1u : ui.edit);   /* (the balls: it blinks) */
     {   /* the loops' direction and speed: shown only while the chosen track's loops play (PLAY lit) -- lit when
          * on, a glow when off; stopped, dark (they still answer) */
         const looper_t *lp = &loop[ui.sel];
@@ -1153,6 +1203,9 @@ static void draw_number(void)
     char d[2] = {(char)('1' + ui.sel), 0};
     CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK) {
         cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
+        if (ui.vary_shown ? ui.vary_shown - 1u : loop[ui.sel].vary) {   /* VARY: VAR, top right */
+            cv_text(236 - text_w(&FONT_S, "VAR"), 2, &FONT_S, "VAR", C_WHITE);
+        }
         if (ui.chord_on[ui.sel]) {               /* chord mode: CHO, top left; the form under it, smaller and dimmer */
             static const char *const AB[CH_N] = {"TRI", "IN1", "IN2", "SU2", "SU4", "OPN", "4TH"};
             const char *ab = AB[ui.chord_form[ui.sel] % CH_N];
@@ -1785,6 +1838,13 @@ static void ui_draw(void)
         ui.shown_page = 7;
         return;
     }
+    if (ui.bb_page && bb.on[ui.sel]) {           /* the chosen track's balls, at ~25 frames a second */
+        if (ui.shown_page != 8 || ui.force || (uint32_t)(fm1_ms - bb.drawn_at) >= 40u)
+            draw_bb_page();
+        ui.shown_page = 8;
+        ui.force = 0;
+        return;
+    }
     if (ui.rv_page) {
         if (ui.shown_page != 1 + ui.fx * 10)
             ui.force = 1;                        /* from another page or the dial: all of it */
@@ -1845,6 +1905,10 @@ static void ui_init(void)
         ui.dlp[l] = DL_DEF[l];
     dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
     ui.rv_touched = -1;
+    memset(&bb, 0, sizeof bb);
+    for (l = 0; l < NLAYER; l++)
+        bb_defaults(l);
+    bb.touched = -1;
     ui.shown_sel = ui.shown_eng = ui.shown_msg = -1;
 #if TELEMETRY
     ui.seed = 0x5EEDu;

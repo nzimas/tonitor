@@ -100,13 +100,14 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up): KNOB 1–4 set the chosen track's attack, decay, sustain and release. With SHIFT: the sound's own envelope again. See [Envelope](#envelope). |
-| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). |
+| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's **ball sequencer**, on and off (EDIT blinks while it runs); **held** (0.6 s) while it runs, its page up or down. A short press is always EDIT. See [Ball sequencer](#ball-sequencer). |
 | the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
 | all black keys | play no notes. They glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT is lit only while held. |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
+| **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one. Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
 | **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
 | **PLAY** | pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit while they play. **SHIFT and PLAY**, from any track: if any loop plays, every loop on every track stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen track's own. |
 | **SELECT** knob | the chosen track's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a track starts at 87 % (0 dB). |
@@ -178,6 +179,42 @@ also changes the notes that are sounding.
 **SHIFT** + the key, **HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
 keeps an envelope for each of its five engines. Sessions store them, copying a track copies them, presets do
 not.
+
+### Ball sequencer
+
+**SHIFT + EDIT** turns on a sequencer of bouncing balls for the chosen track and shows its page; EDIT blinks
+while it runs, and SHIFT + EDIT again turns it off. Each track has its own, and they run at the same time.
+**Holding EDIT** (0.6 s) while the chosen track's balls run puts their page down or up: with the page down the
+balls keep playing and the knobs, the screen and the other pages work as usual; a track button or another page
+also puts it down. A short press of EDIT still turns EDIT on or off.
+
+One to eight balls move in a box on the screen. Each time a ball hits a wall, it plays a note on the track, as
+a key would: in the scale, with the loops' transposition and chord mode, and recorded by the looper when REC is
+on. Each note's length (50 ms to 1.5 s) and level (from −10 dB to full) are drawn at random; the level applies to
+FM, ANIMA and DRUID (CALIGULA and RUSSOLO play at their own level), and notes the looper records play back at full
+level. Each bounce changes the ball's angle at random by up to 12°, kept between 15° and 75° from the walls, so
+the paths change and every wall is reached. Each wall holds the notes of the scale, one segment per step, and the
+segment that is hit lights up. The pitch rises clockwise all the way round, one octave per wall:
+
+| Wall | Octave (at the start) | Direction of rising pitch |
+| --- | --- | --- |
+| bottom | −1 (the octave below the keyboard's) | right to left |
+| left | 0 (the keyboard's) | upwards |
+| top | +1 | left to right |
+| right | +2 | downwards |
+
+While their page is up, the four knobs control them:
+
+| Knob | |
+| --- | --- |
+| **KNOB 1** | the number of balls, 1–8; new ones start from the middle in a random direction |
+| **KNOB 2** | speed, 0–100 (from 0.08 to 2.4 box widths per second) |
+| **KNOB 3** | the octaves of the four walls, moved together by one octave per click, from −3…0 to +2…+5 |
+| **KNOB 4** | instability, 0–100 (0 at the start): each ball gets its own wind, two values that wander at random (a new aim about twice a second, followed over ~0.3 s). One scales its speed, up to 8× faster or slower at 100, so a ball can nearly stop and then rush on; the other turns it, up to half a turn per second. Occasional gusts change its direction by up to 60°. At 0 the pace is steady and the paths straight |
+
+The screen shows the box, the walls' segments in the track's colour and the balls; the line above shows the
+number of balls, or the value just turned. Sessions store each track's ball settings and whether they are on;
+copying a track copies them.
 
 ### Latched keys
 

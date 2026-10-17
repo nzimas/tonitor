@@ -4636,6 +4636,217 @@ static int cmd_druid(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* the ball sequencer: SHIFT + EDIT on the chosen track (EDIT blinks, EDIT itself untouched); the walls' notes
+ * rising clockwise from the octave below the keyboard's; the balls hitting and sounding, every wall in time; the
+ * knobs; EDIT held: the page down (the knobs the track's again, the balls playing on) and up; a short press still
+ * EDIT; sessions keeping it; off, its notes let go */
+static void bb_run(uint32_t ms)
+{
+    uint32_t t0 = fm1_ms;
+    while ((uint32_t)(fm1_ms - t0) < ms) {
+        run_blocks(14, 0);
+        ui_input();
+    }
+}
+static int cmd_balls(const char *dir)
+{
+    uint32_t fail = 0, j, s, n, k, prev = 0, h0;
+    int32_t pk = 0;
+    char path[512];
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    press_phys(KEY_SHIFT, 1);
+    lm_key(KEY_EDIT);
+    press_phys(KEY_SHIFT, 0);
+    if (!bb.on[0] || ui.edit)
+        printf("FAIL balls: SHIFT + EDIT does not turn them on (or turns EDIT on)\n"), fail++;
+    ui_leds();
+    {
+        int a = host_led[14u + KEY_EDIT];
+        fm1_ms += 250;
+        ui_leds();
+        if (a == host_led[14u + KEY_EDIT])
+            printf("FAIL balls: EDIT does not blink\n"), fail++;
+    }
+    n = SCALE_N[ui.scale];
+    for (j = 0; j < 4u; j++)                         /* clockwise, rising */
+        for (s = 0; s < n; s++) {
+            uint32_t note = bb_note(0, j, s);
+            if (note <= prev && (j || s))
+                printf("FAIL balls: wall %u step %u (%u) does not rise from the one before (%u)\n", j, s, note, prev), fail++;
+            prev = note;
+        }
+    if (bb_note(0, 1, 0) != scale_note(0, 0) || bb_note(0, 0, 0) != scale_note(0, -1))
+        printf("FAIL balls: the left wall is not the keyboard's octave, the bottom the one below\n"), fail++;
+    memset(bb.hits, 0, sizeof bb.hits);
+    for (k = 0; k < 10000u / 10u; k++) {
+        uint32_t i;
+        run_blocks(14, 0);
+        ui_input();
+        for (i = 0; i < 2u * CTL; i++)
+            pk = absi(mix_out[i]) > pk ? absi(mix_out[i]) : pk;
+    }
+    h0 = bb.hits[0] + bb.hits[1] + bb.hits[2] + bb.hits[3];
+    printf("balls: one ball, speed 50, 10 s: %u hits (bottom %u, left %u, top %u, right %u), peak %.1f dB\n", h0,
+           bb.hits[0], bb.hits[1], bb.hits[2], bb.hits[3], dbp(pk));
+    if (h0 < 5u || h0 > 30u || pk < 100)
+        printf("FAIL balls: the ball does not hit and sound as it should\n"), fail++;
+    host_enc[PANEL_ENC[EN_K1]] = 3;                   /* four balls, faster, lower, falling */
+    host_enc[PANEL_ENC[EN_K2]] = 10;
+    host_enc[PANEL_ENC[EN_K3]] = -1;
+    host_enc[PANEL_ENC[EN_K4]] = 40;
+    ui_input();
+    if (bb.n[0] != 4 || bb.speed[0] != 70 || bb.base[0] != -2 || bb.unst[0] != 80 || ui.flt[0] || ui.cr[0])
+        printf("FAIL balls: the knobs do not set them (%d %d %d %d)\n", bb.n[0], bb.speed[0], bb.base[0], bb.unst[0]), fail++;
+    {   /* instability: the pace no longer steady -- the way covered in 100 ms windows spreads */
+        uint32_t w, lo = 0xFFFFFFFFu, hiw = 0;
+        for (w = 0; w < 100u; w++) {
+            int32_t x0 = bb.b[0][0].x, y0 = bb.b[0][0].y;
+            uint32_t d;
+            bb_run(100);
+            d = (uint32_t)(absi(bb.b[0][0].x - x0) + absi(bb.b[0][0].y - y0));
+            if (w > 2u) {
+                lo = d < lo ? d : lo;
+                hiw = d > hiw ? d : hiw;
+            }
+        }
+        printf("balls: instability 80: the way a ball covers in 100 ms, %.3f .. %.3f boxes\n", lo / 16777216.0, hiw / 16777216.0);
+        if (hiw < 4u * lo)
+            printf("FAIL balls: at instability 80 the pace is still steady\n"), fail++;
+    }
+    for (k = 0; k < 10u; k++) {                      /* the window to its ends */
+        host_enc[PANEL_ENC[EN_K3]] = -1;
+        ui_input();
+    }
+    if (bb.base[0] != BB_LO || bb_note(0, 0, 0) < 12u)
+        printf("FAIL balls: the octaves do not stop at the lowest (%d)\n", bb.base[0]), fail++;
+    for (k = 0; k < 10u; k++) {
+        host_enc[PANEL_ENC[EN_K3]] = 1;
+        ui_input();
+    }
+    if (bb.base[0] != BB_HI || bb_note(0, 3, n - 1u) > 120u)
+        printf("FAIL balls: the octaves do not stop at the highest (%d)\n", bb.base[0]), fail++;
+    memset(bb.hits, 0, sizeof bb.hits);
+    bb_run(30000);
+    printf("balls: four balls, speed 70, instability 80, 30 s: bottom %u, left %u, top %u, right %u\n", bb.hits[0], bb.hits[1],
+           bb.hits[2], bb.hits[3]);
+    for (k = 0; k < 4u; k++)
+        if (bb.hits[k] < (bb.hits[0] + bb.hits[1] + bb.hits[2] + bb.hits[3]) / 8u)
+            printf("FAIL balls: wall %u is hardly ever hit\n", k), fail++;
+    press_phys(KEY_EDIT, 1);                          /* EDIT held: the page down, the knobs the track's */
+    bb_run(700);
+    press_phys(KEY_EDIT, 0);
+    if (ui.bb_page || !bb.on[0] || ui.edit)
+        printf("FAIL balls: EDIT held does not put the page down (or stops them, or turns EDIT on)\n"), fail++;
+    host_enc[PANEL_ENC[EN_K1]] = 3;
+    ui_input();
+    memset(bb.hits, 0, sizeof bb.hits);
+    bb_run(3000);
+    if (ui.flt[0] != 6 || bb.n[0] != 4 || !(bb.hits[0] + bb.hits[1] + bb.hits[2] + bb.hits[3]))
+        printf("FAIL balls: the page down, KNOB 1 is not the filter, or the balls stopped\n"), fail++;
+    lm_key(KEY_EDIT);                                 /* a short press: EDIT, as ever */
+    if (!ui.edit || ui.bb_page)
+        printf("FAIL balls: a short press of EDIT is not EDIT any more\n"), fail++;
+    lm_key(KEY_EDIT);
+    press_phys(KEY_EDIT, 1);                          /* held again: the page up */
+    bb_run(700);
+    press_phys(KEY_EDIT, 0);
+    if (!ui.bb_page || ui.edit)
+        printf("FAIL balls: EDIT held does not bring the page back\n"), fail++;
+    host_enc[PANEL_ENC[EN_K4]] = 10;                  /* (instability shown, as just turned: 100) */
+    ui_input();
+    host_enc[PANEL_ENC[EN_K4]] = -10;
+    ui_input();
+    bb.unst[0] = 100;
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-40-balls.ppm", dir);
+    ppm(path);
+    if (ses_save(1) != SES_OK)
+        printf("FAIL balls: not saved\n"), fail++;
+    press_phys(KEY_SHIFT, 1);
+    lm_key(KEY_EDIT);
+    press_phys(KEY_SHIFT, 0);
+    run_blocks(400, 0);
+    {
+        uint32_t i, held = 0;
+        for (i = 0; i < NVOICE; i++)
+            held += vox[i].gate;
+        for (i = 0; i < BB_OFFS; i++)
+            held += bb.off[i].at != 0;
+        if (bb.on[0] || held)
+            printf("FAIL balls: off, notes still held (%u)\n", held), fail++;
+    }
+    ses_load_slot(1);
+    if (!bb.on[0] || bb.n[0] != 4 || bb.unst[0] != 100 || bb.base[0] != BB_HI)
+        printf("FAIL balls: a session does not keep them\n"), fail++;
+    printf("balls: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* VARY (SHIFT + REC): the loop's notes at levels and for lengths drawn at random (the recorded ones 1 s long);
+ * REC itself untouched; sessions keep it; emptying the loops ends it */
+static int cmd_vary(void)
+{
+    uint32_t fail = 0, b, k, nlen = 0, shorter = 0, longer = 0, lvl[128] = {0}, nlvl = 0;
+    uint32_t held[NVOICE] = {0};
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    press_btn(B_REC);                                 /* a loop: two notes, each held 1 s, 2.5 s round */
+    press_key(0, 1);
+    run_blocks(1378, 0);
+    press_key(0, 0);
+    run_blocks(200, 0);
+    press_key(4, 1);
+    run_blocks(1378, 0);
+    press_key(4, 0);
+    run_blocks(400, 0);
+    press_btn(B_REC);
+    run_blocks(5, 0);
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_REC);
+    press_phys(KEY_SHIFT, 0);
+    run_blocks(2, 0);
+    if (!loop[0].vary || loop[0].rec != LR_IDLE || loop[0].ntrk != 1u)
+        printf("FAIL vary: SHIFT + REC does not set VARY (or it records)\n"), fail++;
+    for (b = 0; b < 3445u * 6u; b++) {                /* six times round: the notes' lengths and levels */
+        run_blocks(1, 0);
+        for (k = 0; k < NVOICE; k++) {
+            if (vox[k].gate && vox[k].src == SRC_LOOP) {
+                if (!held[k] && !lvl[vox[k].vel & 127u]++)
+                    nlvl++;
+                held[k]++;
+            } else if (held[k]) {
+                nlen++;
+                shorter += held[k] < 1100u;           /* (0.8 s) */
+                longer += held[k] > 1650u;            /* (1.2 s) */
+                held[k] = 0;
+            }
+        }
+    }
+    printf("vary: %u loop notes: %u shorter than 0.8 s, %u longer than 1.2 s, %u levels\n", nlen, shorter, longer, nlvl);
+    if (nlen < 8u || shorter < 2u || longer < 1u || nlvl < 4u)
+        printf("FAIL vary: the loop's notes are not varied in length and level\n"), fail++;
+    if (ses_save(1) != SES_OK)
+        printf("FAIL vary: not saved\n"), fail++;
+    ev_post(EV_LOOP_MODE, 0, 2, 0);
+    run_blocks(2, 0);
+    ses_load_slot(1);
+    run_blocks(2, 0);
+    if (!loop[0].vary)
+        printf("FAIL vary: a session does not keep it\n"), fail++;
+    ev_post(EV_LOOP_CLEAR, 0, 0, 0);
+    run_blocks(2, 0);
+    if (loop[0].vary)
+        printf("FAIL vary: emptying the loops does not end it\n"), fail++;
+    printf("vary: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -5033,6 +5244,10 @@ int main(int argc, char **argv)
         return cmd_dist();
     if (argc >= 3 && !strcmp(argv[1], "druid"))
         return cmd_druid(argv[2]);
+    if (argc >= 3 && !strcmp(argv[1], "balls"))
+        return cmd_balls(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "vary"))
+        return cmd_vary();
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

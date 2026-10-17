@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 17u           /* 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 18u           /* 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -343,7 +343,7 @@ static void ses_emit(void)
         y.send = ui.send[l];
         y.flt = ui.flt[l];
         y.gr = ui.gr[l];
-        y.loop_state = (uint8_t)((lp->play ? 1 : 0) | lp->dmode << 1 | lp->rate << 3);   /* the loops kept (one still
+        y.loop_state = (uint8_t)((lp->play ? 1 : 0) | lp->dmode << 1 | lp->rate << 3 | lp->vary << 5);   /* the loops kept (one still
                                                          * recording is not); format 12: their direction and speed */
         y.loop_len = nt | (uint32_t)(uint8_t)ui.cr[l] << 8 | (uint32_t)ui.path[l] << 16;   /* (the crush, the path in
                                                                                              * the spare bits) */
@@ -428,6 +428,11 @@ static void ses_emit(void)
     ses_out(ui.env, sizeof ui.env);                     /* (format 15: each track's own envelopes, and which are on) */
     ses_out(ui.env_on, sizeof ui.env_on);
     ses_out(ui.dist, NLAYER);                           /* (format 16: each track's distortion) */
+    ses_out(bb.on, NLAYER);                             /* (format 18: the balls) */
+    ses_out(bb.n, NLAYER);
+    ses_out(bb.speed, NLAYER);
+    ses_out(bb.base, NLAYER);
+    ses_out(bb.unst, NLAYER);
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -743,8 +748,10 @@ static void ses_fresh(uint32_t num)
     memset(ui.env, 0, sizeof ui.env);
     memset(ui.env_on, 0, sizeof ui.env_on);
     memset(ui.dist, 0, sizeof ui.dist);
+    bb_release(NLAYER);
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed(), fk, ak, ck, rk, dk;
+        bb_defaults(l);
         loop[l].mute = 0;
         memset(ui.mac[l], 0, sizeof ui.mac[l]);
         memset(ui.latch_note[l], 0, sizeof ui.latch_note[l]);
@@ -797,8 +804,10 @@ static void ses_fresh(uint32_t num)
 static struct {
     uint8_t full, from, engine, path, play;
     int8_t oct, send, flt, gr, cr, lxt, dsend, dist;
+    int8_t bn, bspeed, bbase, bunst;
+    uint8_t bon;
     uint8_t chord_on, chord_form;
-    uint8_t dmode, rate;
+    uint8_t dmode, rate, vary;
     int8_t env[NENG][4];
     uint8_t env_on[NENG];
     uint32_t gseed;
@@ -826,6 +835,11 @@ static void clip_copy(uint32_t l)
     clip.send = ui.send[l];
     clip.dsend = ui.dsend[l];
     clip.dist = ui.dist[l];
+    clip.bon = bb.on[l];
+    clip.bn = bb.n[l];
+    clip.bspeed = bb.speed[l];
+    clip.bbase = bb.base[l];
+    clip.bunst = bb.unst[l];
     clip.chord_on = ui.chord_on[l];
     clip.chord_form = ui.chord_form[l];
     clip.flt = ui.flt[l];
@@ -834,6 +848,7 @@ static void clip_copy(uint32_t l)
     clip.lxt = ui.lxt[l];
     clip.dmode = loop[l].dmode;
     clip.rate = loop[l].rate;
+    clip.vary = loop[l].vary;
     clip.gseed = gran[l].seed;
     memcpy(clip.mac, ui.mac[l], sizeof clip.mac);
     memcpy(clip.env, ui.env[l], sizeof clip.env);
@@ -865,6 +880,14 @@ static void clip_paste(uint32_t l)
     ui.send[l] = clip.send;
     ui.dsend[l] = clip.dsend;
     ui.dist[l] = clip.dist;
+    bb_release(l);
+    bb.on[l] = 0;
+    bb.n[l] = clip.bn;
+    bb.speed[l] = clip.bspeed;
+    bb.base[l] = clip.bbase;
+    bb.unst[l] = clip.bunst;
+    if (clip.bon)
+        bb_toggle(l);
     ui.chord_on[l] = clip.chord_on;
     ui.chord_form[l] = clip.chord_form;
     ui.flt[l] = clip.flt;
@@ -910,6 +933,7 @@ static void clip_paste(uint32_t l)
         lp->mute = clip.mute;
         lp->dmode = clip.dmode;
         lp->rate = clip.rate;
+        lp->vary = clip.vary;
         lp->nheld = 0;
         RING_PUBLISH();
         lp->ntrk = clip.ntrk;
@@ -1141,6 +1165,7 @@ static int ses_load(uint32_t i)
                 play = h.format >= 12u ? y.loop_state & 1u : y.loop_state;
                 lp->dmode = (uint8_t)(h.format >= 12u && (y.loop_state >> 1 & 3u) <= LD_RAND ? y.loop_state >> 1 & 3u : LD_FWD);
                 lp->rate = (uint8_t)(h.format >= 12u && (y.loop_state >> 3 & 3u) <= LS_DOUBLE ? y.loop_state >> 3 & 3u : LS_NORMAL);
+                lp->vary = (uint8_t)(h.format >= 18u ? y.loop_state >> 5 & 1u : 0u);   /* (format 18: VARY) */
                 for (k = 0; k < y.loop_len; k++) {
                     uint32_t tl[2];
                     ses_in(tl, sizeof tl);
@@ -1229,6 +1254,27 @@ static int ses_load(uint32_t i)
         ses_in(ui.dist, NLAYER);
         for (l = 0; l < NLAYER; l++)
             ui.dist[l] = (int8_t)clampi(ui.dist[l], 0, 100);
+    }
+    bb_release(NLAYER);                                 /* the balls (before format 18: off, as at start) */
+    for (l = 0; l < NLAYER; l++)
+        bb_defaults(l);
+    if (h.format >= 18u) {
+        ses_in(bb.on, NLAYER);
+        ses_in(bb.n, NLAYER);
+        ses_in(bb.speed, NLAYER);
+        ses_in(bb.base, NLAYER);
+        ses_in(bb.unst, NLAYER);
+        for (l = 0; l < NLAYER; l++) {
+            bb.on[l] = (uint8_t)(bb.on[l] != 0);
+            bb.n[l] = (int8_t)clampi(bb.n[l], 1, BB_MAX);
+            bb.speed[l] = (int8_t)clampi(bb.speed[l], 0, 100);
+            bb.base[l] = (int8_t)clampi(bb.base[l], BB_LO, BB_HI);
+            bb.unst[l] = (int8_t)clampi(bb.unst[l], 0, 100);
+            if (bb.on[l]) {
+                bb.on[l] = 0;
+                bb_toggle(l);                           /* (launched afresh) */
+            }
+        }
     }
     for (l = 0; l < NLAYER; l++) {
         mac_apply(l);

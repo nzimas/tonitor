@@ -70,6 +70,7 @@ typedef struct {
     uint32_t born;               /* blk_clock at its note-on */
     uint16_t cost;               /* what a block of it took, last time (ticks) */
     uint8_t eng;                 /* the engine its memory (vmem) is playing */
+    uint8_t vel;                 /* its note's level, 1 .. 127 (127: full -- the keys, the loops; less: the balls) */
     uint8_t est;                 /* the track's own envelope (AE_*): where this voice is in it, its level Q24 */
     int32_t elv;
     uint8_t fade_n;              /* the fade's length, when not FADE (the budget's quick one) */
@@ -202,12 +203,15 @@ typedef struct {
     uint32_t start;              /* the loop clock when the recording began */
     uint32_t lclk;               /* the loop clock: half blocks of loop time, 1 a block at half speed, 2, 4 at double */
     uint8_t dmode, rate;         /* LD_*, LS_* (the 4th .. 8th black keys) */
+    uint8_t vary;                /* SHIFT + REC: each note it plays at a level and for a length drawn at random */
     uint32_t rnd;                /* RANDOM's draws */
     uint32_t nev;                /* events used, every loop's */
     loop_trk_t trk[LOOP_TRK];
     uint32_t ev[LOOP_N];
 } looper_t;
 static looper_t loop[NLAYER] POOL;
+#define LV_N 24u                 /* VARY's notes waiting to be let go, a looper's (layers.c loop_strike) */
+static struct { uint8_t trk, raw; uint16_t left; } lv_off[NLAYER][LV_N];
 static uint32_t blk_clock;
 #if TELEMETRY
 static uint32_t tele_ev;                 /* this half: the events taken (bit = type), loop notes (bit 20), wraps (21) */
@@ -620,6 +624,7 @@ static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
 }
 
 /* a note on: a silent voice if there is one, else the one ringing longest (released before held) */
+static uint8_t note_vel = 127;           /* the level of the note note_on makes (EV_ON's value; else full) */
 static void note_on(uint32_t l, uint32_t note, uint32_t src)
 {
     layer_t *y = &lay[l];
@@ -634,6 +639,7 @@ static void note_on(uint32_t l, uint32_t note, uint32_t src)
         v->note = (uint8_t)note;
         v->gate = 1;
         v->src = (uint8_t)src;
+        v->vel = note_vel;
         v->age = ++lay_age;
         if (y->xfade) {                          /* played when the layer's change is made */
             if (!v->sounding)
@@ -847,8 +853,10 @@ static void loop_cmd(uint32_t l, uint32_t type)
         break;
     case EV_LOOP_CLEAR:
         loop_notes_off(l);
-        p->dmode = LD_FWD;                        /* (emptied: forwards, at its speed, again) */
+        p->dmode = LD_FWD;                        /* (emptied: forwards, at its speed, as played, again) */
         p->rate = LS_NORMAL;
+        p->vary = 0;
+        memset(lv_off[l], 0, sizeof lv_off[l]);
         p->play = 0;
         p->mute = 0;
         p->ntrk = 0;
@@ -907,23 +915,81 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
         p->mute |= (uint16_t)bit;
     }
 }
+/* VARY (SHIFT + REC): the loop notes struck at a random level, let go after a random length (50 ms .. 1.5 s) --
+ * their recorded ends not waited for; what is waiting, a looper's (loop, note as recorded, blocks left) */
+static uint32_t lv_rnd(looper_t *p)
+{
+    if (!p->rnd)
+        p->rnd = 0x9E3779B9u ^ (blk_clock * 2654435761u);
+    p->rnd ^= p->rnd << 13;
+    p->rnd ^= p->rnd >> 17;
+    p->rnd ^= p->rnd << 5;
+    return p->rnd;
+}
+static void lv_let_go(uint32_t l, loop_trk_t *t, uint32_t raw)   /* (if loop t still sounds it) */
+{
+    if ((t->snd[raw >> 5] >> (raw & 31u)) & 1u) {
+        note_off(l, lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
+        t->snd[raw >> 5] &= ~(1u << (raw & 31u));
+    }
+}
+/* a loop note struck: as recorded, or (VARY) at a random level, its end set */
+static void loop_strike(uint32_t l, looper_t *p, loop_trk_t *t, uint32_t raw)
+{
+    uint32_t nt = lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), k = (uint32_t)(t - p->trk), i, slot = LV_N;
+    if (!p->vary) {
+        note_on(l, nt, SRC_LOOP);
+        t->snd[raw >> 5] |= 1u << (raw & 31u);
+        return;
+    }
+    for (i = 0; i < LV_N; i++) {                  /* (the same note waiting: let go first; else a free place) */
+        if (lv_off[l][i].left && lv_off[l][i].trk == k && lv_off[l][i].raw == raw) {
+            lv_let_go(l, t, raw);
+            lv_off[l][i].left = 0;
+        }
+        if (!lv_off[l][i].left && slot == LV_N)
+            slot = i;
+    }
+    if (slot == LV_N) {                           /* (all waiting: the soonest let go now) */
+        slot = 0;
+        for (i = 1; i < LV_N; i++)
+            if (lv_off[l][i].left < lv_off[l][slot].left)
+                slot = i;
+        lv_let_go(l, &p->trk[lv_off[l][slot].trk % LOOP_TRK], lv_off[l][slot].raw);
+    }
+    note_vel = (uint8_t)(40u + (lv_rnd(p) >> 8) % 87u);   /* (-10 dB .. full) */
+    note_on(l, nt, SRC_LOOP);
+    note_vel = 127;
+    t->snd[raw >> 5] |= 1u << (raw & 31u);
+    lv_off[l][slot].trk = (uint8_t)k;
+    lv_off[l][slot].raw = (uint8_t)raw;
+    lv_off[l][slot].left = (uint16_t)((((50u * exp2_q16((int32_t)((lv_rnd(p) >> 8) % 322000u))) >> 16) * 1378u) >> 10);
+}
+/* a block: the VARY notes whose time is up let go */
+static void lv_tick(uint32_t l)
+{
+    uint32_t i;
+    for (i = 0; i < LV_N; i++)
+        if (lv_off[l][i].left && !--lv_off[l][i].left)
+            lv_let_go(l, &loop[l].trk[lv_off[l][i].trk % LOOP_TRK], lv_off[l][i].raw);
+}
 /* an event of loop t played: as recorded, or (backwards) turned round -- its start an end, its end a start. A note
  * tied over the loop's end is never let go there, nor struck again just after (forwards: its start is the loop's
  * first block, its end the last; backwards the other way round) */
-static void trk_play(uint32_t l, loop_trk_t *t, const looper_t *p, uint32_t e, int as_on)
+static void trk_play(uint32_t l, loop_trk_t *t, looper_t *p, uint32_t e, int as_on)
 {
     uint32_t raw = LE_NOTE(e), nt = lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask);
     int tied = trk_tied(p, t, e);
     if (as_on) {
-        if (t->wrap && tied)
+        if (t->wrap && tied && !p->vary)
             return;                               /* (still sounding from the round before) */
-        note_on(l, nt, SRC_LOOP);
-        t->snd[raw >> 5] |= 1u << (raw & 31u);
+        (void)nt;
+        loop_strike(l, p, t, raw);
         TELE(20);
 #if TELEMETRY
         tele_non++;
 #endif
-    } else if (!tied) {
+    } else if (!tied && !p->vary) {               /* (VARY: its own length, not the recorded) */
         note_off(l, nt, SRC_LOOP);
         t->snd[raw >> 5] &= ~(1u << (raw & 31u));
     }
@@ -969,11 +1035,9 @@ static void trk_step(uint32_t l, looper_t *p, loop_trk_t *t)
         while (t->ix < (int32_t)t->n && (int32_t)LE_T(ev[t->ix]) <= t->pos) {
             uint32_t e = ev[t->ix++];
             if (LE_ON(e)) {
-                uint32_t raw = LE_NOTE(e);
-                note_on(l, lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
-                t->snd[raw >> 5] |= 1u << (raw & 31u);
+                loop_strike(l, p, t, LE_NOTE(e));
                 t->rgo = 1;
-            } else if ((t->snd[LE_NOTE(e) >> 5] >> (LE_NOTE(e) & 31u)) & 1u) {   /* (only what it struck) */
+            } else if (!p->vary && ((t->snd[LE_NOTE(e) >> 5] >> (LE_NOTE(e) & 31u)) & 1u)) {   /* (only what it struck) */
                 note_off(l, lx_map(LE_NOTE(e), lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
                 t->snd[LE_NOTE(e) >> 5] &= ~(1u << (LE_NOTE(e) & 31u));
             }
@@ -1049,6 +1113,10 @@ static void loop_mode(uint32_t l, uint32_t what, uint32_t val)
 {
     looper_t *p = &loop[l];
     uint32_t k;
+    if (what == 2u) {                             /* VARY on or off */
+        p->vary = (uint8_t)(val != 0);
+        return;
+    }
     if (what) {
         p->rate = (uint8_t)(val <= LS_DOUBLE ? val : LS_NORMAL);
         return;
@@ -1076,6 +1144,7 @@ static void loops_run(void)
         uint32_t was = p->lclk, steps;
         p->lclk += p->rate == LS_HALF ? 1u : p->rate == LS_DOUBLE ? 4u : 2u;
         steps = (p->lclk >> 1) - (was >> 1);
+        lv_tick(l);
         if (!p->play)
             continue;
         for (k = 0; k < p->ntrk; k++) {
@@ -1143,7 +1212,9 @@ static void events_take(void)        /* audio ISR, at a block start */
         switch (e.type) {
         case EV_ON:
             loop_hear(e.layer, 1, e.note);
+            note_vel = (uint8_t)(e.val && e.val < 127u ? e.val : 127u);
             note_on(e.layer, e.note, SRC_KEY);
+            note_vel = 127;
             break;
         case EV_OFF:
             loop_hear(e.layer, 0, e.note);
@@ -1172,7 +1243,7 @@ static void events_take(void)        /* audio ISR, at a block start */
         case EV_LOOP_SET:
             loop_set(e.layer, e.val);
             break;
-        case EV_LOOP_MODE:                        /* (note: 0 the direction, 1 the speed; val: which) */
+        case EV_LOOP_MODE:                        /* (note: 0 the direction, 1 the speed, 2 VARY; val: which) */
             loop_mode(e.layer, e.note, e.val);
             break;
         case EV_LOOP_XP:                          /* SHIFT and OCT: the loops moved along the scale */
@@ -1337,6 +1408,11 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             continue;
         }
         any = 1;
+        if (v->vel && v->vel < 127u) {             /* (a softer note: the balls') */
+            int32_t vg = v->vel * 258;
+            for (i = 0; i < CTL; i++)
+                vb[i] = mulq15(vb[i], vg);
+        }
         if (v->fade) {
             uint32_t fn = v->fade_n ? v->fade_n : FADE;
             int32_t g0 = (int32_t)(v->fade * (uint32_t)Q15 / fn), g1 = (int32_t)((v->fade - 1u) * (uint32_t)Q15 / fn);
