@@ -1404,10 +1404,11 @@ static int ses_load(uint32_t i)
                 bl.w[l][k] = (int8_t)clampi(bl.w[l][k], -32, 48);
                 bl.o[l][k] = (int8_t)clampi(bl.o[l][k], -3, 3);
             }
-            if (bl.on[l]) {
+            if (bl.on[l] && !bb.on[l]) {               /* (one sequencer a track: BALLSY kept if both were on) */
                 bl.on[l] = 0;
                 bl_toggle(l);                           /* (from its first step) */
-            }
+            } else
+                bl.on[l] = 0;
         }
     }
     for (l = 0; l < NLAYER; l++) {

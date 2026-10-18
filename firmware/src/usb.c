@@ -6,7 +6,7 @@
  * so INDEX is never shared and no USB IRQ is needed. MIDI in goes to a ring
  * the audio ISR drains; MIDI out comes from a ring the audio ISR fills.
  * SysEx F0 22 24 35 7D F7 (soft key) asks the main loop to enter UBOOT.
- * VID 0x1209 / PID 0x0001 is the pid.codes test id.
+ * VID 0x1209 / PID 0x0003 (TONITOR; Felucca's 0x0001) is a pid.codes test id.
  * FELUCCA_CDC=1 adds a CDC-ACM serial function (IAD composite: EP2 notify,
  * EP3 bulk data) for the console in console.c.
  * FELUCCA_UAC=1 adds a USB audio input (UAC1, class compliant): the master
@@ -185,7 +185,9 @@ static const uint8_t CFG_DESC[] = {
     8, 0x0B, 0, 2 + FELUCCA_UAC, 1, 1, 0, 0,            /* IAD: audio + MIDI (IF 0-1, 0-2) */
 #else
 #ifndef FELUCCA_USB_PID
-#define FELUCCA_USB_PID 0x0001   /* the update loader is 0x0002 */
+#define FELUCCA_USB_PID 0x0003   /* (TONITOR: its own, so a computer that has seen Felucca's 0x0001 reads "FM-1
+                                  * Tonitor" afresh rather than keep the name it stored then; the update loader is
+                                  * 0x0002) */
 #endif
 static const uint8_t DEV_DESC[18] = {18, 1, 0x10, 0x01, 0, 0, 0, 64, 0x09, 0x12, FELUCCA_USB_PID & 0xFF,
                                      FELUCCA_USB_PID >> 8, 0x00 + 0x10 * (FELUCCA_UAC + FELUCCA_UAC_48K), 0x03,

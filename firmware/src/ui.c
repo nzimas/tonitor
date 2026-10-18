@@ -1081,7 +1081,10 @@ static void ui_input(void)
         }
     }
     if ((ch & keys) >> KEY_ENV & 1u) {           /* with SHIFT: BRICKLAYER on (its page up) or off */
-        if ((keys >> KEY_SHIFT) & 1u) {
+        if (((keys >> KEY_SHIFT) & 1u) && !bl.on[ui.sel] && bb.on[ui.sel]) {
+            say("NOT ALLOWED", 1200);             /* (one sequencer a track: BALLSY runs) */
+            ui.env_down = 0;
+        } else if ((keys >> KEY_SHIFT) & 1u) {
             bl_toggle(ui.sel);
             ui.bl_page = bl.on[ui.sel];
             if (ui.bl_page)
@@ -1112,7 +1115,10 @@ static void ui_input(void)
         }
     }
     if ((ch & keys) >> KEY_EDIT & 1u) {          /* with SHIFT: the chosen track's balls on (their page up) or off */
-        if ((keys >> KEY_SHIFT) & 1u) {
+        if (((keys >> KEY_SHIFT) & 1u) && !bb.on[ui.sel] && bl.on[ui.sel]) {
+            say("NOT ALLOWED", 1200);             /* (one sequencer a track: BRICKLAYER runs) */
+            ui.edit_down = 0;
+        } else if ((keys >> KEY_SHIFT) & 1u) {
             bb_toggle(ui.sel);
             ui.bb_page = bb.on[ui.sel];
             if (ui.bb_page)

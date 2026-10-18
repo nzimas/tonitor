@@ -5251,6 +5251,11 @@ static int cmd_bricks(const char *dir)
     if (!ui.env_page)
         printf("FAIL bricks: a short press is not the ENVELOPE page\n"), fail++;
     lm_key(KEY_ENV);
+    press_phys(KEY_SHIFT, 1);                         /* one sequencer a track: BALLSY refused while it runs */
+    lm_key(KEY_EDIT);
+    press_phys(KEY_SHIFT, 0);
+    if (bb.on[0] || !bl.on[0] || strcmp(ui.msg, "NOT ALLOWED"))
+        printf("FAIL bricks: BALLSY starts beside it\n"), fail++;
     ses_load_slot(1);
     if (!bl.on[0] || bl.n[0] != 2u || bl.len[0] != 8u || bl.unst[0] != 100)
         printf("FAIL bricks: a session does not keep it (%u %u)\n", bl.n[0], bl.len[0]), fail++;

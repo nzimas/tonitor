@@ -221,6 +221,10 @@ copying a track copies them.
 
 ### BRICKLAYER
 
+A track runs one sequencer at a time: while its BALLSY runs, SHIFT + the envelope key shows NOT ALLOWED and
+changes nothing, and while its BRICKLAYER runs, SHIFT + EDIT does the same. (The looper is not counted: it runs
+beside either.)
+
 **SHIFT + the envelope key** (the 3rd black key from the right) turns on BRICKLAYER, a step sequencer built a
 note at a time, for the chosen track, and shows its page; the key blinks while it runs, and SHIFT + the key again
 turns it off. **Holding the envelope key** (0.6 s) while it runs puts its page down or up: with the page down it

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46
+
+Changed
+- One sequencer per track: BALLSY and BRICKLAYER are mutually exclusive. Starting one while the other runs on
+  the same track shows NOT ALLOWED and changes nothing. A session that has both on for a track loads with
+  BALLSY on and BRICKLAYER off. The looper runs beside either.
+
+Fixed
+- The FM-1 showed up as "Felucca" in MIDI applications on computers that had seen Felucca before: they kept the
+  name stored for the same USB IDs (1209:0001). Tonitor now uses its own USB product ID (1209:0003), so it shows
+  up as "FM-1 Tonitor". The update loader is unchanged (1209:0002).
+
 ## 0.45
 
 Added
