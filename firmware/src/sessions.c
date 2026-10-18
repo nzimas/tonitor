@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 19u           /* 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 20u           /* 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -440,6 +440,16 @@ static void ses_emit(void)
     ses_out(bb.speed, NLAYER);
     ses_out(bb.base, NLAYER);
     ses_out(bb.unst, NLAYER);
+    ses_out(bl.on, NLAYER);                             /* (format 20: BRICKLAYER) */
+    ses_out(bl.n, NLAYER);
+    ses_out(bl.len, NLAYER);
+    ses_out(bl.rate, NLAYER);
+    ses_out(bl.harm, NLAYER);
+    ses_out(bl.unst, NLAYER);
+    ses_out(bl.w, sizeof bl.w);
+    ses_out(bl.o, sizeof bl.o);
+    ses_out(bl.dir, NLAYER);
+    ses_out(bl.spd, NLAYER);
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -780,9 +790,11 @@ static void ses_fresh(uint32_t num)
     memset(ui.env_on, 0, sizeof ui.env_on);
     memset(ui.dist, 0, sizeof ui.dist);
     bb_release(NLAYER);
+    bl_release(NLAYER);
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed(), fk, ak, ck, rk, dk, bk;
         bb_defaults(l);
+        bl_defaults(l);
         loop[l].mute = 0;
         memset(ui.mac[l], 0, sizeof ui.mac[l]);
         memset(ui.latch_note[l], 0, sizeof ui.latch_note[l]);
@@ -842,6 +854,9 @@ static struct {
     int8_t oct, send, flt, gr, cr, lxt, dsend, dist;
     int8_t bn, bspeed, bbase, bunst;
     uint8_t bon;
+    uint8_t lon, ln, llen;
+    int8_t lrate, lharm, lunst, lw[BL_MAX], lo[BL_MAX];
+    uint8_t ldir, lspd;
     uint8_t chord_on, chord_form;
     uint8_t dmode, rate, vary;
     int8_t env[NENG][4];
@@ -877,6 +892,16 @@ static void clip_copy(uint32_t l)
     clip.bspeed = bb.speed[l];
     clip.bbase = bb.base[l];
     clip.bunst = bb.unst[l];
+    clip.lon = bl.on[l];
+    clip.ln = bl.n[l];
+    clip.llen = bl.len[l];
+    clip.lrate = bl.rate[l];
+    clip.lharm = bl.harm[l];
+    clip.lunst = bl.unst[l];
+    clip.ldir = bl.dir[l];
+    clip.lspd = bl.spd[l];
+    memcpy(clip.lw, bl.w[l], BL_MAX);
+    memcpy(clip.lo, bl.o[l], BL_MAX);
     clip.chord_on = ui.chord_on[l];
     clip.chord_form = ui.chord_form[l];
     clip.flt = ui.flt[l];
@@ -926,6 +951,19 @@ static void clip_paste(uint32_t l)
     bb.unst[l] = clip.bunst;
     if (clip.bon)
         bb_toggle(l);
+    bl_release(l);
+    bl.on[l] = 0;
+    bl.n[l] = clip.ln;
+    bl.len[l] = clip.llen;
+    bl.rate[l] = clip.lrate;
+    bl.harm[l] = clip.lharm;
+    bl.unst[l] = clip.lunst;
+    bl.dir[l] = clip.ldir;
+    bl.spd[l] = clip.lspd;
+    memcpy(bl.w[l], clip.lw, BL_MAX);
+    memcpy(bl.o[l], clip.lo, BL_MAX);
+    if (clip.lon)
+        bl_toggle(l);
     ui.chord_on[l] = clip.chord_on;
     ui.chord_form[l] = clip.chord_form;
     ui.flt[l] = clip.flt;
@@ -1337,6 +1375,38 @@ static int ses_load(uint32_t i)
             if (bb.on[l]) {
                 bb.on[l] = 0;
                 bb_toggle(l);                           /* (launched afresh) */
+            }
+        }
+    }
+    bl_release(NLAYER);                                 /* BRICKLAYER (before format 20: off and empty) */
+    for (l = 0; l < NLAYER; l++)
+        bl_defaults(l);
+    if (h.format >= 20u) {
+        ses_in(bl.on, NLAYER);
+        ses_in(bl.n, NLAYER);
+        ses_in(bl.len, NLAYER);
+        ses_in(bl.rate, NLAYER);
+        ses_in(bl.harm, NLAYER);
+        ses_in(bl.unst, NLAYER);
+        ses_in(bl.w, sizeof bl.w);
+        ses_in(bl.o, sizeof bl.o);
+        ses_in(bl.dir, NLAYER);
+        ses_in(bl.spd, NLAYER);
+        for (l = 0; l < NLAYER; l++) {
+            bl.dir[l] = (uint8_t)(bl.dir[l] <= LD_RAND ? bl.dir[l] : LD_FWD);
+            bl.spd[l] = (uint8_t)(bl.spd[l] <= LS_DOUBLE ? bl.spd[l] : LS_NORMAL);
+            bl.n[l] = (uint8_t)(bl.n[l] <= BL_MAX ? bl.n[l] : 0u);
+            bl.len[l] = (uint8_t)clampi(bl.len[l], bl.n[l], BL_MAX);
+            bl.rate[l] = (int8_t)clampi(bl.rate[l], 0, 100);
+            bl.harm[l] = (int8_t)clampi(bl.harm[l], 0, 100);
+            bl.unst[l] = (int8_t)clampi(bl.unst[l], 0, 100);
+            for (k = 0; k < BL_MAX; k++) {
+                bl.w[l][k] = (int8_t)clampi(bl.w[l][k], -32, 48);
+                bl.o[l][k] = (int8_t)clampi(bl.o[l][k], -3, 3);
+            }
+            if (bl.on[l]) {
+                bl.on[l] = 0;
+                bl_toggle(l);                           /* (from its first step) */
             }
         }
     }

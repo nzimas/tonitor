@@ -4322,14 +4322,13 @@ static int cmd_env(const char *dir)
                after, lng);
         if (hold < 300 || after > hold / 300 || lng < hold / 20)
             printf("FAIL env: %s: the release does not follow the knob\n", ENG_NAME[e]), fail++;
-        press_phys(KEY_SHIFT, 1);
-        lm_key(KEY_ENV);
-        press_phys(KEY_SHIFT, 0);
-        if (ui.env_on[0][e] || lay_env_on[0] || !ui.env_page)
-            printf("FAIL env: SHIFT + the key does not give the sound's own envelope back\n"), fail++;
         lm_key(KEY_ENV);
         if (ui.env_page)
             printf("FAIL env: the key does not close the page\n"), fail++;
+        press_btn(B_HOME);                            /* (a new sound: its own envelope again) */
+        run_blocks(10, 0);
+        if (ui.env_on[0][e] || lay_env_on[0])
+            printf("FAIL env: HOME does not give the sound's own envelope back\n"), fail++;
     }
     /* HOME, a session, the clipboard */
     grain_reset();
@@ -5041,6 +5040,228 @@ static int cmd_bayarea(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* BRICKLAYER: SHIFT + the envelope key (the key blinks; the track's envelope left as it is); REC its entry (lit,
+ * the looper untouched); notes added, spread evenly over LENGTH, played; SHIFT + a key, SHIFT + REC, REC held:
+ * notes out; the loops' transposition moving them; the page down and up by holding the key, a short press still
+ * the ENVELOPE page; harmony adding notes; instability unsteadying the pace; sessions; the clipboard */
+static uint32_t bl_count(uint32_t ms, uint32_t *distinct)   /* loop-free notes struck on track 1 in ms */
+{
+    uint32_t t0 = fm1_ms, ons = 0, k, seen[128] = {0};
+    uint8_t was[NVOICE] = {0};
+    *distinct = 0;
+    while ((uint32_t)(fm1_ms - t0) < ms) {
+        run_blocks(7, 0);
+        ui_input();
+        for (k = 0; k < NVOICE; k++) {
+            if (vox[k].gate && vox[k].layer == 0u && !was[k]) {
+                ons++;
+                if (!seen[vox[k].note & 127u]++)
+                    (*distinct)++;
+            }
+            was[k] = vox[k].gate && vox[k].layer == 0u;
+        }
+    }
+    return ons;
+}
+static int cmd_bricks(const char *dir)
+{
+    uint32_t fail = 0, i, hits = 0, d, ons, ons2;
+    char path[512];
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    ui.env_on[0][ui.engine[0]] = 1;
+    press_phys(KEY_SHIFT, 1);
+    lm_key(KEY_ENV);
+    press_phys(KEY_SHIFT, 0);
+    if (!bl.on[0] || !ui.bl_page || !ui.env_on[0][ui.engine[0]] || ui.env_page)
+        printf("FAIL bricks: SHIFT + the envelope key does not start it (or touches the envelope)\n"), fail++;
+    ui_leds();
+    {
+        int a = host_led[14u + KEY_ENV];
+        fm1_ms += 250;
+        ui_leds();
+        if (a == host_led[14u + KEY_ENV])
+            printf("FAIL bricks: the envelope key does not blink\n"), fail++;
+    }
+    press_btn(B_REC);                                 /* entry on */
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+    ui_input();
+    ui_leds();
+    if (!bl.rec[0] || loop[0].rec != LR_IDLE || !host_led[PANEL_BTN[B_REC]])
+        printf("FAIL bricks: REC is not its entry (or not lit, or the looper armed)\n"), fail++;
+    for (i = 0; i < 3u; i++) {
+        press_key(i * 2u, 1);
+        run_blocks(50, 0);
+        press_key(i * 2u, 0);
+        run_blocks(20, 0);
+    }
+    if (bl.n[0] != 3u || bl.len[0] != 3u || bl_pitch(0, 1, 0) != scale_note(2, 0))
+        printf("FAIL bricks: the keys are not added (%u notes, %u steps)\n", bl.n[0], bl.len[0]), fail++;
+    host_enc[PANEL_ENC[EN_K1]] = 5;                   /* eight steps: three notes spread over them */
+    ui_input();
+    for (i = 0; i < 8u; i++)
+        hits += bl_note_at(0, i) >= 0;
+    if (bl.len[0] != 8u || hits != 3u || (bl_note_at(0, 0) >= 0 && bl_note_at(0, 1) >= 0))
+        printf("FAIL bricks: LENGTH does not spread the notes (%u of %u)\n", hits, bl.len[0]), fail++;
+    ons = bl_count(4000, &d);
+    printf("bricks: 3 notes in 8 steps, rate 50 (%u ms a step), 4 s: %u struck, %u pitches\n", bl_step_ms(0), ons, d);
+    if (ons < 4u || d != 3u)
+        printf("FAIL bricks: it does not play its notes\n"), fail++;
+    {   /* the loops' transposition moves them, a step of the scale */
+        uint32_t before = bl_pitch(0, 0, 0);
+        host_press |= 1u << PANEL_BTN[LAYER_BTN[0]];
+        fm1_in.buttons |= 1u << PANEL_BTN[LAYER_BTN[0]];
+        press_phys(KEY_SHIFT, 1);
+        press_btn(B_OCTUP);
+        press_phys(KEY_SHIFT, 0);
+        fm1_in.buttons &= ~(1u << PANEL_BTN[LAYER_BTN[0]]);
+        ui_input();
+        if (bl_pitch(0, 0, 0) != scale_note(1, 0) || bl_pitch(0, 0, 0) == before)
+            printf("FAIL bricks: the track's transposition does not move them\n"), fail++;
+        ui.lxt[0] = 0;
+        lx_post();
+        ui.bl_page = 1;                               /* (the track's button put the page down: up again) */
+    }
+    host_enc[PANEL_ENC[EN_K3]] = 50;                  /* harmony 100: more notes than steps */
+    ui_input();
+    ons2 = bl_count(4000, &d);
+    printf("bricks: harmony 100, 4 s: %u struck, %u pitches\n", ons2, d);
+    if (ons2 < ons + ons / 2u || d < 4u)
+        printf("FAIL bricks: HARMONY adds no notes\n"), fail++;
+    host_enc[PANEL_ENC[EN_K3]] = -50;
+    host_enc[PANEL_ENC[EN_K4]] = 50;                  /* instability 100 */
+    ui_input();
+    {
+        uint32_t w, lo = 0xFFFFFFFFu, hi = 0, dd;
+        for (w = 0; w < 16u; w++) {
+            uint32_t n = bl_count(1000, &dd);
+            lo = n < lo ? n : lo;
+            hi = n > hi ? n : hi;
+        }
+        printf("bricks: variation 100: notes a second from %u to %u\n", lo, hi);
+        if (hi < lo + 3u)
+            printf("FAIL bricks: VARIATION does not unsteady it\n"), fail++;
+    }
+    {   /* its page: the loop keys its own -- backwards, half speed, at random; the looper untouched; lit */
+        uint32_t seq[6], j, back = 1, ms0 = bl_step_ms(0);
+        host_enc[PANEL_ENC[EN_K4]] = -50;             /* (steady, to follow its steps) */
+        ui_input();
+        lm_key(KEY_REV);
+        ui_leds();
+        if (bl.dir[0] != LD_REV || loop[0].dmode != LD_FWD || !host_led[14u + KEY_REV])
+            printf("FAIL bricks: REVERSE on its page is not its own (or not lit)\n"), fail++;
+        for (j = 0; j < 6u; j++) {
+            uint8_t was = bl.last[0];
+            uint32_t g = 0;
+            while (bl.last[0] == was && g++ < 400u) {
+                run_blocks(7, 0);
+                ui_input();
+            }
+            seq[j] = bl.last[0];
+        }
+        for (j = 1; j < 6u; j++)
+            back &= seq[j] == (seq[j - 1] + 7u) % 8u;
+        if (!back)
+            printf("FAIL bricks: REVERSE does not play it backwards (%u %u %u)\n", seq[0], seq[1], seq[2]), fail++;
+        lm_key(KEY_HALF);
+        {
+            uint32_t t0, t1;
+            uint8_t was = bl.last[0];
+            while (bl.last[0] == was) {
+                run_blocks(1, 0);
+                ui_input();
+            }
+            t0 = fm1_ms;
+            was = bl.last[0];
+            while (bl.last[0] == was) {
+                run_blocks(1, 0);
+                ui_input();
+            }
+            t1 = fm1_ms;
+            if (bl.spd[0] != LS_HALF || (t1 - t0) < ms0 * 3u / 2u || loop[0].rate != LS_NORMAL)
+                printf("FAIL bricks: HALF SPEED is not its own (%u ms a step)\n", t1 - t0), fail++;
+        }
+        lm_key(KEY_HALF);
+        lm_key(KEY_RAND);
+        if (bl.dir[0] != LD_RAND)
+            printf("FAIL bricks: RANDOM is not its own\n"), fail++;
+        lm_key(KEY_RAND);                             /* (forwards again) */
+        if (bl.dir[0] != LD_FWD)
+            printf("FAIL bricks: RANDOM again is not forwards\n"), fail++;
+        host_enc[PANEL_ENC[EN_K4]] = 50;
+        ui_input();
+    }
+    {   /* VARIATION: the notes' levels spread */
+        uint32_t t0 = fm1_ms, k, lo = 127, hi = 0;
+        while ((uint32_t)(fm1_ms - t0) < 6000u) {
+            run_blocks(7, 0);
+            ui_input();
+            for (k = 0; k < NVOICE; k++)
+                if (vox[k].gate && vox[k].layer == 0u) {
+                    lo = vox[k].vel < lo ? vox[k].vel : lo;
+                    hi = vox[k].vel > hi ? vox[k].vel : hi;
+                }
+        }
+        printf("bricks: variation 100: levels %u .. %u\n", lo, hi);
+        if (hi < lo + 30u)
+            printf("FAIL bricks: VARIATION does not spread the levels\n"), fail++;
+    }
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-41-bricklayer.ppm", dir);
+    ppm(path);
+    press_phys(KEY_SHIFT, 1);                         /* SHIFT + key 2 (entry still on): out */
+    press_key(2, 1);
+    press_key(2, 0);
+    press_phys(KEY_SHIFT, 0);
+    if (bl.n[0] != 2u)
+        printf("FAIL bricks: SHIFT + a key does not take it out (%u)\n", bl.n[0]), fail++;
+    if (ses_save(1) != SES_OK)
+        printf("FAIL bricks: not saved\n"), fail++;
+    press_phys(KEY_SHIFT, 1);                         /* SHIFT + REC: the last out */
+    press_btn(B_REC);
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+    ui_input();
+    press_phys(KEY_SHIFT, 0);
+    if (bl.n[0] != 1u || loop[0].vary)
+        printf("FAIL bricks: SHIFT + REC does not take out the last (or sets VARY)\n"), fail++;
+    fm1_in.buttons |= 1u << PANEL_BTN[B_REC];        /* REC held 1 s: emptied */
+    press_btn(B_REC);
+    for (i = 0; i < 80u; i++) {
+        run_blocks(20, 0);
+        ui_input();
+    }
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+    ui_input();
+    if (bl.n[0] || !bl.rec[0])
+        printf("FAIL bricks: REC held does not empty it (or turns entry off)\n"), fail++;
+    press_phys(KEY_ENV, 1);                           /* the key held: the page down, KNOB 1 the filter */
+    for (i = 0; i < 60u; i++) {
+        run_blocks(20, 0);
+        ui_input();
+    }
+    press_phys(KEY_ENV, 0);
+    host_enc[PANEL_ENC[EN_K1]] = 2;
+    ui_input();
+    if (ui.bl_page || ui.env_page || !bl.on[0] || ui.flt[0] != 4)
+        printf("FAIL bricks: holding the key does not put the page down\n"), fail++;
+    lm_key(KEY_ENV);                                  /* a short press: the ENVELOPE page */
+    if (!ui.env_page)
+        printf("FAIL bricks: a short press is not the ENVELOPE page\n"), fail++;
+    lm_key(KEY_ENV);
+    ses_load_slot(1);
+    if (!bl.on[0] || bl.n[0] != 2u || bl.len[0] != 8u || bl.unst[0] != 100)
+        printf("FAIL bricks: a session does not keep it (%u %u)\n", bl.n[0], bl.len[0]), fail++;
+    clip_copy(0);
+    clip_paste(2);
+    if (!bl.on[2] || bl.n[2] != 2u || bl.w[2][1] != bl.w[0][1])
+        printf("FAIL bricks: the clipboard does not copy it\n"), fail++;
+    printf("bricks: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 static int cmd_overdubs(const char *dir)
 {
     uint32_t fail = 0, i, heard;
@@ -5444,6 +5665,8 @@ int main(int argc, char **argv)
         return cmd_vary();
     if (argc >= 3 && !strcmp(argv[1], "bayarea"))
         return cmd_bayarea(argv[2]);
+    if (argc >= 3 && !strcmp(argv[1], "bricks"))
+        return cmd_bricks(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

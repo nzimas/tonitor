@@ -101,7 +101,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
-| the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up): KNOB 1–4 set the chosen track's attack, decay, sustain and release. With SHIFT: the sound's own envelope again. See [Envelope](#envelope). |
+| the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up; it acts when let go): KNOB 1–4 set the chosen track's attack, decay, sustain and release. See [Envelope](#envelope). With SHIFT: the chosen track's step sequencer, **BRICKLAYER**, on and off (the key blinks while it runs); **held** (0.6 s) while it runs, its page up or down. See [BRICKLAYER](#bricklayer). |
 | the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's physics sequencer, **BALLSY**, on and off (EDIT blinks while it runs); **held** (0.6 s) while it runs, its page up or down. A short press is always EDIT. See [BALLSY](#ballsy). |
 | the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
@@ -179,7 +179,7 @@ and ANIMA's envelope are then held at full; CALIGULA and RUSSOLO are kept playin
 then let go. The change applies from the next note; once the track's envelope is in use, turning the knobs
 also changes the notes that are sounding.
 
-**SHIFT** + the key, **HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
+**HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
 keeps an envelope for each of its six engines. Sessions store them, copying a track copies them, presets do
 not.
 
@@ -218,6 +218,46 @@ While their page is up, the four knobs control them:
 The screen shows the box, the walls' segments in the track's colour and the balls; the line above shows the
 number of balls, or the value just turned. Sessions store each track's ball settings and whether they are on;
 copying a track copies them.
+
+### BRICKLAYER
+
+**SHIFT + the envelope key** (the 3rd black key from the right) turns on BRICKLAYER, a step sequencer built a
+note at a time, for the chosen track, and shows its page; the key blinks while it runs, and SHIFT + the key again
+turns it off. **Holding the envelope key** (0.6 s) while it runs puts its page down or up: with the page down it
+keeps playing and the knobs, the screen and the other pages work as usual (a track button or another page also
+puts it down). A short press of the key is still the ENVELOPE page. Each track has its own.
+
+On its page, **REC** is the entry, not the looper:
+
+| Gesture | |
+| --- | --- |
+| **REC** | entry on or off (REC stays lit while it is on) |
+| a white key, entry on | its note is added at the end of the sequence (and sounds) |
+| **SHIFT** + a white key, entry on | that note is taken out, wherever it is |
+| **SHIFT + REC** | the last note added is taken out |
+| **REC** held 1 s | the sequence is emptied (BRICKS / EMPTY) |
+
+The notes play in the order they were added, spread over the sequence's length as evenly as possible (a
+Euclidean rhythm, the first note on the first step: 3 notes in 8 steps fall on steps 1, 4 and 7). Notes are kept
+as steps of the scale, so they follow the loops' transposition (SHIFT + OCT, and SHIFT + the track's button + OCT),
+the scale and the root, as latched notes do; chord mode applies to them as to keys.
+
+| Knob | |
+| --- | --- |
+| **KNOB 1** | **LENGTH**: steps, from the number of notes up to 32 |
+| **KNOB 2** | **RATE**: 0.5–16 steps a second |
+| **KNOB 3** | **HARMONY**: how often a note becomes a diad (a third or a fifth above) or a triad |
+| **KNOB 4** | **VARIATION**: each note's level (down to −12 dB) and length (from a quarter to twice the usual) are spread at random; the pace wanders (from half to twice the rate), and now and then stops for a moment or rushes; as likely as the knob says, a note stutters (struck 2–4 times within its step), the last 2–4 steps are played again (beat repeat), a note echoes 1–3 times, quieter, or an empty step plays a quiet ghost note from the sequence. At 0: a steady level and length, a steady pace |
+
+On its page the loops' direction and speed keys (the 4th to 8th black keys) are BRICKLAYER's own, lit while on and
+glowing while off: **REVERSE**, **PENDULUM** (forwards and backwards in turn), **RANDOM** (a step drawn at random
+each time), **HALF SPEED** and **DOUBLE SPEED**, combined as for the loops. The step lit on the screen follows them.
+With the page down, the keys are the looper's again.
+
+The screen shows the steps as cells, eight to a row (up to four rows): a note's cell filled in the track's
+colour, an empty one as an outline, the step being played in white. The line above shows the notes and the
+steps (3 IN 8), REC and the number of notes while entering, or the value just turned. Each note lasts 70 % of
+its step (VARIATION spreads it). Sessions store each track's sequence and settings; copying a track copies them.
 
 ### Latched keys
 

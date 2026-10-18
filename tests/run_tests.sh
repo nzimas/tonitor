@@ -36,6 +36,7 @@ build/host dist
 build/host druid build/sounds
 build/host bayarea build/sounds
 build/host balls build/screens
+build/host bricks build/screens
 build/host vary
 build/host ties
 build/host budget

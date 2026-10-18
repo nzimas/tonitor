@@ -13,7 +13,7 @@ headers; changes are noted in each file.
 
 | What | Licence | Where |
 | --- | --- | --- |
-| Tonitor's own code: `firmware/src/{tonitor,anima,fm,gran,reverb,layers,ui,balls,delay,sessions,gfx,main}.c`, `dsp.h`, `tools/{build,gen_tables,gen_font,sdk_from_package}.py`, `tests/`, the scripts | GPL-3.0-only | |
+| Tonitor's own code: `firmware/src/{tonitor,anima,fm,gran,reverb,layers,ui,balls,bricks,delay,sessions,gfx,main}.c`, `dsp.h`, `tools/{build,gen_tables,gen_font,sdk_from_package}.py`, `tests/`, the scripts | GPL-3.0-only | |
 | The browser installer, a port of `tools/fm1_install.py` (Felucca / SLOOP) to JavaScript | GPL-3.0-only | `docs/js/fm1ota.js` |
 | The firmware package the installer writes, built from this tree (with the JieLi SDK files below) | GPL-3.0-only | `docs/firmware/tonitor.fwsc` |
 | The website, the logo, the documentation's text | MIT | `docs/` (except the two rows above), `site/`, `README.md`, `CHANGELOG.md`, `LICENSES/MIT.txt` |

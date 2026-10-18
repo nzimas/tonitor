@@ -105,7 +105,12 @@ static struct {
     uint8_t edit_down, edit_done;   /* EDIT down since edit_t0 (let go soon: EDIT; held: the balls' page) */
     uint32_t edit_t0;
     uint8_t bb_page;             /* the chosen track's balls' page is up (it closes as the other pages do) */
-    uint8_t vary_shown;          /* (VARY just set: what the screen shows until the ISR has taken it, + 1) */
+    uint8_t vary_shown;
+    uint8_t bl_page;             /* the chosen track's BRICKLAYER page is up (closes as the other pages do) */
+    uint8_t env_down, env_done;  /* the envelope key down since env_t0 (let go soon: ENVELOPE; held: BRICKLAYER's page) */
+    uint32_t env_t0;
+    uint8_t blrec_down, blrec_done;   /* REC down on BRICKLAYER's page since blrec_t0 (held 1 s: emptied) */
+    uint32_t blrec_t0;          /* (VARY just set: what the screen shows until the ISR has taken it, + 1) */
     uint32_t cho_t0;
     int8_t sc_touched;           /* 0 the root just turned, 1 the scale, -1 none (until sc_touch_until) */
     uint32_t sc_touch_until;
@@ -304,6 +309,7 @@ static void latch_move(uint32_t l, int32_t d)
 }
 
 #include "balls.c"                       /* (BALLSY, the physics sequencer: SHIFT + EDIT) */
+#include "bricks.c"                      /* (BRICKLAYER, the step sequencer: SHIFT + the envelope key) */
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
 static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
@@ -425,7 +431,7 @@ static void save_long(void)
     }
     if (ui.ses_page == SP_ASK)
         return;
-    ui.rv_page = ui.env_page = ui.bb_page = 0;
+    ui.rv_page = ui.env_page = ui.bb_page = ui.bl_page = 0;
     if (ui.ses_page == SP_LIST && ui.ses_ix != ses_current()) {   /* in the list: into the slot shown, asked */
         ui.ses_new = ui.ses_ix;
         ui.ses_over = (uint8_t)ses_has(ui.ses_ix);
@@ -489,7 +495,7 @@ static void save_short(void)
         }
         return;
     }
-    ui.rv_page = ui.env_page = ui.bb_page = 0;   /* the SESSIONS page, on the session chosen if any */
+    ui.rv_page = ui.env_page = ui.bb_page = ui.bl_page = 0;   /* the SESSIONS page, on the session chosen if any */
     ui.sc_page = 0;
     ui.ses_page = SP_LIST;
     ui.ses_ix = (uint8_t)(ses_current() ? ses_current() : 1);
@@ -644,6 +650,7 @@ static void ui_input(void)
     int32_t s;
     int sh;
     bb_tick();                                   /* (the balls: their time, their notes) */
+    bl_tick();                                   /* (BRICKLAYER's steps) */
     if (ui.vary_shown && loop[ui.sel].vary == ui.vary_shown - 1u)
         ui.vary_shown = 0;                       /* (VARY taken by the ISR: shown from the looper again) */
     (void)rel;
@@ -655,10 +662,10 @@ static void ui_input(void)
             ui.sel = (uint8_t)l;
             ui.vary_shown = 0;
             ui.env_nat_ok = 0;
-            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page) {   /* a layer chosen:
+            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page || ui.bl_page) {   /* a layer chosen:
                                                                                                     * back to it */
                 ui.rv_page = 0;
-                ui.env_page = ui.bb_page = 0;
+                ui.env_page = ui.bb_page = ui.bl_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
                 ui.pre_page = 0;
@@ -691,7 +698,7 @@ static void ui_input(void)
         uint8_t fx = (uint8_t)((fm1_in.notes >> KEY_SHIFT) & 1u);
         ui.rv_page = (uint8_t)!(ui.rv_page && ui.fx == fx);
         ui.fx = fx;
-        ui.env_page = ui.bb_page = 0;
+        ui.env_page = ui.bb_page = ui.bl_page = 0;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.sc_page = 0;
@@ -700,7 +707,7 @@ static void ui_input(void)
     if (btn_bit(press, B_ARP)) {
         ui.sc_page = (uint8_t)!ui.sc_page;
         ui.rv_page = 0;
-        ui.env_page = ui.bb_page = 0;
+        ui.env_page = ui.bb_page = ui.bl_page = 0;
         ui.ses_page = 0;
         ui.pre_page = 0;
         ui.force = 1;
@@ -713,7 +720,7 @@ static void ui_input(void)
             ui.pre_eng = ui.engine[ui.sel];
             if (!ui.pre_ix)
                 ui.pre_ix = 1;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = 0;
         }
         ui.force = 1;
     } else if (btn_bit(press, B_SAVE)) {
@@ -761,6 +768,12 @@ static void ui_input(void)
                 ui.env_touch_until = fm1_ms + 1500u;
             }
         }
+    } else if (ui.bl_page && bl.on[ui.sel]) {    /* BRICKLAYER's page: KNOB 1 .. 4 its */
+        static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t j;
+        for (j = 0; j < 4u; j++)
+            if ((s = knob_take(K[j], sh)) != 0)
+                bl_knob(ui.sel, j, s);
     } else if (ui.bb_page && bb.on[ui.sel]) {    /* the chosen track's balls' page: KNOB 1 .. 4 theirs */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
@@ -828,7 +841,18 @@ static void ui_input(void)
     }
     if (btn_bit(press, B_HOME))                  /* a new sound; with SHIFT, of the same family */
         new_sound((int)((fm1_in.notes >> KEY_SHIFT) & 1u));
-    if (btn_bit(press, B_REC) && sh) {           /* SHIFT and REC: the chosen track's loops VARY (or as played) */
+    if (ui.bl_page && bl.on[ui.sel] && btn_bit(press, B_REC)) {   /* BRICKLAYER's page: REC is its entry */
+        if (sh) {                                /* SHIFT and REC: the last note out */
+            if (bl.n[ui.sel])
+                bl.n[ui.sel]--;
+            say("LAST OUT", 900);
+        } else {
+            ui.blrec_down = 1;
+            ui.blrec_done = 0;
+            ui.blrec_t0 = fm1_ms;
+        }
+        ui.force = 1;
+    } else if (btn_bit(press, B_REC) && sh) {    /* SHIFT and REC: the chosen track's loops VARY (or as played) */
         uint32_t v = !loop[ui.sel].vary;
         ev_post(EV_LOOP_MODE, ui.sel, 2, v);
         say(v ? "VARY" : "VARY OFF", 1200);
@@ -846,6 +870,23 @@ static void ui_input(void)
             say(m, 1200);
         } else if (p->rec == LR_IDLE && p->ntrk >= LOOP_TRK)
             say("10 LOOPS", 1500);               /* full: not armed */
+    }
+    if (ui.blrec_down) {                         /* (BRICKLAYER: held 1 s, emptied; let go soon, entry on or off) */
+        if (!btn_bit(fm1_in.buttons, B_REC)) {
+            ui.blrec_down = 0;
+            if (!ui.blrec_done) {
+                bl.rec[ui.sel] = (uint8_t)!bl.rec[ui.sel];
+                say(bl.rec[ui.sel] ? "REC" : "REC OFF", 900);
+            }
+        } else if (!ui.blrec_done && (uint32_t)(fm1_ms - ui.blrec_t0) >= 1000u) {
+            ui.blrec_done = 1;
+            bl.n[ui.sel] = 0;
+            bl.len[ui.sel] = 0;
+            bl.pos[ui.sel] = 0;
+            bl_release(ui.sel);
+            flash("BRICKS", "EMPTY", LAYER_COL[ui.sel]);
+        }
+        ui.force = 1;
     }
     if (ui.rec_down && !btn_bit(fm1_in.buttons, B_REC))
         ui.rec_down = 0;
@@ -990,7 +1031,19 @@ static void ui_input(void)
     }
     keys = fm1_in.notes;
     ch = keys ^ ui.keys;
-    {   /* the chosen track's loops: backwards or PENDULUM (or forwards again); half or double speed (or normal) */
+    if (ui.bl_page && bl.on[ui.sel]) {           /* BRICKLAYER's page: the same keys, its own direction and speed */
+        uint32_t l = ui.sel;
+        if ((ch & keys) >> KEY_REV & 1u || (ch & keys) >> KEY_PEND & 1u || (ch & keys) >> KEY_RAND & 1u) {
+            uint32_t want = (ch & keys) >> KEY_REV & 1u ? LD_REV : (ch & keys) >> KEY_PEND & 1u ? LD_PEND : LD_RAND;
+            bl.dir[l] = (uint8_t)(bl.dir[l] == want ? LD_FWD : want);
+            say(bl.dir[l] == LD_REV ? "REVERSE" : bl.dir[l] == LD_PEND ? "PENDULUM" : bl.dir[l] == LD_RAND ? "RANDOM" : "FORWARD", 1200);
+        }
+        if ((ch & keys) >> KEY_HALF & 1u || (ch & keys) >> KEY_DOUBLE & 1u) {
+            uint32_t want = (ch & keys) >> KEY_HALF & 1u ? LS_HALF : LS_DOUBLE;
+            bl.spd[l] = (uint8_t)(bl.spd[l] == want ? LS_NORMAL : want);
+            say(bl.spd[l] == LS_HALF ? "HALF SPEED" : bl.spd[l] == LS_DOUBLE ? "DOUBLE SPEED" : "NORMAL SPEED", 1200);
+        }
+    } else {   /* the chosen track's loops: backwards or PENDULUM (or forwards again); half or double speed (or normal) */
         const looper_t *p = &loop[ui.sel];
         if ((ch & keys) >> KEY_REV & 1u || (ch & keys) >> KEY_PEND & 1u || (ch & keys) >> KEY_RAND & 1u) {
             uint32_t want = (ch & keys) >> KEY_REV & 1u ? LD_REV : (ch & keys) >> KEY_PEND & 1u ? LD_PEND : LD_RAND;
@@ -1027,23 +1080,43 @@ static void ui_input(void)
                 say("CHORDS OFF", 900);
         }
     }
-    if ((ch & keys) >> KEY_ENV & 1u) {           /* the ENVELOPE page up or down; with SHIFT, the sound's own envelope */
+    if ((ch & keys) >> KEY_ENV & 1u) {           /* with SHIFT: BRICKLAYER on (its page up) or off */
         if ((keys >> KEY_SHIFT) & 1u) {
-            ui.env_on[ui.sel][ui.engine[ui.sel]] = 0;
-            mac_apply(ui.sel);
-            say("AS DRAWN", 900);
+            bl_toggle(ui.sel);
+            ui.bl_page = bl.on[ui.sel];
+            if (ui.bl_page)
+                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bb_page = 0;
+            say(bl.on[ui.sel] ? "BRICKLAYER" : "BRICKLAYER OFF", 900);
+            ui.force = 1;
+            ui.env_down = 0;
         } else {
-            ui.env_page = (uint8_t)!ui.env_page;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.bb_page = 0;
+            ui.env_down = 1;
+            ui.env_done = 0;
+            ui.env_t0 = fm1_ms;
         }
+    }
+    if (ui.env_down && (keys >> KEY_ENV & 1u) && !ui.env_done && bl.on[ui.sel] &&
+        (uint32_t)(fm1_ms - ui.env_t0) >= 600u) {   /* held, BRICKLAYER running: its page up or down */
+        ui.env_done = 1;
+        ui.bl_page = (uint8_t)!ui.bl_page;
+        if (ui.bl_page)
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bb_page = 0;
         ui.force = 1;
+    }
+    if (ui.env_down && !(keys >> KEY_ENV & 1u)) {   /* let go soon: the ENVELOPE page up or down */
+        ui.env_down = 0;
+        if (!ui.env_done) {
+            ui.env_page = (uint8_t)!ui.env_page;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.bb_page = ui.bl_page = 0;
+            ui.force = 1;
+        }
     }
     if ((ch & keys) >> KEY_EDIT & 1u) {          /* with SHIFT: the chosen track's balls on (their page up) or off */
         if ((keys >> KEY_SHIFT) & 1u) {
             bb_toggle(ui.sel);
             ui.bb_page = bb.on[ui.sel];
             if (ui.bb_page)
-                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = 0;
+                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bl_page = 0;
             say(bb.on[ui.sel] ? "BALLSY" : "BALLSY OFF", 900);
             ui.force = 1;
             ui.edit_down = 0;
@@ -1058,7 +1131,7 @@ static void ui_input(void)
         ui.edit_done = 1;
         ui.bb_page = (uint8_t)!ui.bb_page;
         if (ui.bb_page)
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bl_page = 0;
         ui.force = 1;
     }
     if (ui.edit_down && !(keys >> KEY_EDIT & 1u)) {   /* let go soon: EDIT on or off */
@@ -1096,8 +1169,16 @@ static void ui_input(void)
             if (w < p->ntrk)
                 ev_post(EV_LOOP_TRK, ui.sel, w, (p->mute >> w) & 1u);
             ui.force = 1;
+        } else if (((keys >> k) & 1u) && ui.bl_page && bl.on[ui.sel] && bl.rec[ui.sel] && ((keys >> KEY_SHIFT) & 1u)) {
+            bl_remove(ui.sel, white_ix(k), ui.oct[ui.sel]);   /* BRICKLAYER, entry on: SHIFT + a key takes it out */
+            ui.key_layer[k] = KEY_NONE;
+            ui.force = 1;
         } else if ((keys >> k) & 1u) {
             /* (moved as the track's loops are -- all of them, and its own -- so what is added fits them) */
+            if (ui.bl_page && bl.on[ui.sel] && bl.rec[ui.sel]) {   /* BRICKLAYER, entry on: the key's note added */
+                bl_add(ui.sel, white_ix(k), ui.oct[ui.sel]);
+                ui.force = 1;
+            }
             uint32_t note = scale_note(white_ix(k) + ui.lx + ui.lxt[ui.sel], ui.oct[ui.sel]), bit = 1u << k;
             ui.key_layer[k] = KEY_NONE;
             if (ui.latch[ui.sel] & bit) {        /* a latched key: SHIFT held lets go of it; alone, nothing */
@@ -1149,7 +1230,10 @@ static void ui_leds(void)
     }
     {
         const looper_t *p = &loop[ui.sel];
-        fm1_led_key(PANEL_BTN[B_REC], p->rec == LR_REC || (p->rec == LR_ARMED && (fm1_ms / 250u) & 1u));
+        if (ui.bl_page && bl.on[ui.sel])         /* (BRICKLAYER's page: REC lit while entry is on) */
+            fm1_led_key(PANEL_BTN[B_REC], bl.rec[ui.sel]);
+        else
+            fm1_led_key(PANEL_BTN[B_REC], p->rec == LR_REC || (p->rec == LR_ARMED && (fm1_ms / 250u) & 1u));
         fm1_led_key(PANEL_BTN[B_PLAY], p->play && p->ntrk);
     }
     fm1_led_key(PANEL_BTN[B_HOME], (int32_t)(ui.home_until - fm1_ms) > 0);
@@ -1172,12 +1256,14 @@ static void ui_leds(void)
     {   /* the loops' direction and speed: shown only while the chosen track's loops play (PLAY lit) -- lit when
          * on, a glow when off; stopped, dark (they still answer) */
         const looper_t *lp = &loop[ui.sel];
-        int on = lp->play && lp->ntrk;
-        fm1_led_key(14u + KEY_REV, on && lp->dmode == LD_REV);
-        fm1_led_key(14u + KEY_PEND, on && lp->dmode == LD_PEND);
-        fm1_led_key(14u + KEY_RAND, on && lp->dmode == LD_RAND);
-        fm1_led_key(14u + KEY_HALF, on && lp->rate == LS_HALF);
-        fm1_led_key(14u + KEY_DOUBLE, on && lp->rate == LS_DOUBLE);
+        int blp = ui.bl_page && bl.on[ui.sel];   /* (BRICKLAYER's page: its own, while it runs) */
+        int on = blp || (lp->play && lp->ntrk);
+        uint32_t dm = blp ? bl.dir[ui.sel] : lp->dmode, rt = blp ? bl.spd[ui.sel] : lp->rate;
+        fm1_led_key(14u + KEY_REV, on && dm == LD_REV);
+        fm1_led_key(14u + KEY_PEND, on && dm == LD_PEND);
+        fm1_led_key(14u + KEY_RAND, on && dm == LD_RAND);
+        fm1_led_key(14u + KEY_HALF, on && rt == LS_HALF);
+        fm1_led_key(14u + KEY_DOUBLE, on && rt == LS_DOUBLE);
         led_dim_key(14u + KEY_REV, on);
         led_dim_key(14u + KEY_PEND, on);
         led_dim_key(14u + KEY_RAND, on);
@@ -1189,7 +1275,7 @@ static void ui_leds(void)
     led_dim_key(14u + KEY_EDIT, 1);
     led_dim_key(14u + KEY_CHORD, 1);
     led_dim_key(14u + KEY_ENV, 1);
-    fm1_led_key(14u + KEY_ENV, ui.env_page);
+    fm1_led_key(14u + KEY_ENV, bl.on[ui.sel] ? (fm1_ms / 250u) & 1u : ui.env_page);   /* (BRICKLAYER: it blinks) */
     fm1_led_key(14u + KEY_CHORD, ui.chord_on[ui.sel]);
 }
 
@@ -1842,6 +1928,13 @@ static void ui_draw(void)
         ui.shown_page = 7;
         return;
     }
+    if (ui.bl_page && bl.on[ui.sel]) {           /* BRICKLAYER, at ~25 frames a second */
+        if (ui.shown_page != 9 || ui.force || (uint32_t)(fm1_ms - bl.drawn_at) >= 40u)
+            draw_bl_page();
+        ui.shown_page = 9;
+        ui.force = 0;
+        return;
+    }
     if (ui.bb_page && bb.on[ui.sel]) {           /* the chosen track's balls, at ~25 frames a second */
         if (ui.shown_page != 8 || ui.force || (uint32_t)(fm1_ms - bb.drawn_at) >= 40u)
             draw_bb_page();
@@ -1912,6 +2005,10 @@ static void ui_init(void)
     memset(&bb, 0, sizeof bb);
     for (l = 0; l < NLAYER; l++)
         bb_defaults(l);
+    memset(&bl, 0, sizeof bl);
+    for (l = 0; l < NLAYER; l++)
+        bl_defaults(l);
+    bl.touched = -1;
     bb.touched = -1;
     ui.shown_sel = ui.shown_eng = ui.shown_msg = -1;
 #if TELEMETRY
