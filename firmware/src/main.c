@@ -200,6 +200,17 @@ static int fl_erase4k_quiet(uint32_t off, uint32_t *took)
 
 #define OTA_IDENTITY (recovery_active ? "FM-1_000" : TONITOR_ID)
 #include "ota.c"
+/* backup.c's hooks: a message to the host, and a record put back (the screen says so) */
+static int bk_wire(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
+static void bk_done(uint32_t num)
+{
+    char m[16] = "RESTORED ";
+    if (num >= PRE_NUM)
+        str_cpy(m + 9, "PRESETS", 7);
+    else
+        fmt_int(m + 9, (int32_t)num);
+    say(m, 1500);
+}
 static void recovery_poll(void);
 static uint32_t ota_now_ms(void) { return fm1_ms; }
 static void ota_idle(void)

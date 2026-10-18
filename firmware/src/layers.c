@@ -29,8 +29,8 @@
 
 #define NLAYER 6
 #define NVOICE 12                /* the voices of all the layers (FM and ANIMA) */
-enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, ENG_DRUID, ENG_BAY, NENG };
-static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO", "DRUID", "BAYAREA"};
+enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, ENG_DRUID, ENG_BAY, ENG_HIVE, NENG };
+static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO", "DRUID", "BAYAREA", "HIVE"};
 
 static fm_patch_t fm_buf[NLAYER][2];
 static an_design_t an_buf[NLAYER][2];
@@ -49,16 +49,21 @@ static volatile uint8_t dr_pub[NLAYER], dr_use[NLAYER];
 /* BAYAREA (bayarea.c): a West Coast voice, voices of the pool as well */
 static ba_design_t ba_buf[NLAYER][2];
 static volatile uint8_t ba_pub[NLAYER], ba_use[NLAYER];
+/* HIVE (hive.c): a swarm of oscillators, voices of the pool as well */
+static hv_design_t hv_buf[NLAYER][2];
+static volatile uint8_t hv_pub[NLAYER], hv_use[NLAYER];
 /* an organism engine (one for the layer, outside the voices' pool) */
 static int eng_organism(uint32_t e) { return e == ENG_CAL || e == ENG_RUS; }
 
 /* the pool's voices' own memory, ~4.8 KiB each: an ANIMA voice (its resonator) or a DRUID one (its strings) --
  * a voice is one engine at a time (voice_t.eng) */
-typedef union { an_voice_t an; dr_voice_t dr; ba_voice_t ba; } vmem_t;
-typedef char dr_fits_an_voice[sizeof(dr_voice_t) <= sizeof(an_voice_t) && sizeof(ba_voice_t) <= sizeof(an_voice_t) ? 1 : -1];
+typedef union { an_voice_t an; dr_voice_t dr; ba_voice_t ba; hv_voice_t hv; } vmem_t;
+typedef char dr_fits_an_voice[sizeof(dr_voice_t) <= sizeof(an_voice_t) && sizeof(ba_voice_t) <= sizeof(an_voice_t) &&
+                              sizeof(hv_voice_t) <= sizeof(an_voice_t) ? 1 : -1];
 static vmem_t vmem[NVOICE] POOL;
 static void dr_measure(dr_design_t *d) { dr_measure_on(d, (dr_voice_t *)(void *)&an_probe); }
-static void ba_measure(ba_design_t *d) { ba_measure_on(d, (ba_voice_t *)(void *)&an_probe); }   /* (ANIMA's probe:
+static void ba_measure(ba_design_t *d) { ba_measure_on(d, (ba_voice_t *)(void *)&an_probe); }
+static void hv_measure(hv_design_t *d) { hv_measure_on(d, (hv_voice_t *)(void *)&an_probe); }   /* (ANIMA's probe:
                                                                                                * never both at once) */
 
 #define FADE 12u                 /* blocks of a fade (~9 ms) */
@@ -522,6 +527,9 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
     else if (lay[l].engine == ENG_BAY) {
         ba_note_on(&vmem[k].ba, &ba_buf[l][ba_use[l]], (int32_t)v->note, v->vel ? v->vel : 127, fresh || !v->sounding);
         vmem[k].ba.hold = 0;
+    } else if (lay[l].engine == ENG_HIVE) {
+        hv_note_on(&vmem[k].hv, &hv_buf[l][hv_use[l]], (int32_t)v->note, v->vel ? v->vel : 127, fresh || !v->sounding);
+        vmem[k].hv.hold = 0;
     }
     else {
         an_note_on(&vmem[k].an, &an_buf[l][an_use[l]], pitch_inc((int32_t)v->note * 16), fresh || !v->sounding);
@@ -535,6 +543,8 @@ static void voice_on(uint32_t l, uint32_t k, int fresh)
             vmem[k].an.env_hold = 1;
         else if (lay[l].engine == ENG_BAY)
             vmem[k].ba.hold = 1;
+        else if (lay[l].engine == ENG_HIVE)
+            vmem[k].hv.hold = 1;
         v->est = AE_ATT;
         v->elv = 0;
     }
@@ -553,6 +563,8 @@ static void voice_off(uint32_t l, uint32_t k)
         dr_note_off(&vmem[k].dr);
     else if (v->eng == ENG_BAY)
         ba_note_off(&vmem[k].ba, &ba_buf[l][ba_use[l]]);
+    else if (v->eng == ENG_HIVE)
+        hv_note_off(&vmem[k].hv);
     else
         an_note_off(&vmem[k].an);
 }
@@ -568,6 +580,8 @@ static void voice_silence(uint32_t k)
         vmem[k].dr.live = 0;
     else if (v->eng == ENG_BAY)
         vmem[k].ba.live = 0;
+    else if (v->eng == ENG_HIVE)
+        vmem[k].hv.live = 0;
     else
         vmem[k].an.live = 0;
 }
@@ -721,11 +735,14 @@ static int change_due(uint32_t l)
         dr_use[l] = dr_pub[l];
     if (y->engine != ENG_BAY && y->want_engine != ENG_BAY)
         ba_use[l] = ba_pub[l];
+    if (y->engine != ENG_HIVE && y->want_engine != ENG_HIVE)
+        hv_use[l] = hv_pub[l];
     if (y->want_engine != y->engine)
         return 1;
     return y->engine == ENG_FM ? fm_pub[l] != fm_use[l] : y->engine == ENG_ANIMA ? an_pub[l] != an_use[l]
            : y->engine == ENG_CAL ? cal_pub[l] != cal_use[l] : y->engine == ENG_RUS ? rus_pub[l] != rus_use[l]
-           : y->engine == ENG_DRUID ? dr_pub[l] != dr_use[l] : ba_pub[l] != ba_use[l];
+           : y->engine == ENG_DRUID ? dr_pub[l] != dr_use[l] : y->engine == ENG_BAY ? ba_pub[l] != ba_use[l]
+           : hv_pub[l] != hv_use[l];
 }
 /* what was asked, now (the voices silent), and the notes still held played again with it */
 static void change_apply(uint32_t l)
@@ -778,6 +795,7 @@ static void change_apply(uint32_t l)
         rus_use[l] = rus_pub[l];
         dr_use[l] = dr_pub[l];
         ba_use[l] = ba_pub[l];
+        hv_use[l] = hv_pub[l];
         if (y->engine == ENG_CAL)
             for (j = 0; j < n; j++)
                 cal_note_on(c, &cal_buf[l][cal_use[l]], nn[j], ns[j]);
@@ -1561,6 +1579,9 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             } else if (y->engine == ENG_BAY) {
                 memcpy(vmem[k].ba.mac, felt, NMAC);
                 alive = ba_render(&vmem[k].ba, &ba_buf[l][ba_use[l]], vb, CTL);
+            } else if (y->engine == ENG_HIVE) {
+                memcpy(vmem[k].hv.mac, felt, NMAC);
+                alive = hv_render(&vmem[k].hv, &hv_buf[l][hv_use[l]], vb, CTL);
             } else {
                 memcpy(vmem[k].an.mac, mac, NMAC);
                 alive = an_render(&vmem[k].an, &an_buf[l][an_use[l]], vb, CTL);
@@ -1583,6 +1604,8 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
                     vmem[k].dr.live = 0;
                 else if (v->eng == ENG_BAY)
                     vmem[k].ba.live = 0;
+                else if (v->eng == ENG_HIVE)
+                    vmem[k].hv.live = 0;
                 else
                     vmem[k].an.live = 0;
             }
@@ -1820,6 +1843,7 @@ static void layers_init(void)
     eng_cost[ENG_RUS] = BLK_TICKS * 4u / 100u;
     eng_cost[ENG_DRUID] = BLK_TICKS * 6u / 100u;
     eng_cost[ENG_BAY] = BLK_TICKS * 6u / 100u;
+    eng_cost[ENG_HIVE] = BLK_TICKS * 8u / 100u;
 #else
     memcpy(eng_cost, host_cost_model, sizeof eng_cost);
 #endif
@@ -1957,6 +1981,14 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         cal_buf[l][k].out = level;
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)k;
+    } else if (e == ENG_HIVE) {
+        if (!sound_slot_free(&hv_pub[l], &hv_use[l]))
+            return 0;
+        k = hv_use[l] ^ 1u;
+        hv_design(&hv_buf[l][k], -1, seed, path, gen);
+        hv_buf[l][k].out = level;
+        RING_PUBLISH();
+        hv_pub[l] = (uint8_t)k;
     } else if (e == ENG_BAY) {
         if (!sound_slot_free(&ba_pub[l], &ba_use[l]))
             return 0;
@@ -2035,6 +2067,23 @@ static int new_bay(uint32_t l, uint32_t seed, uint32_t path)
     ba_pub[l] = (uint8_t)k;
     return 1;
 }
+static int new_hive(uint32_t l, uint32_t seed, uint32_t path)
+{
+    uint32_t k, tries;
+    int32_t was = hv_buf[l][hv_use[l]].kind;
+    if (!sound_slot_free(&hv_pub[l], &hv_use[l]))
+        return 0;
+    k = hv_use[l] ^ 1u;
+    for (tries = 0; tries < 4u; tries++) {
+        hv_design(&hv_buf[l][k], new_kind, seed + tries * 7919u, path, GEN_NOW);
+        if (new_kind >= 0 || hv_buf[l][k].kind != was)
+            break;
+    }
+    hv_measure(&hv_buf[l][k]);
+    RING_PUBLISH();
+    hv_pub[l] = (uint8_t)k;
+    return 1;
+}
 /* the name of what layer l plays on engine e */
 static const char *sound_name(uint32_t l, uint32_t e)
 {
@@ -2046,6 +2095,8 @@ static const char *sound_name(uint32_t l, uint32_t e)
         return DK_NAME[dr_buf[l][dr_pub[l]].kind % DK_N];
     if (e == ENG_BAY)
         return BK_NAME[ba_buf[l][ba_pub[l]].kind % BK_N];
+    if (e == ENG_HIVE)
+        return HK_NAME[hv_buf[l][hv_pub[l]].kind % HK_N];
     if (e == ENG_FM)
         return FF_NAME[fm_buf[l][fm_pub[l]].family % FF_N];
     return AK_NAME[an_buf[l][an_pub[l]].kind % AK_N];

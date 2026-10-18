@@ -1160,6 +1160,117 @@ static void fm_experimental(uint8_t *p, rnd_t *r)
 }
 
 /* a patch of family f (FF_N: any), from seed, on a path; then fm_measure */
+/* generation 4: IMPACT as struck things of many kinds -- a falling pitch (the old one's every sound) now one kind in
+ * ten; the tone moved about (the carriers' ratios, the octave) */
+static void fm_gen_impact4(uint8_t *p, rnd_t *r)
+{
+    static const int16_t SKIN[6] = {100, 159, 214, 230, 265, 292};   /* a drum skin's modes */
+    static const int16_t WOOD[5] = {100, 200, 300, 400, 275};
+    int n, kind = (int)rnd_below(r, 100), fb;
+    kind = kind < 22 ? 0 : kind < 42 ? 1 : kind < 62 ? 2 : kind < 78 ? 3 : kind < 90 ? 4 : 5;
+    p[FP_ALG] = kind == 2 || kind == 3 ? ALG_MANY[rnd_below(r, 6)]
+                : rnd_chance(r, 50) ? ALG_PAIRS[rnd_below(r, 6)] : ALG_DEEP[rnd_below(r, 6)];
+    fb = kind == 4 ? rnd_in(r, 5, 7) : (int)rnd_below(r, 4);
+    p[FP_FB] = (uint8_t)fb;
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        if (fm_is_carrier(p, n)) {
+            int dec = kind == 0 ? rnd_in(r, 45, 75) : kind == 2 ? rnd_in(r, 15, 45) : kind == 4 ? rnd_in(r, 50, 80)
+                                                                                      : rnd_in(r, 30, 60);
+            fm_ratio(op, kind == 0 ? (rnd_chance(r, 50) ? 50 : 100)
+                         : kind == 1 ? WOOD[rnd_below(r, 5)] + rnd_in(r, -4, 4)
+                         : kind == 2 ? inharm_ratio(r)
+                         : kind == 3 ? SKIN[rnd_below(r, 6)] + rnd_in(r, -3, 3)
+                         : kind == 4 ? rnd_in(r, 50, 400)
+                                     : (rnd_chance(r, 60) ? 100 : inharm_ratio(r)));
+            fm_env(op, 99, dec, rnd_in(r, 20, 50), rnd_in(r, 30, 60), 99, rnd_in(r, 0, 40), 0, 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 88, 99);
+            op[FP_DET] = (uint8_t)rnd_in(r, 4, 10);
+        } else {
+            if (kind == 0 || kind == 4 || rnd_chance(r, 25))
+                fm_fixed(op, kind == 0 ? rnd_in(r, 1, 2) : rnd_in(r, 2, 3), rnd_below(r, 100));   /* a thud, a crack */
+            else
+                fm_ratio(op, kind == 1 ? rnd_in(r, 300, 900) : kind == 3 ? rnd_in(r, 100, 300)
+                                                              : rnd_chance(r, 50) ? inharm_ratio(r) : rnd_in(r, 50, 700));
+            fm_env(op, 99, kind == 1 ? rnd_in(r, 80, 99) : rnd_in(r, 55, 90), rnd_in(r, 40, 70), 50, 99,
+                   rnd_in(r, 0, 40), 0, 0);   /* the strike's brightness, gone first */
+            op[FP_OL] = (uint8_t)(kind == 2 ? rnd_in(r, 50, 80) : rnd_in(r, 70, 99));
+        }
+        op[FP_RS] = (uint8_t)rnd_below(r, 5);
+    }
+    if (rnd_chance(r, 30))                                 /* (an octave down or up) */
+        p[FP_TRNSP] = (uint8_t)(rnd_chance(r, 60) ? 12 : 36);
+    if (kind == 5) {                                       /* the pitch falling to the note: now and then */
+        p[FP_PL1 + 3] = (uint8_t)rnd_in(r, 58, 80);
+        p[FP_PL1] = p[FP_PL1 + 1] = p[FP_PL1 + 2] = 50;
+        p[FP_PR1] = (uint8_t)rnd_in(r, 60, 92);
+        p[FP_PR1 + 1] = p[FP_PR1 + 2] = 99;
+    } else if (rnd_chance(r, 15)) {                        /* .. or barely: a strike's slight settling */
+        p[FP_PL1 + 3] = (uint8_t)rnd_in(r, 51, 54);
+        p[FP_PR1] = (uint8_t)rnd_in(r, 70, 95);
+    }
+    p[FP_LAMD] = 0;
+    p[FP_LPMD] = 0;
+}
+/* generation 4: GLITCH clunkier and more various -- the sample-and-hold stepping the pitch (the old one's every
+ * sound, a toy computer's chatter) now one kind in seven, and gentle; the others: the level chopped by a square or
+ * random LFO, a crunch of heavy feedback and fixed-frequency modulators, the pitch thrown between steps by its
+ * envelope, a slow wobble on a broken timbre */
+static void fm_gen_glitch4(uint8_t *p, rnd_t *r)
+{
+    int n, kind = (int)rnd_below(r, 100);
+    kind = kind < 25 ? 0 : kind < 50 ? 1 : kind < 72 ? 2 : kind < 86 ? 3 : 4;
+    p[FP_ALG] = rnd_chance(r, 50) ? ALG_PAIRS[rnd_below(r, 6)] : rnd_chance(r, 50) ? ALG_MANY[rnd_below(r, 6)]
+                                                                                    : ALG_DEEP[rnd_below(r, 6)];
+    p[FP_FB] = (uint8_t)(kind == 1 ? rnd_in(r, 6, 7) : rnd_in(r, 1, 6));
+    for (n = 1; n <= 6; n++) {
+        uint8_t *op = fm_op(p, n);
+        if (fm_is_carrier(p, n)) {
+            fm_ratio(op, rnd_chance(r, 50) ? 100 * rnd_in(r, 1, 4) / (rnd_chance(r, 30) ? 2 : 1) : inharm_ratio(r));
+            if (kind == 1)                                 /* (stopped short, a click of a tail) */
+                fm_env(op, 99, rnd_in(r, 55, 85), rnd_in(r, 20, 60), rnd_in(r, 60, 90), 99, rnd_in(r, 40, 80),
+                       rnd_in(r, 0, 50), 0);
+            else
+                fm_env(op, 99, rnd_in(r, 30, 70), rnd_in(r, 20, 60), rnd_in(r, 40, 80), 99, rnd_in(r, 60, 99),
+                       rnd_in(r, 40, 90), 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, 88, 99);
+            op[FP_AMS] = (uint8_t)(kind == 0 ? 3 : rnd_in(r, 0, 2));
+        } else {
+            if (kind == 1 || rnd_chance(r, 30))
+                fm_fixed(op, rnd_in(r, 1, 3), rnd_below(r, 100));   /* (mechanical: not following the note) */
+            else
+                fm_ratio(op, rnd_chance(r, 50) ? inharm_ratio(r) : rnd_in(r, 50, 1100));
+            fm_env(op, rnd_in(r, 60, 99), rnd_in(r, 30, 90), rnd_in(r, 20, 80), rnd_in(r, 40, 70), 99,
+                   rnd_below(r, 99), rnd_below(r, 99), 0);
+            op[FP_OL] = (uint8_t)rnd_in(r, kind == 1 ? 80 : 55, 99);
+        }
+    }
+    p[FP_LPMD] = p[FP_LAMD] = 0;
+    if (kind == 0) {                                       /* chopped: the level gated, the pitch left alone */
+        p[FP_LFW] = (uint8_t)(rnd_chance(r, 60) ? 3 : 5);
+        p[FP_LFS] = (uint8_t)rnd_in(r, 45, 85);
+        p[FP_LAMD] = (uint8_t)rnd_in(r, 60, 99);
+    } else if (kind == 2) {                                /* thrown: the pitch envelope's abrupt steps */
+        int i;
+        for (i = 0; i < 3; i++) {
+            p[FP_PR1 + i] = (uint8_t)rnd_in(r, 85, 99);
+            p[FP_PL1 + i] = (uint8_t)(rnd_chance(r, 50) ? rnd_in(r, 38, 47) : rnd_in(r, 53, 62));
+        }
+        p[FP_PL1 + 2] = (uint8_t)rnd_in(r, 46, 54);
+    } else if (kind == 3) {                                /* a slow, uneven wobble */
+        p[FP_LFW] = (uint8_t)rnd_below(r, 3);
+        p[FP_LFS] = (uint8_t)rnd_in(r, 15, 45);
+        p[FP_LPMS] = (uint8_t)rnd_in(r, 2, 4);
+        p[FP_LPMD] = (uint8_t)rnd_in(r, 10, 40);
+        p[FP_LAMD] = (uint8_t)rnd_in(r, 0, 40);
+    } else if (kind == 4) {                                /* the old chatter, gentler: a slower, shallower step */
+        p[FP_LFW] = 5;
+        p[FP_LFS] = (uint8_t)rnd_in(r, 40, 75);
+        p[FP_LPMS] = (uint8_t)rnd_in(r, 3, 5);
+        p[FP_LPMD] = (uint8_t)rnd_in(r, 10, 50);
+        p[FP_LAMD] = (uint8_t)rnd_in(r, 10, 60);
+    }
+}
 static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path, uint32_t gen)
 {
     rnd_t rr, *r = &rr;
@@ -1178,7 +1289,7 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     case FF_METAL: fm_gen_metal(p, r); break;
     case FF_DRONE: fm_gen_drone(p, r); break;
     case FF_BRUIT: fm_gen_bruit(p, r); break;
-    case FF_IMPACT: fm_gen_impact(p, r); break;
+    case FF_IMPACT: gen >= 4u ? fm_gen_impact4(p, r) : fm_gen_impact(p, r); break;
     case FF_ITERATIF: fm_gen_iteratif(p, r); break;
     case FF_GLISSE: fm_gen_glisse(p, r); break;
     case FF_SPECTRE: fm_gen_spectre(p, r); break;
@@ -1194,7 +1305,7 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     case FF_PLUCK: fm_gen_pluck(p, r); break;
     case FF_MALLET: fm_gen_mallet(p, r); break;
     case FF_WARP: fm_gen_warp(p, r); break;
-    case FF_GLITCH: fm_gen_glitch(p, r); break;
+    case FF_GLITCH: gen >= 4u ? fm_gen_glitch4(p, r) : fm_gen_glitch(p, r); break;
     case FF_RUBBER: fm_gen_rubber(p, r); break;
     default: fm_gen_wind(p, r); break;
     }

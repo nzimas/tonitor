@@ -133,7 +133,7 @@ def to_html(md, toc):
 
 def page(title, current, body, desc, head=""):
     """every page: the menu down the left (above the content on a narrow screen), the content, the footer"""
-    nav = [("./", "Home"), ("install.html", "Install"), ("manual.html", "Manual"), ("changelog.html", "Changelog"), ("projects.html", "Other projects"),
+    nav = [("./", "Home"), ("install.html", "Install"), ("manual.html", "Manual"), ("changelog.html", "Changelog"), ("backup.html", "Backup"), ("projects.html", "Other projects"),
            (REPO, "GitHub")]
     links = "\n      ".join(f'<a href="{h}"' + (' aria-current="page"' if n == current else "") + f">{n}</a>"
                            for h, n in nav)
@@ -209,6 +209,10 @@ def fragments():
         "Install Tonitor", "Install", (src / "install.html").read_text(),
         "Install Tonitor on an M-VAVE FM-1 from your browser, over USB MIDI.",
         '\n<script type="module" src="js/install.js"></script>'))
+    (DOCS / "backup.html").write_text(page(
+        "Back up Tonitor sessions", "Backup", (src / "backup.html").read_text(),
+        "Save the sessions and presets on an FM-1 running Tonitor to a file, and restore them, from your browser.",
+        '\n<script type="module" src="js/backup.js"></script>'))
     (DOCS / "projects.html").write_text(page(
         "Other projects by Nuno Zimas", "Other projects", (src / "projects.html").read_text(),
         "Firmware and instruments by Nuno Zimas for the Elektron Model:Cycles and Digitone II, the Ableton Move, "
@@ -263,4 +267,4 @@ if __name__ == "__main__":
     manual()
     changelog()
     firmware(Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "build" / "tonitor.fwsc")
-    print("site: docs/index.html, install.html, manual.html, changelog.html, projects.html")
+    print("site: docs/index.html, install.html, backup.html, manual.html, changelog.html, projects.html")

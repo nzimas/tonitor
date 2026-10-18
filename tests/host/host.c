@@ -87,6 +87,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 #include "russolo.c"
 #include "druid.c"
 #include "bayarea.c"
+#include "hive.c"
 #include "reverb.c"
 #define MQ 64u
 static uint32_t midi_in_q[MQ];
@@ -121,6 +122,7 @@ static uint8_t host_led[64];
 static void fm1_led_key(uint32_t id, int on) { if (id < 64u) host_led[id] = (uint8_t)!!on; }
 #include "ui.c"
 #include "sessions.c"
+#include "backup.c"
 
 /* the flash, emulated: NOR (erased to 0xFF, programming only clears bits); erases counted */
 static uint8_t host_flash[0x100000];
@@ -710,6 +712,31 @@ static int cmd_flows(void)
             printf("FAIL flows: %u white keys, not 16\n", w), fail++;
         ui_draw();
         ppm("build/screens/screen-17-scale.ppm");
+        for (k = 0; k < NSCALE; k++) {           /* every scale: its steps rising within the octave, its name fitting */
+            uint32_t j, ok = SCALE_N[k] >= 5u && SCALE_N[k] <= SCALE_MAXN && SCALE_STEP[k][0] == 0;
+            for (j = 1; j < SCALE_N[k]; j++)
+                ok &= SCALE_STEP[k][j] > SCALE_STEP[k][j - 1] && SCALE_STEP[k][j] < 12u;
+            if (!ok)
+                printf("FAIL flows: scale %u (%s %s) is not a scale\n", k, SCALE_L1[k], SCALE_L2[k]), fail++;
+            if (text_w(&FONT_M, SCALE_L1[k]) - 4 * ((int32_t)str_len(SCALE_L1[k]) - 1) > 236 ||   /* (squeezed at most */
+                text_w(&FONT_M, SCALE_L2[k]) - 4 * ((int32_t)str_len(SCALE_L2[k]) - 1) > 236)     /* 4 px a letter) */
+                printf("FAIL flows: scale %u's name (%s %s) is %d / %d px, too wide to read\n", k, SCALE_L1[k],
+                       SCALE_L2[k], text_w(&FONT_M, SCALE_L1[k]), text_w(&FONT_M, SCALE_L2[k])), fail++;
+        }
+        {
+            static const uint8_t SHOW[3] = {11, 15, 22};
+            uint8_t was = ui.scale;
+            for (k = 0; k < 3u; k++) {
+                char nm[64];
+                ui.scale = SHOW[k];
+                ui.force = 1;
+                draw_sc_page();
+                snprintf(nm, sizeof nm, "build/screens/screen-17-scale-%u.ppm", SHOW[k]);
+                ppm(nm);
+            }
+            ui.scale = was;
+            ui.force = 1;
+        }
         press_btn(B_ARP);
         run_blocks(44100u * 20u / CTL, 0);
     }
@@ -5040,6 +5067,226 @@ static int cmd_bayarea(const char *dir)
     return fail ? 1 : 0;
 }
 
+static int cmd_hive(const char *dir)
+{
+    static hv_voice_t v;
+    static int32_t rec[44100 * 4];
+    uint32_t fail = 0, k, s, g;
+    char path[512];
+    wav_ch = 1;
+    for (k = 0; k < HK_N; k++)
+        for (s = 0; s < 2u; s++) {
+            hv_design_t d;
+            uint32_t b, i, n = 0;
+            int32_t out[CTL], pk = 0;
+            double held = 0, late = 0, tail = 0, ns;
+            struct timespec t0, t1;
+            hv_design(&d, (int32_t)k, 900u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
+            hv_measure(&d);
+            hv_init(&v, 99u);
+            hv_note_on(&v, &d, 48, 127, 1);
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            for (b = 0; b < 44100u * 7u / 2u / CTL; b++) {
+                if (b == 2067u)
+                    hv_note_off(&v);
+                if (!hv_render(&v, &d, out, CTL))
+                    memset(out, 0, sizeof out);
+                for (i = 0; i < CTL; i++) {
+                    rec[n++] = out[i];
+                    wav_put(out[i]);
+                    pk = absi(out[i]) > pk ? absi(out[i]) : pk;
+                }
+            }
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            ns = ((t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec)) / (double)(n / CTL);
+            for (i = 0; i < 8820u; i++)
+                held += (double)rec[i] * rec[i];
+            held = sqrt(held / 8820);
+            for (i = 44100u; i < 66150u; i++)
+                late += (double)rec[i] * rec[i];
+            late = sqrt(late / 22050);
+            for (i = 44100u * 3u; i < n; i++)
+                tail += (double)rec[i] * rec[i];
+            tail = sqrt(tail / (n - 44100u * 3u));
+            snprintf(path, sizeof path, "%s/bayarea-%s-%s.wav", dir, HK_NAME[k], s ? "exp" : "amb");
+            wav_write(path);
+            printf("hive %-6s %s (%s): out x%.2f, first 0.2 s %6.1f dB, 1 .. 1.5 s %6.1f dB, peak %6.1f dB, 1.5 s after "
+                   "release %6.1f dB, %.2f us a block\n", HK_NAME[k], s ? "exp" : "amb", d.sus > 0 ? "sustain" : "decay",
+                   d.out / 4096.0, dbp(held), dbp(late), dbp(pk), dbp(tail), ns / 1000.0);
+            if (held < 30.0 || pk >= 32767)
+                printf("FAIL hive: %s does not sound, or clips\n", HK_NAME[k]), fail++;
+            if (d.sus > Q15 / 4 && late < held / 8.0 && held > 300)
+                printf("FAIL hive: %s (sustaining) does not hold while held\n", HK_NAME[k]), fail++;
+            if (tail > (d.sus > 0 ? late : held) / (d.rel > 1500 ? 1.5 : 8.0) && tail > 100.0)   /* (long releases: dying) */
+                printf("FAIL hive: %s does not die away once let go\n", HK_NAME[k]), fail++;
+        }
+    for (k = 0; k < HK_N; k++)                       /* many seeds of each kind: each sounds, none clips (C2 .. C4;
+                                                      * higher, the track's limiter takes it) */
+        for (s = 0; s < 24u; s++) {
+            hv_design_t d;
+            uint32_t b, i, quiet = 0;
+            int32_t out[CTL], pk = 0;
+            double e = 0;
+            hv_design(&d, (int32_t)k, 31u + s * 104729u, s % 3u, GEN_NOW);
+            hv_measure(&d);
+            hv_init(&v, s);
+            hv_note_on(&v, &d, 36 + (int32_t)(s % 3u) * 12, 127, 1);
+            for (b = 0; b < 2067u; b++) {
+                if (!hv_render(&v, &d, out, CTL))
+                    memset(out, 0, sizeof out);
+                for (i = 0; i < CTL; i++) {
+                    pk = absi(out[i]) > pk ? absi(out[i]) : pk;
+                    e += (double)out[i] * out[i];
+                }
+            }
+            quiet = sqrt(e / (2067.0 * CTL)) < 30.0;
+            if (quiet || pk >= 32767)
+                printf("FAIL hive: %s seed %u %s\n", HK_NAME[k], s, quiet ? "silent" : "clips"), fail++;
+        }
+    {   /* through a track */
+        int32_t pk = 0;
+        uint32_t b, i, seed;
+        grain_reset();
+        memset(host_flash, 0xFF, sizeof host_flash);
+        ses_scan(1);
+        ui.send[0] = 0;
+        level_pan_apply(0);
+        press_btn(B_FX);
+        for (g = 0; ui.engine[0] != ENG_HIVE && g < 10u; g++) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        run_blocks(20, 0);
+        if (ui.engine[0] != ENG_HIVE || lay[0].engine != ENG_HIVE)
+            printf("FAIL hive: PRESETS does not reach HIVE\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        for (i = 0; i < 3u; i++)
+            press_key(i * 2u, 1);
+        for (b = 0; b < 600u; b++) {
+            run_blocks(1, 0);
+            for (i = 0; i < 2u * CTL; i++)
+                pk = absi(mix_out[i]) > pk ? absi(mix_out[i]) : pk;
+        }
+        for (i = 0; i < 3u; i++)
+            press_key(i * 2u, 0);
+        run_blocks(3000, 0);
+        printf("hive: a chord on track 1 (%s): peak %.1f dB\n", sound_name(0, ENG_HIVE), dbp(pk));
+        if (pk < 300)
+            printf("FAIL hive: a track on HIVE does not sound\n"), fail++;
+        ui.mac[0][ENG_HIVE][1] = 30;
+        seed = hv_buf[0][hv_pub[0]].seed;
+        if (ses_save(1) != SES_OK)
+            printf("FAIL hive: not saved\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        ses_load_slot(1);
+        run_blocks(10, 0);
+        if (ui.engine[0] != ENG_HIVE || hv_buf[0][hv_pub[0]].seed != seed || ui.mac[0][ENG_HIVE][1] != 30)
+            printf("FAIL hive: a session does not keep it\n"), fail++;
+        if (pre_save(0, ENG_HIVE, 7) != SES_OK || pre_save(0, ENG_BAY, 7) != SES_OK)
+            printf("FAIL hive: the presets are not saved\n"), fail++;
+        press_btn(B_HOME);
+        run_blocks(10, 0);
+        if (pre_load(0, ENG_HIVE, 7) != SES_OK || hv_buf[0][hv_pub[0]].seed != seed ||
+            pre_kind(ENG_HIVE, 7) != hv_buf[0][hv_pub[0]].kind || pre_kind(ENG_BAY, 7) < 0 || pre_kind(ENG_HIVE, 8) >= 0)
+            printf("FAIL hive: the preset does not give it back (or BAYAREA's is lost)\n"), fail++;
+        clip_copy(0);
+        clip_paste(3);
+        if (ui.engine[3] != ENG_HIVE || hv_buf[3][hv_pub[3]].seed != seed)
+            printf("FAIL hive: the clipboard does not copy it\n"), fail++;
+    }
+    printf("hive: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* HIVE's variety: per kind, eight seeds at C3 held 2 s; for each, its brightness (zero crossings a second, as
+ * octaves), its motion (how much its level and brightness change from 50 ms to 50 ms), its pitch's clarity (the
+ * autocorrelation's best peak between 1.5 and 20 ms), its attack (the time to half its peak). Printed: the spread
+ * of each over the seeds, and the mean distance between two seeds (each measure in its own unit) */
+static int cmd_hivediv(void)
+{
+    static hv_voice_t v;
+    static float rec[88200];
+    uint32_t k, s, fail = 0;
+    double tot = 0;
+    for (k = 0; k < HK_N; k++) {
+        double f[8][4], dist = 0, sd[4] = {0};
+        uint32_t a, b, j, np = 0;
+        for (s = 0; s < 8u; s++) {
+            hv_design_t d;
+            int32_t out[CTL];
+            uint32_t i, n = 0, zc = 0, w;
+            double pk = 0, mot = 0, best = 0, prev_e = -1, prev_z = -1;
+            hv_design(&d, (int32_t)k, 1234u + s * 7919u, PATH_OPEN, GEN_NOW);
+            hv_measure(&d);
+            hv_init(&v, 5u + s);
+            hv_note_on(&v, &d, 48, 127, 1);
+            for (b = 0; b < 88200u / CTL; b++) {
+                if (!hv_render(&v, &d, out, CTL))
+                    memset(out, 0, sizeof out);
+                for (i = 0; i < CTL; i++)
+                    rec[n++] = (float)out[i];
+            }
+            for (i = 1; i < n; i++)
+                zc += (rec[i] >= 0) != (rec[i - 1] >= 0);
+            for (i = 0; i < n; i++)
+                pk = fabs(rec[i]) > pk ? fabs(rec[i]) : pk;
+            for (i = 0; i < n && fabs(rec[i]) < pk / 2; i++)
+                ;
+            f[s][3] = log2(1.0 + i / 44.1);              /* the attack, log2 ms */
+            for (w = 44100u; w + 2205u <= n; w += 2205u) {  /* (the second half: the sound as it is held) */
+                double e = 0;
+                uint32_t z = 0;
+                for (i = w; i < w + 2205u; i++) {
+                    e += (double)rec[i] * rec[i];
+                    z += i > w && (rec[i] >= 0) != (rec[i - 1] >= 0);
+                }
+                e = 10 * log10(e / 2205 + 1);
+                if (prev_e >= 0)
+                    mot += fabs(e - prev_e) + 3 * fabs(log2((z + 1.0) / (prev_z + 1.0)));
+                prev_e = e, prev_z = z;
+            }
+            f[s][1] = mot / 19;
+            {
+                double e0 = 0;
+                uint32_t lag;
+                for (i = 44100u; i < 44100u + 8192u; i++)
+                    e0 += (double)rec[i] * rec[i];
+                for (lag = 66u; lag < 882u; lag++) {
+                    double c = 0;
+                    for (i = 44100u; i < 44100u + 8192u; i++)
+                        c += (double)rec[i] * rec[i + lag];
+                    best = c / (e0 + 1) > best ? c / (e0 + 1) : best;
+                }
+            }
+            f[s][2] = 4 * best;
+            f[s][0] = log2(zc / 2.0 + 1);
+        }
+        for (j = 0; j < 4u; j++) {
+            double m = 0;
+            for (s = 0; s < 8u; s++)
+                m += f[s][j] / 8;
+            for (s = 0; s < 8u; s++)
+                sd[j] += (f[s][j] - m) * (f[s][j] - m) / 8;
+            sd[j] = sqrt(sd[j]);
+        }
+        for (a = 0; a < 8u; a++)
+            for (b = a + 1u; b < 8u; b++, np++) {
+                double q = 0;
+                for (j = 0; j < 4u; j++)
+                    q += (f[a][j] - f[b][j]) * (f[a][j] - f[b][j]);
+                dist += sqrt(q);
+            }
+        dist /= np;
+        tot += dist;
+        printf("hivediv %-8s spread: brightness %.2f oct, motion %.2f, pitch clarity %.2f, attack %.2f oct; "
+               "mean distance %.2f\n", HK_NAME[k], sd[0], sd[1], sd[2], sd[3], dist);
+    }
+    printf("hivediv: mean distance over the kinds %.2f\n", tot / HK_N);
+    return fail ? 1 : 0;
+}
+
 /* BRICKLAYER: SHIFT + the envelope key (the key blinks; the track's envelope left as it is); REC its entry (lit,
  * the looper untouched); notes added, spread evenly over LENGTH, played; SHIFT + a key, SHIFT + REC, REC held:
  * notes out; the loops' transposition moving them; the page down and up by holding the key, a short press still
@@ -5265,6 +5512,211 @@ static int cmd_bricks(const char *dir)
         printf("FAIL bricks: the clipboard does not copy it\n"), fail++;
     printf("bricks: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
+}
+
+/* backup.c: the host's side of it -- sessions and a preset listed, read whole, the flash wiped (another firmware),
+ * written back, the store scanned again (a restart): the same records, sessions loading as they were; a record
+ * with a bad body refused */
+static uint8_t bkr[600];
+static uint32_t bkr_n;
+static int bk_serving;                            /* (bkserve: the replies to stdout, as hex) */
+static int bk_wire(const uint8_t *p, uint32_t n)
+{
+    uint32_t i, acc = 0, nb = 0;
+    if (bk_serving) {
+        for (i = 0; i < n; i++)
+            printf("%02x", p[i]);
+        printf("\n");
+        fflush(stdout);
+    }
+    bkr_n = 0;
+    for (i = 1; i + 1u < n; i++) {                   /* (unpacked as the page will) */
+        acc |= (uint32_t)(p[i] & 0x7Fu) << nb;
+        nb += 7u;
+        while (nb >= 8u) {
+            bkr[bkr_n++] = (uint8_t)acc;
+            acc >>= 8;
+            nb -= 8u;
+        }
+    }
+    return 0;
+}
+static uint32_t bk_done_n;
+static void bk_done(uint32_t num) { (void)num; bk_done_n++; }
+static void bk_ask(uint32_t cmd, const uint8_t *b, uint32_t n)
+{
+    static uint8_t m[600];
+    uint32_t i, sm = 0;
+    m[0] = 0, m[1] = 0x59, m[2] = (uint8_t)cmd, m[3] = (uint8_t)n, m[4] = (uint8_t)(n >> 8), m[5] = 0;
+    for (i = 0; i < n; i++)
+        sm += (m[6 + i] = b[i]);
+    m[6 + n] = (uint8_t)~sm;
+    bk_handle(m, 7u + n);
+}
+static int bk_put(uint32_t num, const uint8_t *rec, uint32_t len)   /* a record written back: the last status */
+{
+    uint8_t q[8 + 256];
+    uint32_t off;
+    q[0] = (uint8_t)num, q[1] = (uint8_t)(num >> 8);
+    bk_wr32(q + 2, len);
+    bk_ask(0x52, q, 6);
+    if (bkr[6])
+        return bkr[6];
+    for (off = 0; off < len; off += 256u) {
+        uint32_t c = len - off < 256u ? len - off : 256u;
+        bk_wr32(q, off);
+        memcpy(q + 4, rec + off, c);
+        bk_ask(0x53, q, 4 + c);
+        if (bkr[6])
+            return bkr[6];
+    }
+    bk_ask(0x54, q, 0);
+    return bkr[6];
+}
+static int cmd_backup(void)
+{
+    static uint8_t rec[8][60000];
+    uint32_t fail = 0, nrec, i, num[8], len[8];
+    int8_t want_dist;
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);                                  /* two sessions (one with a loop), a preset */
+    press_btn(B_REC);
+    press_key(0, 1);
+    run_blocks(300, 0);
+    press_key(0, 0);
+    press_btn(B_REC);
+    run_blocks(50, 0);
+    ui.dist[0] = 44;
+    if (ses_save(3) != SES_OK || ses_save(17) != SES_OK || pre_save(0, ENG_FM, 9) != SES_OK)
+        printf("FAIL backup: the store not made\n"), fail++;
+    want_dist = ui.dist[0];
+    bk_ask(0x50, 0, 0);                               /* the list */
+    nrec = bkr[6];
+    printf("backup: %u records listed\n", nrec);
+    if (nrec != 3u)
+        printf("FAIL backup: the list is not the three records\n"), fail++;
+    for (i = 0; i < nrec && i < 8u; i++) {            /* each read whole, 256 bytes at a time */
+        uint32_t off = 0;
+        num[i] = bkr[7 + i * 6] | (uint32_t)bkr[8 + i * 6] << 8;
+        len[i] = bk_rd32(bkr + 9 + i * 6);
+        while (off < len[i]) {
+            uint8_t q[8];
+            uint32_t c;
+            uint8_t keep[600];
+            memcpy(keep, bkr, sizeof keep);
+            q[0] = (uint8_t)num[i], q[1] = (uint8_t)(num[i] >> 8);
+            bk_wr32(q + 2, off);
+            q[6] = 0, q[7] = 1;
+            bk_ask(0x51, q, 8);
+            c = bkr[12] | (uint32_t)bkr[13] << 8;
+            memcpy(rec[i] + off, bkr + 14, c);
+            off += c;
+            memcpy(bkr, keep, sizeof keep);
+            if (!c)
+                break;
+        }
+    }
+    memset(host_flash, 0x5A, sizeof host_flash);      /* another firmware's things over it all */
+    ses_scan(1);
+    ses_fresh(1);
+    if (ses_has(3) || pre_kind(ENG_FM, 9) >= 0)
+        printf("FAIL backup: the flash not wiped\n"), fail++;
+    {   /* a record with a bad body: refused */
+        static uint8_t bad[60000];
+        memcpy(bad, rec[0], len[0]);
+        bad[len[0] - 1u] ^= 0x55u;
+        if (bk_put(num[0], bad, len[0]) != 4)
+            printf("FAIL backup: a damaged record is not refused\n"), fail++;
+    }
+    for (i = 0; i < nrec && i < 8u; i++)
+        if (bk_put(num[i], rec[i], len[i]) != 0)
+            printf("FAIL backup: record %u not written back\n", num[i]), fail++;
+    ses_scan(1);                                      /* a restart */
+    if (!ses_has(3) || !ses_has(17) || pre_kind(ENG_FM, 9) < 0 || bk_done_n != nrec)
+        printf("FAIL backup: the records are not back after a restart\n"), fail++;
+    ui.dist[0] = 0;
+    if (ses_load_slot(3) != SES_OK || ui.dist[0] != want_dist || !loop[0].ntrk)
+        printf("FAIL backup: a session put back does not load as it was\n"), fail++;
+    {   /* the records read again are the same, but for their sequence number and its CRC */
+        uint32_t same = 0;
+        for (i = 0; i < nrec; i++) {
+            int at = ses_find(num[i]);
+            static uint8_t again[60000];
+            if (at < 0)
+                continue;
+            ses_flash_read(SES_LO + ses.sect[at] * SES_SECT, again, len[i]);
+            same += !memcmp(again + 32, rec[i] + 32, len[i] - 32u) && !memcmp(again, rec[i], 12);
+        }
+        if (same != nrec)
+            printf("FAIL backup: the records put back differ\n"), fail++;
+    }
+    printf("backup: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* bkserve: the FM-1's side of the backup page, for tests/web/test_backup.mjs -- a store with two sessions and a
+ * preset; F0..F7 frames in as hex lines (decoded and checked as ota.c's ota_take), the replies out; WIPE (another
+ * firmware over the flash), SCAN (a restart), LOAD n (a session loaded: OK or FAIL) */
+static int cmd_bkserve(void)
+{
+    char line[2048];
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    press_btn(B_REC);
+    press_key(0, 1);
+    run_blocks(300, 0);
+    press_key(0, 0);
+    press_btn(B_REC);
+    run_blocks(50, 0);
+    ses_save(3);
+    ses_save(17);
+    pre_save(0, ENG_FM, 9);
+    pre_save(0, ENG_BAY, 2);
+    bk_serving = 1;
+    printf("READY\n");
+    fflush(stdout);
+    while (fgets(line, sizeof line, stdin)) {
+        static uint8_t w[1024], m[1024];
+        uint32_t n = 0, i, d = 0, acc = 0, nb = 0, sm = 0;
+        if (!strncmp(line, "WIPE", 4)) {
+            memset(host_flash, 0x5A, sizeof host_flash);
+            ses_scan(1);
+            printf("OK\n");
+        } else if (!strncmp(line, "SCAN", 4)) {
+            ses_scan(1);
+            printf("OK\n");
+        } else if (!strncmp(line, "LOAD", 4)) {
+            printf(ses_load_slot((uint32_t)atoi(line + 5)) == SES_OK ? "OK\n" : "FAIL\n");
+        } else {
+            for (i = 0; line[i] && line[i + 1] && line[i] != '\n'; i += 2) {
+                unsigned v;
+                sscanf(line + i, "%2x", &v);
+                w[n++] = (uint8_t)v;
+            }
+            for (i = 1; i + 1u < n; i++) {             /* (ota_unpack7) */
+                acc |= (uint32_t)(w[i] & 0x7Fu) << nb;
+                nb += 7u;
+                while (nb >= 8u) {
+                    m[d++] = (uint8_t)acc;
+                    acc >>= 8;
+                    nb -= 8u;
+                }
+            }
+            for (i = 6; i + 1u < d; i++)
+                sm += m[i];
+            if (d >= 7u && m[0] == 0 && m[1] == 0x59 && (uint32_t)(m[3] | m[4] << 8 | m[5] << 16) + 7u == d &&
+                (uint8_t)~sm == m[d - 1u] && m[2] >= 0x50 && m[2] <= 0x54)
+                bk_handle(m, d);
+            else
+                printf("BAD\n");
+        }
+        fflush(stdout);
+    }
+    return 0;
 }
 
 static int cmd_overdubs(const char *dir)
@@ -5670,8 +6122,16 @@ int main(int argc, char **argv)
         return cmd_vary();
     if (argc >= 3 && !strcmp(argv[1], "bayarea"))
         return cmd_bayarea(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "hivediv"))
+        return cmd_hivediv();
+    if (argc >= 3 && !strcmp(argv[1], "hive"))
+        return cmd_hive(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "bricks"))
         return cmd_bricks(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "bkserve"))
+        return cmd_bkserve();
+    if (argc >= 2 && !strcmp(argv[1], "backup"))
+        return cmd_backup();
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))

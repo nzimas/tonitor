@@ -167,6 +167,10 @@ static void ota_service(void)
     uint32_t d = ota_take();
     if (d == 7u && ota_dec[2] == 0x11)
         ota_reply_identity();
+#ifndef FELUCCA_LOADER
+    else if (d >= 7u && ota_dec[2] >= 0x50 && ota_dec[2] <= 0x54)
+        bk_handle(ota_dec, d);                   /* (TONITOR: the sessions and presets kept on a computer, backup.c) */
+#endif
 }
 
 /* one read request (3 tries x 5 s); data -> dst */

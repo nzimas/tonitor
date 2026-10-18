@@ -188,11 +188,16 @@ static const int8_t PAN_DEF[NLAYER] = {0, 10, -5, 5, -2, 2};   /* (track 1 in th
 enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_DSEND, DIAL_DIST, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
 
 /* the scales: the white keys play their degrees, from the root, up */
-#define NSCALE 9
-static const char *const SCALE_L1[NSCALE] = {"MAJOR", "MINOR", "MINOR", "MINOR", "DORIAN", "MINOR", "WHOLE", "ENIGMATIC", "JAPANESE"};
-static const char *const SCALE_L2[NSCALE] = {"", "NATURAL", "HARMONIC", "MELODIC", "", "PENTA", "TONE", "", "IN"};
-static const uint8_t SCALE_N[NSCALE] = {7, 7, 7, 7, 7, 5, 6, 7, 5};
-static const uint8_t SCALE_STEP[NSCALE][7] = {
+#define NSCALE 23                /* (new ones at the end: sessions keep the number) */
+#define SCALE_MAXN 8
+/* (a long name split over the two lines rather than squeezed past reading: host.c flows checks) */
+static const char *const SCALE_L1[NSCALE] = {"MAJOR", "MINOR", "MINOR", "MINOR", "DORIAN", "MINOR", "WHOLE", "ENIGMATIC", "JAPANESE",
+    "PHRYGIAN", "LYDIAN", "MIXO-", "LOCRIAN", "MAJOR", "BLUES", "HUNGAR-", "DOUBLE", "PHRYGIAN", "JAPANESE",
+    "JAPANESE", "PELOG", "OCTA-", "PROME-"};
+static const char *const SCALE_L2[NSCALE] = {"", "NATURAL", "HARMONIC", "MELODIC", "", "PENTA", "TONE", "", "IN",
+    "", "", "LYDIAN", "", "PENTA", "", "IAN MINOR", "HARMONIC", "DOMINANT", "HIRAJOSHI", "IWATO", "", "TONIC", "THEUS"};
+static const uint8_t SCALE_N[NSCALE] = {7, 7, 7, 7, 7, 5, 6, 7, 5, 7, 7, 7, 7, 5, 6, 7, 7, 7, 5, 5, 5, 8, 6};
+static const uint8_t SCALE_STEP[NSCALE][SCALE_MAXN] = {
     {0, 2, 4, 5, 7, 9, 11},      /* major */
     {0, 2, 3, 5, 7, 8, 10},      /* natural minor */
     {0, 2, 3, 5, 7, 8, 11},      /* harmonic minor */
@@ -202,6 +207,20 @@ static const uint8_t SCALE_STEP[NSCALE][7] = {
     {0, 2, 4, 6, 8, 10},         /* whole tone */
     {0, 1, 4, 6, 8, 10, 11},     /* enigmatic (Verdi's scala enigmatica) */
     {0, 1, 5, 7, 8},             /* in (miyako-bushi): Japan's sorrowful scale, koto and shakuhachi */
+    {0, 1, 3, 5, 7, 8, 10},      /* phrygian */
+    {0, 2, 4, 6, 7, 9, 11},      /* lydian */
+    {0, 2, 4, 5, 7, 9, 10},      /* mixolydian */
+    {0, 1, 3, 5, 6, 8, 10},      /* locrian */
+    {0, 2, 4, 7, 9},             /* major pentatonic */
+    {0, 3, 5, 6, 7, 10},         /* blues (the minor pentatonic and the flat fifth) */
+    {0, 2, 3, 6, 7, 8, 11},      /* hungarian minor */
+    {0, 1, 4, 5, 7, 8, 11},      /* double harmonic (byzantine) */
+    {0, 1, 4, 5, 7, 8, 10},      /* phrygian dominant (the harmonic minor's fifth mode) */
+    {0, 2, 3, 7, 8},             /* hirajoshi */
+    {0, 1, 5, 6, 10},            /* iwato */
+    {0, 1, 3, 7, 8},             /* pelog (selisir), in equal temperament */
+    {0, 1, 3, 4, 6, 7, 9, 10},   /* octatonic, half step first (diminished) */
+    {0, 2, 4, 6, 9, 10},         /* prometheus (Scriabin's mystic chord as a scale) */
 };
 static const char *const NOTE_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 #define SCALE_BASE 48            /* the root's octave: C3 .. B3 on the first key (the layer's octave moves it) */
@@ -551,6 +570,8 @@ static void env_native(uint32_t l, int8_t *v)
         dr_env_adsr(&dr_buf[l][dr_pub[l]], a);
     else if (e == ENG_BAY)
         ba_env_adsr(&ba_buf[l][ba_pub[l]], a);
+    else if (e == ENG_HIVE)
+        hv_env_adsr(&hv_buf[l][hv_pub[l]], a);
     else {
         const rus_design_t *d = &rus_buf[l][rus_pub[l]];
         a[0] = d->att;
@@ -579,7 +600,8 @@ static const char *mac_name(uint32_t l, uint32_t j)
     uint32_t e = ui.engine[l];
     return e == ENG_FM ? fm_mac_name(&fm_buf[l][fm_pub[l]], j) : e == ENG_ANIMA ? an_mac_name(&an_buf[l][an_pub[l]], j)
            : e == ENG_CAL ? cal_mac_name(&cal_buf[l][cal_pub[l]], j) : e == ENG_RUS ? rus_mac_name(&rus_buf[l][rus_pub[l]], j)
-           : e == ENG_DRUID ? dr_mac_name(&dr_buf[l][dr_pub[l]], j) : ba_mac_name(&ba_buf[l][ba_pub[l]], j);
+           : e == ENG_DRUID ? dr_mac_name(&dr_buf[l][dr_pub[l]], j) : e == ENG_BAY ? ba_mac_name(&ba_buf[l][ba_pub[l]], j)
+           : hv_mac_name(&hv_buf[l][hv_pub[l]], j);
 }
 
 /* HOME: a new sound for the layer chosen */
@@ -593,7 +615,8 @@ static void new_sound(int same)                  /* same: of the family (kind, s
                : ui.engine[l] == ENG_CAL   ? (int32_t)cal_buf[l][cal_pub[l]].kind
                : ui.engine[l] == ENG_RUS   ? (int32_t)rus_buf[l][rus_pub[l]].kind
                : ui.engine[l] == ENG_DRUID ? (int32_t)dr_buf[l][dr_pub[l]].kind
-                                           : (int32_t)ba_buf[l][ba_pub[l]].kind;
+               : ui.engine[l] == ENG_BAY   ? (int32_t)ba_buf[l][ba_pub[l]].kind
+                                           : (int32_t)hv_buf[l][hv_pub[l]].kind;
     say(same ? "SAME FAMILY" : "NEW", 900);
     ui.home_until = fm1_ms + 400u;
     ui_draw();                                   /* the message first: an FM patch takes ~30 ms to measure */
@@ -602,7 +625,8 @@ static void new_sound(int same)                  /* same: of the family (kind, s
          : ui.engine[l] == ENG_CAL   ? new_cal(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_RUS   ? new_rus(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_DRUID ? new_druid(l, next_seed(), ui.path[l])
-                                     : new_bay(l, next_seed(), ui.path[l]);
+         : ui.engine[l] == ENG_BAY   ? new_bay(l, next_seed(), ui.path[l])
+                                     : new_hive(l, next_seed(), ui.path[l]);
     new_kind = -1;
     if (!ok)
         say("BUSY", 900);
@@ -1767,7 +1791,8 @@ static void cv_text_in(int32_t x, int32_t w, int32_t band_h, const char *t, uint
 static const char *kind_name(uint32_t e, int32_t k)
 {
     return e == ENG_FM ? FF_NAME[k % FF_N] : e == ENG_ANIMA ? AK_NAME[k % AK_N] : e == ENG_CAL ? CS_NAME[k % CS_N]
-           : e == ENG_RUS ? RK_NAME[k % RK_N] : e == ENG_DRUID ? DK_NAME[k % DK_N] : BK_NAME[k % BK_N];
+           : e == ENG_RUS ? RK_NAME[k % RK_N] : e == ENG_DRUID ? DK_NAME[k % DK_N]
+           : e == ENG_BAY ? BK_NAME[k % BK_N] : HK_NAME[k % HK_N];
 }
 /* the PRESETS page: the engine's name over four slots (the page of the one chosen), the chosen one in white; a
  * full slot's number in red with its sound's name, an empty one grey. Or, asked: OVERWRITE?, the slot, NO | YES */
@@ -2043,8 +2068,10 @@ static void sounds_init(void)
         dr_measure(&dr_buf[l][0]);
         ba_design(&ba_buf[l][0], -1, s * 23u + 13u, PATH_OPEN, GEN_NOW);
         ba_measure(&ba_buf[l][0]);
+        hv_design(&hv_buf[l][0], -1, s * 29u + 17u, PATH_OPEN, GEN_NOW);
+        hv_measure(&hv_buf[l][0]);
         fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
-        cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = dr_pub[l] = dr_use[l] = ba_pub[l] = ba_use[l] = 0;
+        cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = dr_pub[l] = dr_use[l] = ba_pub[l] = ba_use[l] = hv_pub[l] = hv_use[l] = 0;
         gran_profile(l, next_seed());            /* the granulator's character, drawn */
     }
 }

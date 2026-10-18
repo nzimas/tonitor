@@ -39,7 +39,7 @@ static struct {
     uint8_t on[NLAYER];
     int8_t n[NLAYER], speed[NLAYER], base[NLAYER], unst[NLAYER];   /* the knobs: 1 .. 8, 0 .. 100, BB_LO .. BB_HI, 0 .. 100 */
     bb_ball_t b[NLAYER][BB_MAX];
-    uint32_t lit[NLAYER][4][7];  /* a segment hit: lit until then */
+    uint32_t lit[NLAYER][4][SCALE_MAXN];  /* a segment hit: lit until then */
     struct { uint8_t layer, note, form; uint32_t at; } off[BB_OFFS];   /* the notes playing, let go at .at */
     uint32_t t;                  /* fm1_ms of the last step */
     uint32_t hits[4];            /* (the walls' hits, counted: the test reads them) */
@@ -131,7 +131,7 @@ static void bb_hit(uint32_t l, uint32_t j, uint32_t s)
     bb.off[slot].note = (uint8_t)note;
     bb.off[slot].form = (uint8_t)f1;
     bb.off[slot].at = (fm1_ms + len) | 1u;
-    bb.lit[l][j][s % 7u] = (fm1_ms + 150u) | 1u;
+    bb.lit[l][j][s % SCALE_MAXN] = (fm1_ms + 150u) | 1u;
     bb.hits[j]++;
 }
 /* one step of dt ms for track l's balls */

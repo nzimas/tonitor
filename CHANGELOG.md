@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.48
+
+Added
+- HIVE, a seventh engine, ported from the SWARMER machine of DigiRust and extended: per voice, seven
+  oscillators, each sound drawing for each one its place (the note, an octave or fifth, a cluster step, or an
+  inharmonic partial), its share of the detune spread, its wave (sine, triangle, saw, square), its level and the
+  LFO that moves it; slow noise on the pitches; noise; ring modulation; a 4-pole low-, band- or high-pass filter
+  with its own envelope and an LFO; an ADSR; a drive. Twelve kinds: SUB, LEAD, STAB, PAD, DRONE, WASH (after
+  DigiRust's), and CLUSTER, METAL, SPECTRA, GROUND, AIR, TIDES (inharmonic and textural, for non-melodic use).
+  Macros: DETUNE, MOVEMENT, MIX (NOISE on GROUND and AIR), CUTOFF. It is the last position of the PRESETS knob,
+  after BAYAREA, and has its own preset table.
+- 14 scales, after the nine there were (23 in all): phrygian, lydian, mixolydian, locrian, major pentatonic,
+  blues, Hungarian minor, double harmonic, phrygian dominant, hirajoshi, iwato, pelog (selisir, equal
+  temperament), octatonic (half–whole, eight notes) and Prometheus. Sessions keep their scale. Long names are
+  split over the screen's two lines.
+
+Changed
+- Session format 22 (a seventh sound per track). Older sessions load; their tracks get a new HIVE sound.
+
+## 0.47
+
+Changed
+- Generator generation 4 for new sounds. FM IMPACT: six kinds (thud, wooden knock, metal hit, drum skin, debris,
+  falling pitch); the falling pitch, previously on every IMPACT sound, now about one in ten; carrier ratios and
+  the octave vary more. FM GLITCH: five kinds (level chopped by a square or random LFO, feedback crunch with
+  fixed-frequency modulators, pitch steps from the pitch envelope, slow wobble, sample-and-hold pitch); the
+  sample-and-hold pitch stepping, previously on every GLITCH sound, now about one in seven and shallower.
+  The other families and engines are unchanged.
+
+Added
+- Backup page on the website (backup.html): saves every session and both preset tables from the FM-1 to a JSON
+  file and restores them, over Web MIDI. The firmware answers new SysEx commands in the installer's framing
+  (0x50 list, 0x51 read, 0x52/0x53/0x54 write and commit, 256-byte pieces). Restored records are written whole,
+  with a new sequence number, after their head and body CRCs are checked; a record that does not arrive intact
+  is not written. The screen shows RESTORED and the number.
+
+Compatibility
+- Sounds stored as seeds (sessions, presets) regenerate identically for generations 0–3 (checked by a test).
+
 ## 0.46
 
 Changed

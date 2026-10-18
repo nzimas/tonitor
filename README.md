@@ -38,7 +38,7 @@ track in its own colour.
 
 ### Highlights
 
-- **Six sound engines**, chosen per track:
+- **Seven sound engines**, chosen per track:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a lo-fi synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
@@ -52,6 +52,8 @@ track in its own colour.
     dispersion, sympathetic strings, and a modal resonator, plucked, struck, bowed or rattled.
   - **BAYAREA** — a West Coast voice: a morphing oscillator with two FM modulators, a wavefolder, and a low-pass
     gate or a sustaining envelope over resonant low-passes.
+  - **HIVE** — a swarm of seven oscillators per voice, detuned, stacked or on inharmonic partials, moved by
+    slow LFOs and noise, through a 4-pole filter with its own envelope and a drive; melodic kinds and textural ones.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
@@ -59,7 +61,7 @@ track in its own colour.
 - **Latching**: hold notes, press SHIFT, and they sustain as drones while you play on top.
 - Per track: **DJ resonant filter**, **granulator** (dark ↔ scatter), **bit/rate crush**, **distortion**, level, pan and
   a send to a lush **master reverb** (Dattorro plate).
-- **Scales** on the white keys (major, minors, dorian, pentatonic, whole tone, enigmatic, Japanese *in*),
+- **Scales** on the white keys (23: the seven modes, minors, pentatonics, blues, whole tone, octatonic, Hungarian minor, double harmonic, enigmatic, Prometheus, Japanese and Balinese scales),
   any root.
 - **64 session slots** in the FM-1's flash: every track, sound, loop and setting.
 
@@ -92,7 +94,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | Control | What it does |
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1 2 3 4 5 6**. The chosen track's button is lit; the others glow while they sound. **Held** (0.8 s): **copy** the track, or **paste** the copy onto it — see [Copying a track](#copying-a-track). |
-| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID** or **BAYAREA**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA** or **HIVE**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
 | **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **SHIFT + HOME** | a **new sound of the same family** (kind, species) as the chosen track's sound — to explore a family you like. The screen says SAME FAMILY. |
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
@@ -158,9 +160,10 @@ The macros are chosen for each engine, and for some by the kind of sound:
 | **CALIGULA** | **WAVEFORM**: triangles to squares | **MOD DEPTH**: how deeply the pairs modulate each other | **FEEDBACK** (total feedback and drive) — or **DELAY** for SPORE, VEIL, LITANY and MOTH | **TOUCHES**: how busy the hand is, its touches and bursts — or **GATE RATE** (the gates' speed) for HIVE, MOTH and WIRE |
 | **DRUID** | **STRUCTURE**: on a string, its dispersion (below a quarter, a buzzing bridge; above, the partials stretched, then noise in the period); on sympathetic strings, the intervals they are tuned to; on a body, how its partials are spaced, from squeezed through harmonic to bell-like | **BRIGHTNESS**: the exciter's low-pass and the string's or body's high-frequency loss | **DAMPING**: how long it rings, from ~70 ms to ~18 s to -60 dB, and above 0.95 on without decay | **POSITION**: where it is plucked or struck and where it is picked up — which partials sound |
 | **BAYAREA** | **SHAPE**: the oscillator from sine through triangle and square to saw | **FOLDS**: the wavefolder's drive | **FM**: both modulators' depth | **DECAY**: the gate's decay, or the sustain's release, from an eighth to eight times the sound's own |
+| **HIVE** | **DETUNE**: the swarm's spread around its places, from none to twice the sound's own | **MOVEMENT**: the LFOs' depth on the pitches, the levels and the filter, from none to twice | **MIX**: the swarm against the main oscillator — or **NOISE** on GROUND and AIR | **CUTOFF**: the filter's cutoff |
 | **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **RANDOMNESS**: how much chance drives it; above the middle, stutters too |
 
-Each track keeps the macros of each of its six sounds. **HOME** draws a new sound as it comes (its macros
+Each track keeps the macros of each of its seven sounds. **HOME** draws a new sound as it comes (its macros
 in the middle). Sessions and presets keep the macros with the sound.
 
 ### Envelope
@@ -180,7 +183,7 @@ then let go. The change applies from the next note; once the track's envelope is
 also changes the notes that are sounding.
 
 **HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
-keeps an envelope for each of its six engines. Sessions store them, copying a track copies them, presets do
+keeps an envelope for each of its seven engines. Sessions store them, copying a track copies them, presets do
 not.
 
 ### BALLSY
@@ -194,7 +197,7 @@ also puts it down. A short press of EDIT still turns EDIT on or off.
 One to eight balls move in a box on the screen. Each time a ball hits a wall, it plays a note on the track, as
 a key would: in the scale, with the loops' transposition and chord mode, and recorded by the looper when REC is
 on. Each note's length (50 ms to 1.5 s) and level (from −10 dB to full) are drawn at random; the level applies to
-FM, ANIMA and DRUID (CALIGULA and RUSSOLO play at their own level), and notes the looper records play back at full
+FM, ANIMA, DRUID, BAYAREA and HIVE (CALIGULA and RUSSOLO play at their own level), and notes the looper records play back at full
 level. Each bounce changes the ball's angle at random by up to 12°, kept between 15° and 75° from the walls, so
 the paths change and every wall is reached. Each wall holds the notes of the scale, one segment per step, and the
 segment that is hit lights up. The pitch rises clockwise all the way round, one octave per wall:
@@ -321,7 +324,7 @@ button blinks. Choose another track and hold its button until **PASTED / TRACK n
 track's tone and loops. The clipboard is then empty: the next hold copies again. Holding the copied track's own
 button again copies it again (as it is now), pasting nothing.
 
-What is copied: the **tone** — the engine, the sounds of all six engines with their macros and envelopes, the filter, the
+What is copied: the **tone** — the engine, the sounds of all seven engines with their macros and envelopes, the filter, the
 granulator, the crush, the reverb send, the octave and the generative path — and **all the loops**, every
 overdub, those taken out still out, playing or stopped as they were (pasted, they start from their beginnings).
 The copy is taken when you hold the button: what the track does afterwards is not pasted. The track pasted
@@ -403,6 +406,23 @@ from there across the 16 white keys, so a pentatonic scale spans more than three
 | WHOLE TONE | 0 2 4 6 8 10 |
 | ENIGMATIC | 0 1 4 6 8 10 11 |
 | JAPANESE IN | 0 1 5 7 8 — the *in* (miyako-bushi) scale of the koto and shakuhachi, known for its sorrow |
+| PHRYGIAN | 0 1 3 5 7 8 10 |
+| LYDIAN | 0 2 4 6 7 9 11 |
+| MIXOLYDIAN | 0 2 4 5 7 9 10 |
+| LOCRIAN | 0 1 3 5 6 8 10 |
+| MAJOR PENTA | 0 2 4 7 9 |
+| BLUES | 0 3 5 6 7 10 |
+| HUNGARIAN MINOR | 0 2 3 6 7 8 11 |
+| DOUBLE HARMONIC | 0 1 4 5 7 8 11 (also called Byzantine) |
+| PHRYGIAN DOMINANT | 0 1 4 5 7 8 10 — the fifth mode of the harmonic minor |
+| JAPANESE HIRAJOSHI | 0 2 3 7 8 |
+| JAPANESE IWATO | 0 1 5 6 10 |
+| PELOG | 0 1 3 7 8 — Balinese *selisir*, in equal temperament |
+| OCTATONIC | 0 1 3 4 6 7 9 10 — half step, whole step, alternating (eight notes: the 16 white keys span two octaves) |
+| PROMETHEUS | 0 2 4 6 9 10 — Scriabin's |
+
+The screen splits the longer names over its two lines (MIXO- LYDIAN, HUNGAR- IAN MINOR, OCTA- TONIC, PROME- THEUS)
+rather than squeezing the letters together.
 
 USB MIDI notes are not quantised.
 
@@ -426,9 +446,9 @@ erases flash, which silences the audio for a moment, as a session save does.
 
 The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–64.
 
-A session stores in full the sound of the engine each track is on, and the other three as the seed that
+A session stores in full the sound of the engine each track is on, and the others as the seed that
 made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
-sector of flash. A session is the whole machine: every track's engine and its six sounds, its path, octave, level, pan,
+sector of flash. A session is the whole machine: every track's engine and its seven sounds, its path, octave, level, pan,
 reverb send, filter, granulator (and the character it was drawn with), crush, distortion, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
 the track chosen. They are kept in the
 FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
@@ -439,6 +459,13 @@ each), so sessions and presets saved under an older Tonitor load with the same s
 brings new generators. Erasing flash silences the audio for a moment: a save
 uses blank flash when there is some, and the FM-1 blanks free flash by itself while nothing sounds.
 
+
+**Backing up.** The [backup page](https://nzimas.github.io/tonitor/backup.html) (desktop Chrome, Edge or Opera,
+over USB MIDI; Tonitor 0.47 or later) copies every session and both preset tables from the FM-1 to a file on the
+computer, and writes them back from that file — before trying another firmware, which may erase or overwrite
+them, and after reinstalling Tonitor. Each record is copied whole and checked (its head and body CRCs) before it
+replaces the one with the same number; the others on the FM-1 are kept. The FM-1 shows RESTORED and the number as
+each one arrives.
 ### The granulator
 
 Each track keeps the last half second of its own sound (at 22 kHz, 8-bit mu-law: a little grit is part of
@@ -514,7 +541,7 @@ saved then come back as they were):
 | **METAL** | bells and gongs: many carriers on inharmonic ratios, the high partials dying first |
 | **DRONE** | spectral drones: near-harmonic pairs detuned to beat, an index wandering over minutes |
 | **BRUIT** | noises: feedback and high ratios scattered by a sample-and-hold LFO |
-| **IMPACT** | struck bodies, the pitch falling, the modulators dying before the carriers |
+| **IMPACT** | struck bodies of several kinds: thuds, wooden knocks, metal hits, drum skins (membrane-like partials), debris (heavy feedback, fixed-frequency modulators); the modulators dying before the carriers; the octave sometimes moved; the pitch falling to the note on about one sound in ten |
 | **ITERATIF** | iterative objects: a sound pulsed by its own LFO, square or random |
 | **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly |
 | **SPECTRE** | a spectral arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
@@ -531,7 +558,7 @@ saved then come back as they were):
 | **PLUCK** | plucked strings, bright or dark: the modulators die at once (the attack's brightness), the carriers die away, higher strings quicker |
 | **MALLET** | struck bars — marimba, vibraphone, kalimba: a high modulator's knock, gone at once, the bar ringing on |
 | **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope |
-| **GLITCH** | a quick sample-and-hold stepping the pitch and the level, envelopes chopped short |
+| **GLITCH** | broken, mechanical sounds of several kinds: the level chopped by a square or random LFO, a crunch of heavy feedback with fixed-frequency modulators, the pitch thrown between steps by its envelope, a slow uneven wobble, and now and then a gentle sample-and-hold on the pitch |
 | **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it |
 
 Each patch is then shaped with care: modulators on high ratios turned down (their sidebands alias and
@@ -735,6 +762,52 @@ delay and reverb, keeping only its resonator bank.
 AMBIENT favours BONGO, CHIME, SWELL and DRONE; EXPERIMENTAL favours PLUCK and FOLDED, with more drive and folding
 and other FM ratios more often.
 
+### HIVE — a swarm of oscillators
+
+The seventh engine is a port of the SWARMER machine of DigiRust, contributed by its author, extended here with
+inharmonic and textural kinds. It plays from the shared pool of voices. Each voice has seven oscillators, and each
+sound draws, for every one of them:
+
+- its place relative to the note: the note itself, an octave or a fifth, a step of a cluster (quarter-tones,
+  seconds), or an inharmonic partial (the modes of a free bar, a bell's partials, a stretched harmonic series, or
+  ratios at random);
+- its share of the spread that DETUNE sets (symmetric, clustered, to one side, at random, or in pairs);
+- its wave, a position along sine, triangle, saw and square (neighbouring waves crossfaded);
+- its level, and which of three LFOs moves its pitch and its level, and at what phase. The LFOs' rates are drawn
+  too, from about 0.02 Hz to a few Hz depending on the kind; MOVEMENT scales their depth.
+
+The seventh oscillator is the main one, set against the other six by MIX. Each voice also has a slow noise on
+every oscillator's pitch; how closely it follows the key (fully for the melodic kinds, partly or hardly at all for
+the textural ones); noise; a ring modulation of the first oscillator by the main one; a 4-pole filter (two
+state-variable filters, low-pass, band-pass or high-pass) whose cutoff follows half the key's movement and is swept
+by its own envelope and by the first LFO; an ADSR envelope on the level; and a drive (tanh).
+
+Changed from DigiRust: the waves are computed as they play (the sine from its table, the triangle directly, the
+saw and square band-limited with polyBLEP) instead of read from band-limited tables, which would not fit in RAM
+here; the filter, envelopes and drive are Tonitor's own.
+
+| Kind | |
+| --- | --- |
+| **SUB** | the main oscillator one or two octaves down, short attack; sometimes an octave up in the swarm |
+| **LEAD** | brighter, short attack, resonant |
+| **STAB** | short attack and decay, little or no sustain, a strong filter sweep; sometimes a fifth and an octave in the swarm |
+| **PAD** | slow attack (0.2–3 s), wide detune, long release; sometimes octaves in the swarm |
+| **DRONE** | slower attack, full sustain, long release (1.5–6 s); sometimes fifths and octaves stacked |
+| **WASH** | the slowest attack (0.8–5 s), the longest release (3–9 s), often noise and a moving filter |
+| **CLUSTER** | the oscillators at quarter-tone and semitone steps around the note, slowly beating |
+| **METAL** | inharmonic partials (bar, bell, stretched or random), struck: short attack, a long decay, often a ring modulation |
+| **SPECTRA** | inharmonic partials whose levels and pitches turn slowly (or shimmer), the key hardly followed: a spectrum evolving over seconds |
+| **GROUND** | two octaves down, a dense inharmonic cluster with noise, a slowly moving filter, driven: rumble |
+| **AIR** | filtered noise and one to seven high, drifting whistles, band-pass or high-pass, the filter swept: wind |
+| **TIDES** | the oscillators gliding apart and back by up to five semitones on slow LFOs, sometimes on inharmonic partials |
+
+CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are meant for non-melodic, textural use. On GROUND and AIR the third
+macro is **NOISE** (the noise's level) instead of MIX.
+
+AMBIENT favours PAD, DRONE, WASH, SPECTRA and TIDES, and makes the LFOs slower and the sound darker, the attacks
+longer; EXPERIMENTAL favours STAB, CLUSTER, METAL, GROUND and AIR, and adds more noise to the pitches, more drive
+and, sometimes, a ring modulation.
+
 # Building from source
 
 Once:
@@ -775,7 +848,7 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 ## How it is built
 
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
-`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `druid.c` (DRUID), `bayarea.c` (BAYAREA), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
+`anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `druid.c` (DRUID), `bayarea.c` (BAYAREA), `hive.c` (HIVE), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
 the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). Based on Felucca and earlier open FM-1 firmware work: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
@@ -807,6 +880,7 @@ Tonitor is by Nuno Zimas. It stands on the work of others:
 - **RUSSOLO** re-makes, in fixed point, the techniques of
   [**Noisferatu**](https://github.com/rob-scape/noisferatu) by Robert Heel (GPL-3.0).
 - **BAYAREA** is ported from the bayarea opcode of Vascular.
+- **HIVE** is ported from the SWARMER machine of DigiRust.
 - **DRUID** is a fixed-point port of the resonators of [**Mutable Instruments Rings**](https://github.com/pichenettes/eurorack)
   by Émilie Gillet (MIT).
 - **Atkinson Hyperlegible** by the Braille Institute (SIL OFL 1.1) and **Terminus** (SIL OFL 1.1).

@@ -32,8 +32,8 @@ enum { PATH_OPEN, PATH_AMBIENT, PATH_EXP, PATH_N };
 /* the generators' generation: a sound is drawn again from (seed, path, gen) bit for bit, so a sound saved as its
  * seed (sessions, presets) keeps its generation, and every generation stays as it was (tests/golden: 0 is the
  * generators up to 0.20). New sounds are drawn on GEN_NOW. */
-#define GEN_NOW 3u
-#define GEN_N 4u                 /* 0: up to 0.20; 1: 0.21 (more families, kinds, species); 2: FM's ratios as meant; 3: 0.29 (plucks, mallets, warps, glitches, rubber; eight ANIMA kinds more, and breadth) */
+#define GEN_NOW 4u
+#define GEN_N 5u                 /* 0: up to 0.20; 1: 0.21 (more families, kinds, species); 2: FM's ratios as meant; 3: 0.29 (plucks, mallets, warps, glitches, rubber; eight ANIMA kinds more, and breadth); 4: 0.47 (FM's IMPACT and GLITCH more various) */
 /* EDIT's four macros on a sound: -MAC_MAX .. MAC_MAX each, 0 = the sound as it was drawn */
 #define MAC_MAX 64
 #define NMAC 4u

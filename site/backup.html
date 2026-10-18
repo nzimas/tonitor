@@ -1,0 +1,47 @@
+<h1>Back up sessions and presets</h1>
+<p>This page copies the sessions and presets stored on an FM-1 running Tonitor to a file on this computer, and
+  puts them back from that file. Use it before you try another firmware (it may erase or overwrite them): when
+  you reinstall Tonitor, restore the file here. It works in a desktop <b>Chrome, Edge or Opera</b>, over USB
+  MIDI, and needs Tonitor <b>0.47 or later</b> on the FM-1. Nothing is uploaded anywhere: the file stays on this
+  computer.</p>
+
+<div class="panel" aria-live="polite">
+  <p class="status" id="status">Not connected</p>
+  <p class="detail" id="detail">Connect the FM-1 with a USB data cable, switch it on, then find it.</p>
+  <dl class="dev" id="facts" hidden>
+    <dt>On the FM-1</dt><dd id="f-dev"></dd>
+    <dt>In the file</dt><dd id="f-file">no file opened</dd>
+  </dl>
+  <div class="bar" id="bar" hidden><div></div></div>
+  <div class="cta">
+    <button class="btn" id="connect">Find my FM-1</button>
+    <button class="btn primary" id="save" disabled>Save to a file</button>
+  </div>
+</div>
+
+<h2>Restore</h2>
+<div class="panel">
+  <p>Open a backup file, then write it to the FM-1. Every session and preset table in the file
+    replaces the one with the same number on the FM-1; the others on the FM-1 are kept.</p>
+  <div class="cta">
+    <label class="btn" for="file">Open a backup file</label>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+  </div>
+  <label class="check"><input type="checkbox" id="agree">
+    <span>I understand that the sessions and presets in the file replace those with the same numbers on the
+      FM-1.</span></label>
+  <div class="cta">
+    <button class="btn primary" id="restore" disabled>Restore to the FM-1</button>
+  </div>
+</div>
+
+<h2>Notes</h2>
+<ul>
+  <li>Close any other program using MIDI (a DAW, M-VAVE's app), and allow MIDI access when the browser asks:
+    the sessions travel as MIDI system-exclusive messages.</li>
+  <li>The FM-1 keeps playing while this page works, but writing to its flash silences the audio for a moment
+    each time.</li>
+  <li>Each session and preset table is copied whole and checked: one that does not arrive intact is not written.</li>
+</ul>
+<p class="note">The page (<code>js/backup.js</code>) and the part of the firmware that answers it
+  (<code>firmware/src/backup.c</code>) are GPL-3.0, <a href="https://github.com/nzimas/tonitor">on GitHub</a>.</p>

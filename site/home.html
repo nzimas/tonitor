@@ -20,8 +20,8 @@
   <dd>Each with its own engine, sound, octave, level and pan.</dd>
   <dt>Voices</dt>
   <dd>Twelve voices shared by all tracks: each track takes as many as its notes need.</dd>
-  <dt>Six engines</dt>
-  <dd>FM, ANIMA, CALIGULA, RUSSOLO, DRUID and BAYAREA, chosen per track (described <a href="#engines">below</a>).</dd>
+  <dt>Seven engines</dt>
+  <dd>FM, ANIMA, CALIGULA, RUSSOLO, DRUID, BAYAREA and HIVE, chosen per track (described <a href="#engines">below</a>).</dd>
   <dt>Sound generation</dt>
   <dd>HOME generates a new sound for the track from the engine's families of sounds.</dd>
   <dt>Generative paths</dt>
@@ -143,6 +143,16 @@
   envelope and the filter peak by amounts drawn with each sound. Six kinds: BONGO, PLUCK, CHIME, FOLDED, SWELL,
   DRONE. Polyphonic, from the shared pool of voices.</p>
 <p>Macros: <b>SHAPE</b>, <b>FOLDS</b>, <b>FM</b> (both modulators' depth) and <b>DECAY</b>.</p>
+
+<h3>HIVE</h3>
+<p>A swarm of oscillators, ported from the SWARMER machine of DigiRust and extended: per voice, seven oscillators,
+  each placed at the note, an octave or fifth, a cluster step or an inharmonic partial, each with its own wave
+  (sine, triangle, saw or square), level and LFO; slow noise on the pitches, noise, ring modulation, a 4-pole low-,
+  band- or high-pass filter with its own envelope and LFO, an ADSR and a drive. Twelve kinds: SUB, LEAD, STAB,
+  PAD, DRONE and WASH, and the inharmonic, textural CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES for
+  non-melodic use. Polyphonic, from the shared pool of voices.</p>
+<p>Macros: <b>DETUNE</b>, <b>MOVEMENT</b> (the LFOs' depth), <b>MIX</b> (swarm against main; <b>NOISE</b> on
+  GROUND and AIR) and <b>CUTOFF</b>.</p>
 
 <h2>Install</h2>
 <p>The installer runs in a desktop Chrome, Edge or Opera and talks to the FM-1 over USB MIDI. Nothing to
