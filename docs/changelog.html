@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=cc266f0a7c">
+<link rel="stylesheet" href="css/site.css?v=ab61317bf0">
 </head>
 <body>
 <div class="layout">
@@ -26,6 +26,7 @@
       <a href="install.html">Install</a>
       <a href="manual.html">Manual</a>
       <a href="changelog.html" aria-current="page">Changelog</a>
+      <a href="backup.html">Backup</a>
       <a href="projects.html">Other projects</a>
       <a href="https://github.com/nzimas/tonitor">GitHub</a>
     </nav>
@@ -42,6 +43,29 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="048">0.48</h2>
+<p>Added</p>
+<ul>
+<li>HIVE, a seventh engine, ported from the SWARMER machine of DigiRust and extended: per voice, seven oscillators, each sound drawing for each one its place (the note, an octave or fifth, a cluster step, or an inharmonic partial), its share of the detune spread, its wave (sine, triangle, saw, square), its level and the LFO that moves it; slow noise on the pitches; noise; ring modulation; a 4-pole low-, band- or high-pass filter with its own envelope and an LFO; an ADSR; a drive. Twelve kinds: SUB, LEAD, STAB, PAD, DRONE, WASH (after DigiRust's), and CLUSTER, METAL, SPECTRA, GROUND, AIR, TIDES (inharmonic and textural, for non-melodic use). Macros: DETUNE, MOVEMENT, MIX (NOISE on GROUND and AIR), CUTOFF. It is the last position of the PRESETS knob, after BAYAREA, and has its own preset table.</li>
+<li>14 scales, after the nine there were (23 in all): phrygian, lydian, mixolydian, locrian, major pentatonic, blues, Hungarian minor, double harmonic, phrygian dominant, hirajoshi, iwato, pelog (selisir, equal temperament), octatonic (half–whole, eight notes) and Prometheus. Sessions keep their scale. Long names are split over the screen's two lines.</li>
+</ul>
+<p>Changed</p>
+<ul>
+<li>Session format 22 (a seventh sound per track). Older sessions load; their tracks get a new HIVE sound.</li>
+</ul>
+<h2 id="047">0.47</h2>
+<p>Changed</p>
+<ul>
+<li>Generator generation 4 for new sounds. FM IMPACT: six kinds (thud, wooden knock, metal hit, drum skin, debris, falling pitch); the falling pitch, previously on every IMPACT sound, now about one in ten; carrier ratios and the octave vary more. FM GLITCH: five kinds (level chopped by a square or random LFO, feedback crunch with fixed-frequency modulators, pitch steps from the pitch envelope, slow wobble, sample-and-hold pitch); the sample-and-hold pitch stepping, previously on every GLITCH sound, now about one in seven and shallower. The other families and engines are unchanged.</li>
+</ul>
+<p>Added</p>
+<ul>
+<li>Backup page on the website (backup.html): saves every session and both preset tables from the FM-1 to a JSON file and restores them, over Web MIDI. The firmware answers new SysEx commands in the installer's framing (0x50 list, 0x51 read, 0x52/0x53/0x54 write and commit, 256-byte pieces). Restored records are written whole, with a new sequence number, after their head and body CRCs are checked; a record that does not arrive intact is not written. The screen shows RESTORED and the number.</li>
+</ul>
+<p>Compatibility</p>
+<ul>
+<li>Sounds stored as seeds (sessions, presets) regenerate identically for generations 0–3 (checked by a test).</li>
+</ul>
 <h2 id="046">0.46</h2>
 <p>Changed</p>
 <ul>
@@ -341,6 +365,6 @@
     </footer>
   </div>
 </div>
-<script src="js/menu.js?v=cc266f0a7c"></script>
+<script src="js/menu.js?v=ab61317bf0"></script>
 </body>
 </html>
