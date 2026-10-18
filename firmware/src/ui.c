@@ -170,8 +170,9 @@ static struct {
 
 /* ------------------------------------------------------------ notes --- */
 static uint8_t press_vel;                /* the level of the notes pressed now, 1 .. 126 (0: full) -- the balls set it */
-static void note_press(uint32_t l, uint32_t note) { ev_post(EV_ON, l, note, press_vel); }
-static void note_release(uint32_t l, uint32_t note) { ev_post(EV_OFF, l, note, 0); }
+static uint8_t press_seq;                /* the notes pressed now are a sequencer's: the looper does not record them */
+static void note_press(uint32_t l, uint32_t note) { ev_post(EV_ON, l, note, press_vel | (press_seq ? EV_UNHEARD : 0u)); }
+static void note_release(uint32_t l, uint32_t note) { ev_post(EV_OFF, l, note, press_seq ? EV_UNHEARD : 0u); }
 
 static void ui_draw(void);
 static void say(const char *s, uint32_t ms)
@@ -291,6 +292,13 @@ static void chord_press(uint32_t l, uint32_t root, uint32_t f1, int on)
         else
             note_release(l, n[i]);
 }
+/* a note (or chord) of BALLSY's or BRICKLAYER's: played as a key's, but not for the looper (it records the keys) */
+static void seq_press(uint32_t l, uint32_t root, uint32_t f1, int on)
+{
+    press_seq = 1;
+    chord_press(l, root, f1, on);
+    press_seq = 0;
+}
 /* track l's latched notes (and chords) moved by d steps of the scale, as its loops are */
 static void latch_move(uint32_t l, int32_t d)
 {
@@ -329,6 +337,9 @@ static void latch_move(uint32_t l, int32_t d)
 
 #include "balls.c"                       /* (BALLSY, the physics sequencer: SHIFT + EDIT) */
 #include "bricks.c"                      /* (BRICKLAYER, the step sequencer: SHIFT + the envelope key) */
+/* PLAY is the sequencer's on its page (BALLSY's or BRICKLAYER's, up), the looper's on every other */
+static int seq_on(uint32_t l) { return bl.on[l] || bb.on[l]; }
+static int seq_page(void) { return (ui.bl_page && bl.on[ui.sel]) || (ui.bb_page && bb.on[ui.sel]); }
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
 static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
@@ -924,15 +935,26 @@ static void ui_input(void)
         flash(d, "EMPTY", LAYER_COL[ui.sel]);
     }
     if (btn_bit(press, B_PLAY)) {
-        if ((fm1_in.notes >> KEY_SHIFT) & 1u) {  /* SHIFT and PLAY, any layer: every loop stops if one plays, */
-            uint32_t l, playing = 0, kept = 0;   /* else every loop there is starts, together */
+        if ((fm1_in.notes >> KEY_SHIFT) & 1u) {  /* SHIFT and PLAY, any layer: every loop and sequencer stops if */
+            uint32_t l, playing = 0, kept = 0;   /* one plays, else every one there is starts, together */
             for (l = 0; l < NLAYER; l++) {
-                playing |= loop[l].play;
-                kept |= loop[l].ntrk != 0u;
+                playing |= loop[l].play || bl.run[l] || bb.run[l];
+                kept |= loop[l].ntrk != 0u || seq_on(l);
             }
-            if (playing || kept)
+            if (playing || kept) {
                 ev_post(EV_LOOPS, 0, 0, (uint32_t)!playing);
-            say(playing ? "LOOPS OFF" : kept ? "LOOPS ON" : "NO LOOPS", 1200);
+                for (l = 0; l < NLAYER; l++) {
+                    bl_set_run(l, !playing);
+                    bb_set_run(l, !playing);
+                }
+            }
+            say(playing ? "ALL STOPPED" : kept ? "ALL PLAYING" : "NOTHING", 1200);
+        } else if (seq_page()) {                 /* PLAY on a sequencer's page: it starts or stops */
+            int run = !(bl.run[ui.sel] || bb.run[ui.sel]);
+            bl_set_run(ui.sel, run);
+            bb_set_run(ui.sel, run);
+            say(run ? "PLAY" : "STOP", 700);
+            ui.force = 1;
         } else {                                 /* PLAY: let go soon, the loops; held, the overdubs */
             ui.play_down = 1;
             ui.play_t0 = fm1_ms;
@@ -1106,7 +1128,7 @@ static void ui_input(void)
     }
     if ((ch & keys) >> KEY_ENV & 1u) {           /* with SHIFT: BRICKLAYER on (its page up) or off */
         if (((keys >> KEY_SHIFT) & 1u) && !bl.on[ui.sel] && bb.on[ui.sel]) {
-            say("NOT ALLOWED", 1200);             /* (one sequencer a track: BALLSY runs) */
+            say("NOT ALLOWED", 1200);             /* (one sequencer a track: BALLSY there) */
             ui.env_down = 0;
         } else if ((keys >> KEY_SHIFT) & 1u) {
             bl_toggle(ui.sel);
@@ -1140,7 +1162,7 @@ static void ui_input(void)
     }
     if ((ch & keys) >> KEY_EDIT & 1u) {          /* with SHIFT: the chosen track's balls on (their page up) or off */
         if (((keys >> KEY_SHIFT) & 1u) && !bb.on[ui.sel] && bl.on[ui.sel]) {
-            say("NOT ALLOWED", 1200);             /* (one sequencer a track: BRICKLAYER runs) */
+            say("NOT ALLOWED", 1200);             /* (one sequencer a track: BRICKLAYER there) */
             ui.edit_down = 0;
         } else if ((keys >> KEY_SHIFT) & 1u) {
             bb_toggle(ui.sel);
@@ -1264,7 +1286,8 @@ static void ui_leds(void)
             fm1_led_key(PANEL_BTN[B_REC], bl.rec[ui.sel]);
         else
             fm1_led_key(PANEL_BTN[B_REC], p->rec == LR_REC || (p->rec == LR_ARMED && (fm1_ms / 250u) & 1u));
-        fm1_led_key(PANEL_BTN[B_PLAY], p->play && p->ntrk);
+        fm1_led_key(PANEL_BTN[B_PLAY], seq_page() ? (bl.run[ui.sel] || bb.run[ui.sel]) && (fm1_ms / 250u) & 1u   /* (blinking */
+                                                  : p->play && p->ntrk);                               /* as its key) */
     }
     fm1_led_key(PANEL_BTN[B_HOME], (int32_t)(ui.home_until - fm1_ms) > 0);
     fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page);

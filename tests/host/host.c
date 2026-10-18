@@ -4697,6 +4697,14 @@ static int cmd_balls(const char *dir)
         if (a == host_led[14u + KEY_EDIT])
             printf("FAIL balls: EDIT does not blink\n"), fail++;
     }
+    memset(bb.hits, 0, sizeof bb.hits);               /* on, they wait for PLAY */
+    bb_run(1000);
+    if (bb.run[0] || bb.hits[0] + bb.hits[1] + bb.hits[2] + bb.hits[3])
+        printf("FAIL balls: they move before PLAY\n"), fail++;
+    press_btn(B_PLAY);
+    ui_leds();
+    if (!bb.run[0] || !host_led[PANEL_BTN[B_PLAY]] || loop[0].play)
+        printf("FAIL balls: PLAY does not start them (or is not lit, or plays the loops)\n"), fail++;
     n = SCALE_N[ui.scale];
     for (j = 0; j < 4u; j++)                         /* clockwise, rising */
         for (s = 0; s < n; s++) {
@@ -5332,6 +5340,11 @@ static int cmd_bricks(const char *dir)
         if (a == host_led[14u + KEY_ENV])
             printf("FAIL bricks: the envelope key does not blink\n"), fail++;
     }
+    if (bl.run[0])
+        printf("FAIL bricks: it runs before PLAY\n"), fail++;
+    press_btn(B_PLAY);
+    if (!bl.run[0])
+        printf("FAIL bricks: PLAY does not start it\n"), fail++;
     press_btn(B_REC);                                 /* entry on */
     fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
     ui_input();
@@ -5503,8 +5516,76 @@ static int cmd_bricks(const char *dir)
     press_phys(KEY_SHIFT, 0);
     if (bb.on[0] || !bl.on[0] || strcmp(ui.msg, "NOT ALLOWED"))
         printf("FAIL bricks: BALLSY starts beside it\n"), fail++;
+    if (ui.bl_page || ui.bb_page)                     /* PLAY: the sequencer's on its page (blinking), else the looper's */
+        printf("FAIL bricks: its page is up\n"), fail++;
+    press_btn(B_PLAY);
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_PLAY]);
+    ui_input();
+    if (!bl.run[0])
+        printf("FAIL bricks: PLAY off its page stops it\n"), fail++;
+    ui.bl_page = 1;
+    {
+        int a1, a2;
+        ui_leds();
+        a1 = host_led[PANEL_BTN[B_PLAY]];
+        fm1_ms += 250;
+        ui_leds();
+        a2 = host_led[PANEL_BTN[B_PLAY]];
+        if (a1 == a2)
+            printf("FAIL bricks: PLAY does not blink on its page while it plays\n"), fail++;
+    }
+    press_btn(B_PLAY);
+    if (bl.run[0] || strcmp(ui.msg, "STOP"))
+        printf("FAIL bricks: PLAY on its page does not stop it\n"), fail++;
+    press_btn(B_PLAY);
+    if (!bl.run[0])
+        printf("FAIL bricks: PLAY on its page does not start it again\n"), fail++;
+    ui.bl_page = 0;
+    press_phys(KEY_SHIFT, 1);                         /* SHIFT + PLAY: every sequencer and loop stops, then starts */
+    press_btn(B_PLAY);
+    press_phys(KEY_SHIFT, 0);
+    if (bl.run[0] || strcmp(ui.msg, "ALL STOPPED"))
+        printf("FAIL bricks: SHIFT + PLAY does not stop it\n"), fail++;
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_PLAY);
+    press_phys(KEY_SHIFT, 0);
+    if (!bl.run[0] || strcmp(ui.msg, "ALL PLAYING"))
+        printf("FAIL bricks: SHIFT + PLAY does not start it\n"), fail++;
+    {   /* the looper beside it, its page down: a loop recorded, playing; PLAY lit steadily */
+        int a1, a2;
+        bl_add(0, 2, 0);                              /* (two notes for it to play meanwhile) */
+        bl_add(0, 4, 0);
+        press_btn(B_REC);
+        fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+        ui_input();
+        run_blocks(4, 0);
+        press_key(0, 1);
+        for (i = 0; i < 40u; i++) {                   /* (1.5 s: BRICKLAYER plays meanwhile) */
+            run_blocks(50, 0);
+            ui_input();
+        }
+        press_key(0, 0);
+        run_blocks(40, 0);
+        press_btn(B_REC);
+        fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+        ui_input();
+        run_blocks(4, 0);
+        if (!loop[0].ntrk || !loop[0].play || !bl.run[0])
+            printf("FAIL bricks: the looper does not record and play beside it (%u loops)\n", loop[0].ntrk), fail++;
+        if (loop[0].nev != 2u)                        /* (the key's note, on and off: none of BRICKLAYER's) */
+            printf("FAIL bricks: the looper records BRICKLAYER's notes (%u events, not the key's 2)\n", loop[0].nev), fail++;
+        ui_leds();
+        a1 = host_led[PANEL_BTN[B_PLAY]];
+        fm1_ms += 250;
+        ui_leds();
+        a2 = host_led[PANEL_BTN[B_PLAY]];
+        if (!a1 || !a2)
+            printf("FAIL bricks: PLAY is not lit steadily for the loops off its page\n"), fail++;
+        ev_post(EV_LOOP_CLEAR, 0, 0, 0);
+        run_blocks(4, 0);
+    }
     ses_load_slot(1);
-    if (!bl.on[0] || bl.n[0] != 2u || bl.len[0] != 8u || bl.unst[0] != 100)
+    if (!bl.on[0] || !bl.run[0] || bl.n[0] != 2u || bl.len[0] != 8u || bl.unst[0] != 100)
         printf("FAIL bricks: a session does not keep it (%u %u)\n", bl.n[0], bl.len[0]), fail++;
     clip_copy(0);
     clip_paste(2);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * TONITOR: BALLSY, a physics sequencer: bouncing balls, one per track (SHIFT + EDIT, on and off; EDIT blinks while the
- * chosen track's is on). One to eight balls move in a box; each time one hits a wall it plays a note on the
+ * chosen track's is on; on, the balls wait for PLAY, which on their page moves them and holds them still -- elsewhere PLAY is the
+ * looper's). One to eight balls move in a box; each time one hits a wall it plays a note on the
  * track. Each wall holds the scale's notes, one segment a step, an octave apart: from the bottom (the lowest)
  * clockwise -- left, top, right -- the pitch rising all the way round (the bottom from right to left, the left
  * upwards, the top from left to right, the right downwards). By default the bottom is the octave below the
@@ -20,8 +21,8 @@
  * instability (0 .. 100).
  *
  * It runs in the main loop on the milliseconds that have passed (in steps of at most 4 ms), so it keeps time
- * whatever the screen costs; its notes go as a key's do (the scale, the loops' transposition, chords, the
- * loopers recording them). */
+ * whatever the screen costs; its notes go as a key's do (the scale, the loops' transposition, chords), but the
+ * looper does not record them (ui.c seq_press). */
 
 #define BB_MAX 8
 #define BB_ONE (1 << 24)         /* the box's side, Q24 */
@@ -37,6 +38,7 @@ typedef struct {
 } bb_ball_t;
 static struct {
     uint8_t on[NLAYER];
+    uint8_t run[NLAYER];         /* moving (PLAY starts and stops them; on, they wait for PLAY) */
     int8_t n[NLAYER], speed[NLAYER], base[NLAYER], unst[NLAYER];   /* the knobs: 1 .. 8, 0 .. 100, BB_LO .. BB_HI, 0 .. 100 */
     bb_ball_t b[NLAYER][BB_MAX];
     uint32_t lit[NLAYER][4][SCALE_MAXN];  /* a segment hit: lit until then */
@@ -50,7 +52,7 @@ static struct {
 
 static void bb_defaults(uint32_t l)
 {
-    bb.on[l] = 0;
+    bb.on[l] = bb.run[l] = 0;
     bb.n[l] = 1;
     bb.speed[l] = 50;
     bb.base[l] = -1;
@@ -94,7 +96,7 @@ static void bb_release(uint32_t l)
     uint32_t i;
     for (i = 0; i < BB_OFFS; i++)
         if (bb.off[i].at && (l >= NLAYER || bb.off[i].layer == l)) {
-            chord_press(bb.off[i].layer, bb.off[i].note, bb.off[i].form, 0);
+            seq_press(bb.off[i].layer, bb.off[i].note, bb.off[i].form, 0);
             bb.off[i].at = 0;
         }
 }
@@ -110,7 +112,7 @@ static void bb_hit(uint32_t l, uint32_t j, uint32_t s)
     uint32_t len = (50u * exp2_q16(rnd_in(&bb.r, 0, 322000))) >> 16;   /* 50 ms .. 1.5 s (x 2^4.9) */
     for (i = 0; i < BB_OFFS; i++) {                 /* the same note sounding: let go first (struck again) */
         if (bb.off[i].at && bb.off[i].layer == l && bb.off[i].note == note) {
-            chord_press(l, note, bb.off[i].form, 0);
+            seq_press(l, note, bb.off[i].form, 0);
             bb.off[i].at = 0;
         }
     }
@@ -123,9 +125,9 @@ static void bb_hit(uint32_t l, uint32_t j, uint32_t s)
             slot = i;
     }
     if (bb.off[slot].at)
-        chord_press(bb.off[slot].layer, bb.off[slot].note, bb.off[slot].form, 0);
+        seq_press(bb.off[slot].layer, bb.off[slot].note, bb.off[slot].form, 0);
     press_vel = (uint8_t)rnd_in(&bb.r, 40, 126);    /* (-10 dB .. full) */
-    chord_press(l, note, f1, 1);
+    seq_press(l, note, f1, 1);
     press_vel = 0;
     bb.off[slot].layer = (uint8_t)l;
     bb.off[slot].note = (uint8_t)note;
@@ -199,20 +201,28 @@ static void bb_tick(void)
     while (dt > 0) {
         int32_t s = dt > 4 ? 4 : dt;
         for (l = 0; l < NLAYER; l++)
-            if (bb.on[l])
+            if (bb.on[l] && bb.run[l])
                 bb_step(l, s);
         dt -= s;
     }
     for (i = 0; i < BB_OFFS; i++)
         if (bb.off[i].at && (int32_t)(now - bb.off[i].at) >= 0) {
-            chord_press(bb.off[i].layer, bb.off[i].note, bb.off[i].form, 0);
+            seq_press(bb.off[i].layer, bb.off[i].note, bb.off[i].form, 0);
             bb.off[i].at = 0;
         }
 }
-/* SHIFT + EDIT: track l's balls on or off */
+/* PLAY: track l's balls moving on from where they are, or held still */
+static void bb_set_run(uint32_t l, int run)
+{
+    bb.run[l] = (uint8_t)(run && bb.on[l]);
+    if (!bb.run[l])
+        bb_release(l);
+}
+/* SHIFT + EDIT: track l's balls on (in the middle, waiting for PLAY) or off */
 static void bb_toggle(uint32_t l)
 {
     bb.on[l] = (uint8_t)!bb.on[l];
+    bb.run[l] = 0;
     if (bb.on[l]) {
         if (!bb.r.s)
             rnd_seed(&bb.r, fm1_ms ^ 0xB0B5u);

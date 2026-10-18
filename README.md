@@ -103,8 +103,8 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
-| the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up; it acts when let go): KNOB 1–4 set the chosen track's attack, decay, sustain and release. See [Envelope](#envelope). With SHIFT: the chosen track's step sequencer, **BRICKLAYER**, on and off (the key blinks while it runs); **held** (0.6 s) while it runs, its page up or down. See [BRICKLAYER](#bricklayer). |
-| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's physics sequencer, **BALLSY**, on and off (EDIT blinks while it runs); **held** (0.6 s) while it runs, its page up or down. A short press is always EDIT. See [BALLSY](#ballsy). |
+| the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up; it acts when let go): KNOB 1–4 set the chosen track's attack, decay, sustain and release. See [Envelope](#envelope). With SHIFT: the chosen track's step sequencer, **BRICKLAYER**, on and off (the key blinks while it is on; PLAY starts it); **held** (0.6 s) while it is on, its page up or down. See [BRICKLAYER](#bricklayer). |
+| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's physics sequencer, **BALLSY**, on and off (EDIT blinks while it is on; PLAY starts it); **held** (0.6 s) while it is on, its page up or down. A short press is always EDIT. See [BALLSY](#ballsy). |
 | the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
@@ -113,7 +113,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
 | **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one, and now and then, at odds of its own, it is changed or joined: dropped this time round (5 %), late by 5–40 ms (25 %), an octave up or down (8 %), replaced or joined by a note that was not recorded — a step or two of the scale away, or a fifth (8 %), preceded by a grace note a step away (4 %), struck 2–4 times quickly (4 %), joined by a third or fifth above (10 %), echoed 1–4 times 120–400 ms apart, each quieter, sometimes climbing or falling a step each time (15 %); the notes of a chord are sometimes strummed 20–60 ms apart (12 %). Every note stays in the scale. The loops' **pace** is no longer steady either: it rises and falls slowly, and every few seconds on average it halts for a moment and resumes at once, bursts to 2–3× for a moment, grinds to a stop and snaps back, or climbs to 2–2.5× and drops suddenly (not while REC records). Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
 | **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
-| **PLAY** | pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit while they play. **SHIFT and PLAY**, from any track: if any loop plays, every loop on every track stops (LOOPS OFF; the loops are kept); if none plays, every loop there is starts, all together from their starts (LOOPS ON). PLAY alone still starts or stops the chosen track's own. |
+| **PLAY** | on BALLSY's or BRICKLAYER's page: starts or stops that sequencer (PLAY or STOP on the screen; PLAY blinks with the sequencer's key while it plays). On every other page, pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit, steadily, while they play. **SHIFT and PLAY**, from any track: if any loop or sequencer plays, every loop and sequencer on every track stops (ALL STOPPED; the loops are kept); if none plays, every loop and every sequencer that is on starts, all together from their starts (ALL PLAYING). PLAY alone still starts or stops the chosen track's own. |
 | **SELECT** knob | the chosen track's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a track starts at 87 % (0 dB). |
 | **KNOB 1** | the chosen track's **DJ filter**: from the middle (off), left is a resonant **low-pass** coming down from 20 kHz to ~35 Hz, right a resonant **high-pass** going up from 16 Hz to ~12 kHz; the further from the middle, the more resonant. While you turn it, and for a second after, the **whole screen is its dial** (in the track's colour, the mode and cutoff under it: LP 1.2 KHZ). Saved with the session. |
 | **KNOB 2** | the chosen track's **granulator**: the middle is off (as it starts). **Left** towards dark ambient: long, overlapping, slowly drifting grains, pitched down now and then, darkened, fed back on themselves, sometimes frozen. **Right** towards scattering: short, fast grains, their timing, place, pitch and level jittered more and more, reversed, stuttered, full of holes, decimated at the far end. The further from the middle, the more grains and the less of the track. While you turn it, the **whole screen is its dial** (DARK 40, SCATTER 25, OFF). Saved with the session. |
@@ -186,19 +186,31 @@ also changes the notes that are sounding.
 keeps an envelope for each of its seven engines. Sessions store them, copying a track copies them, presets do
 not.
 
+### PLAY, the sequencers and the looper
+
+A track has one sequencer at a time: while its BALLSY is on, SHIFT + the envelope key shows NOT ALLOWED and
+changes nothing, and while its BRICKLAYER is on, SHIFT + EDIT does the same. The looper works beside either.
+
+A sequencer turned on waits for **PLAY**. On the sequencer's page, PLAY starts and stops it, and blinks with the
+sequencer's key while it plays. On every other page PLAY is the looper's, as ever, lit steadily while the
+track's loops play: so with a sequencer playing you can put its page down (or choose the track), record loops
+over it from the keys (the looper records only the keys, never the sequencer's notes), and start and stop them
+with PLAY; bring the sequencer's page up again to start or stop the sequencer.
+
 ### BALLSY
 
 **SHIFT + EDIT** turns on BALLSY, a physics sequencer of bouncing balls, for the chosen track and shows its page; EDIT blinks
-while it runs, and SHIFT + EDIT again turns it off. Each track has its own, and they run at the same time.
-**Holding EDIT** (0.6 s) while the chosen track's balls run puts their page down or up: with the page down the
+while it is on, and SHIFT + EDIT again turns it off. The balls wait in the middle until **PLAY** (on their page) starts
+them; PLAY again holds them still where they are (their notes let go), and PLAY once more moves them on from there.
+Each track has its own, and they run at the same time.
+**Holding EDIT** (0.6 s) while the chosen track's balls are on puts their page down or up: with the page down the
 balls keep playing and the knobs, the screen and the other pages work as usual; a track button or another page
 also puts it down. A short press of EDIT still turns EDIT on or off.
 
 One to eight balls move in a box on the screen. Each time a ball hits a wall, it plays a note on the track, as
-a key would: in the scale, with the loops' transposition and chord mode, and recorded by the looper when REC is
-on. Each note's length (50 ms to 1.5 s) and level (from −10 dB to full) are drawn at random; the level applies to
-FM, ANIMA, DRUID, BAYAREA and HIVE (CALIGULA and RUSSOLO play at their own level), and notes the looper records play back at full
-level. Each bounce changes the ball's angle at random by up to 12°, kept between 15° and 75° from the walls, so
+a key would: in the scale, with the loops' transposition and chord mode. The looper does not record them: it
+records only what is played on the keys. Each note's length (50 ms to 1.5 s) and level (from −10 dB to full) are drawn at random; the level applies to
+FM, ANIMA, DRUID, BAYAREA and HIVE (CALIGULA and RUSSOLO play at their own level). Each bounce changes the ball's angle at random by up to 12°, kept between 15° and 75° from the walls, so
 the paths change and every wall is reached. Each wall holds the notes of the scale, one segment per step, and the
 segment that is hit lights up. The pitch rises clockwise all the way round, one octave per wall:
 
@@ -224,13 +236,10 @@ copying a track copies them.
 
 ### BRICKLAYER
 
-A track runs one sequencer at a time: while its BALLSY runs, SHIFT + the envelope key shows NOT ALLOWED and
-changes nothing, and while its BRICKLAYER runs, SHIFT + EDIT does the same. (The looper is not counted: it runs
-beside either.)
-
 **SHIFT + the envelope key** (the 3rd black key from the right) turns on BRICKLAYER, a step sequencer built a
-note at a time, for the chosen track, and shows its page; the key blinks while it runs, and SHIFT + the key again
-turns it off. **Holding the envelope key** (0.6 s) while it runs puts its page down or up: with the page down it
+note at a time, for the chosen track, and shows its page; the key blinks while it is on, and SHIFT + the key again
+turns it off. It waits for **PLAY** (on its page), which starts it from its first step and, pressed again, stops
+it (its notes let go); notes can be entered whether it plays or not. **Holding the envelope key** (0.6 s) while it is on puts its page down or up: with the page down it
 keeps playing and the knobs, the screen and the other pages work as usual (a track button or another page also
 puts it down). A short press of the key is still the ENVELOPE page. Each track has its own.
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.49
+
+Changed
+- BALLSY and BRICKLAYER wait for PLAY when turned on. On their page PLAY starts and stops them (PLAY or STOP on
+  the screen) and blinks with their key while they play; on every other page PLAY is the looper's, lit
+  steadily while the loops play. BRICKLAYER starts from its first step; BALLSY's balls stop where they are and
+  move on from there. The looper works beside either, and records only notes played on the keys: BALLSY's and
+  BRICKLAYER's notes are no longer recorded.
+- SHIFT + PLAY starts or stops every loop and every sequencer that is on, together (ALL PLAYING, ALL STOPPED).
+- Session format 23: whether each sequencer plays. Older sessions load with their sequencers playing.
+
 ## 0.48
 
 Added

@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * TONITOR: BRICKLAYER, a step sequencer built a note at a time, one per track (SHIFT + the envelope key, on and
- * off; the key blinks while the chosen track's runs; held 0.6 s while it runs, its page up or down).
+ * off; the key blinks while the chosen track's is on; held 0.6 s while it is on, its page up or down). On, it
+ * waits for PLAY: on its page PLAY starts it from its first step and stops it (blinking while it plays); on the
+ * other pages PLAY is the looper's, which runs beside it.
  *
  * On its page REC is the entry: pressed, entry on or off (REC lit while on); while on, each white key adds its
  * note to the end of the sequence (and sounds); SHIFT + a white key takes that note out wherever it is; SHIFT +
@@ -18,13 +20,15 @@
  * On its page the loops' direction and speed keys are its own: REVERSE, PENDULUM, RANDOM (a step drawn at random
  * each time), HALF and DOUBLE SPEED.
  *
- * It runs in the main loop on the milliseconds that have passed, as BALLSY does; its notes go as a key's do. */
+ * It runs in the main loop on the milliseconds that have passed, as BALLSY does; its notes go as a key's do, but
+ * the looper does not record them (ui.c seq_press). */
 
 #define BL_MAX 32
 #define BL_Q 24                  /* notes to come (echoes, stutters) and sounding, waiting for their time */
 
 static struct {
     uint8_t on[NLAYER], n[NLAYER], len[NLAYER];
+    uint8_t run[NLAYER];         /* playing (PLAY starts and stops it; on, it waits for PLAY) */
     int8_t w[NLAYER][BL_MAX], o[NLAYER][BL_MAX];   /* each note: its step of the scale, its octave */
     int8_t rate[NLAYER], harm[NLAYER], unst[NLAYER];   /* 0 .. 100 */
     uint8_t rec[NLAYER];         /* entry on (REC lit, on its page) */
@@ -46,7 +50,7 @@ static struct {
 
 static void bl_defaults(uint32_t l)
 {
-    bl.on[l] = bl.n[l] = bl.rec[l] = bl.pos[l] = 0;
+    bl.on[l] = bl.run[l] = bl.n[l] = bl.rec[l] = bl.pos[l] = 0;
     bl.len[l] = 0;
     bl.rate[l] = 50;
     bl.harm[l] = 0;
@@ -100,7 +104,7 @@ static void bl_play(uint32_t l, uint32_t note, uint32_t vel, uint32_t len, uint3
             if (bl.q[i].on == 2u && (int32_t)(bl.q[i].at - bl.q[slot].at) < 0)
                 slot = i;
         if (bl.q[slot].on == 2u)
-            chord_press(bl.q[slot].layer, bl.q[slot].note, bl.q[slot].form, 0);
+            seq_press(bl.q[slot].layer, bl.q[slot].note, bl.q[slot].form, 0);
     }
     bl.q[slot].layer = (uint8_t)l;
     bl.q[slot].note = (uint8_t)note;
@@ -116,7 +120,7 @@ static void bl_release(uint32_t l)                  /* track l's notes (all trac
     for (i = 0; i < BL_Q; i++)
         if (bl.q[i].on && (l >= NLAYER || bl.q[i].layer == l)) {
             if (bl.q[i].on == 2u)
-                chord_press(bl.q[i].layer, bl.q[i].note, bl.q[i].form, 0);
+                seq_press(bl.q[i].layer, bl.q[i].note, bl.q[i].form, 0);
             bl.q[i].on = 0;
         }
 }
@@ -183,7 +187,7 @@ static void bl_tick(void)
     for (l = 0; l < NLAYER; l++) {
         uint32_t sm;
         int32_t u;
-        if (!bl.on[l] || !bl.n[l])
+        if (!bl.on[l] || !bl.run[l] || !bl.n[l])
             continue;
         if (bl.len[l] < bl.n[l])
             bl.len[l] = bl.n[l];
@@ -223,21 +227,20 @@ static void bl_tick(void)
     for (i = 0; i < BL_Q; i++) {
         if (bl.q[i].on == 1u && (int32_t)(now - bl.q[i].at) >= 0) {
             press_vel = bl.q[i].vel;
-            chord_press(bl.q[i].layer, bl.q[i].note, bl.q[i].form, 1);
+            seq_press(bl.q[i].layer, bl.q[i].note, bl.q[i].form, 1);
             press_vel = 0;
             bl.q[i].on = 2;
             bl.q[i].at = now + bl.q[i].len;
         } else if (bl.q[i].on == 2u && (int32_t)(now - bl.q[i].at) >= 0) {
-            chord_press(bl.q[i].layer, bl.q[i].note, bl.q[i].form, 0);
+            seq_press(bl.q[i].layer, bl.q[i].note, bl.q[i].form, 0);
             bl.q[i].on = 0;
         }
     }
 }
-static void bl_toggle(uint32_t l)                   /* SHIFT + the envelope key */
+static void bl_set_run(uint32_t l, int run)            /* PLAY: started from its first step, or stopped */
 {
-    bl.on[l] = (uint8_t)!bl.on[l];
-    bl.rec[l] = 0;
-    if (bl.on[l]) {
+    bl.run[l] = (uint8_t)(run && bl.on[l]);
+    if (bl.run[l]) {
         bl.pos[l] = bl.last[l] = 0;
         bl.pdir[l] = 1;
         bl.due[l] = fm1_ms;
@@ -245,6 +248,12 @@ static void bl_toggle(uint32_t l)                   /* SHIFT + the envelope key 
         bl.pace[l] = bl.paim[l] = Q16;
     } else
         bl_release(l);
+}
+static void bl_toggle(uint32_t l)                   /* SHIFT + the envelope key: on (waiting for PLAY) or off */
+{
+    bl.on[l] = (uint8_t)!bl.on[l];
+    bl.rec[l] = 0;
+    bl_set_run(l, 0);
 }
 /* entry: a key's note added at the end (white index w at octave o) */
 static void bl_add(uint32_t l, int32_t w, int32_t o)

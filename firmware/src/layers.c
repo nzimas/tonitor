@@ -484,6 +484,7 @@ static void lim_block(int32_t *env, int32_t *g, int32_t *x, uint32_t n)
 /* --------------------------------------------------------- events --- */
 enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK, EV_LOOP_XP, EV_LOOP_MODE };
 typedef struct { uint8_t type, layer, note, val; } ev_t;
+#define EV_UNHEARD 0x80u         /* (EV_ON, EV_OFF: in val, a sequencer's note -- the looper does not record it) */
 #define EVQ 64u
 static ev_t evq[EVQ];
 static volatile uint32_t ev_w, ev_r;
@@ -1412,13 +1413,16 @@ static void events_take(void)        /* audio ISR, at a block start */
         TELE(e.type);
         switch (e.type) {
         case EV_ON:
-            loop_hear(e.layer, 1, e.note);
+            if (!(e.val & EV_UNHEARD))
+                loop_hear(e.layer, 1, e.note);
+            e.val &= 0x7Fu;
             note_vel = (uint8_t)(e.val && e.val < 127u ? e.val : 127u);
             note_on(e.layer, e.note, SRC_KEY);
             note_vel = 127;
             break;
         case EV_OFF:
-            loop_hear(e.layer, 0, e.note);
+            if (!(e.val & EV_UNHEARD))
+                loop_hear(e.layer, 0, e.note);
             note_off(e.layer, e.note, SRC_KEY);
             break;
         case EV_ENGINE:

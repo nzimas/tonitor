@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 22u           /* 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 23u           /* 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -459,6 +459,8 @@ static void ses_emit(void)
     ses_out(bl.o, sizeof bl.o);
     ses_out(bl.dir, NLAYER);
     ses_out(bl.spd, NLAYER);
+    ses_out(bb.run, NLAYER);                            /* (format 23: playing) */
+    ses_out(bl.run, NLAYER);
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -1450,6 +1452,19 @@ static int ses_load(uint32_t i)
                 bl_toggle(l);                           /* (from its first step) */
             } else
                 bl.on[l] = 0;
+        }
+    }
+    {   /* playing or not (before format 23 they played as they were on) */
+        uint8_t brun[NLAYER], lrun[NLAYER];
+        if (h.format >= 23u) {
+            ses_in(brun, NLAYER);
+            ses_in(lrun, NLAYER);
+        } else
+            for (l = 0; l < NLAYER; l++)
+                brun[l] = lrun[l] = 1;
+        for (l = 0; l < NLAYER; l++) {
+            bb_set_run(l, brun[l] != 0);
+            bl_set_run(l, lrun[l] != 0);
         }
     }
     for (l = 0; l < NLAYER; l++) {
