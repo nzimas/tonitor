@@ -42,6 +42,15 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="045">0.45</h2>
+<p>Added</p>
+<ul>
+<li>BRICKLAYER, a step sequencer per track on SHIFT + the envelope key (the key blinks while it runs; holding the key 0.6 s shows or hides its page; a short press is still the ENVELOPE page, now acting on release). On its page REC is the note entry (lit while on): white keys add notes at the end; SHIFT + a white key removes that note; SHIFT + REC removes the last; REC held 1 s empties the sequence. Notes play in order, spread evenly over the length (Euclidean, first note on the first step) and are stored as scale steps, following the loop transposition, scale and root. KNOB 1: length (number of notes to 32 steps). KNOB 2: rate (0.5–16 steps a second). KNOB 3: harmony (diads and triads in the scale). KNOB 4: variation (each note's level, down to −12 dB, and length, ×¼ to ×2, spread at random; pace from ×0.5 to ×2, stops, rushes, stutters, beat repeats, echoes, ghost notes). On its page the loop direction and speed keys (REVERSE, PENDULUM, RANDOM, HALF SPEED, DOUBLE SPEED) are its own, lit while on. Notes last 70 % of a step. The screen shows the steps as cells, eight to a row, the step playing lit. Stored in sessions (format 20) and copied with the track.</li>
+</ul>
+<p>Removed</p>
+<ul>
+<li>SHIFT + the envelope key no longer resets the track's envelope to AS DRAWN; HOME and loading a preset still do.</li>
+</ul>
 <h2 id="044">0.44</h2>
 <p>Fixed</p>
 <ul>
