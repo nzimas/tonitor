@@ -117,90 +117,39 @@
 <h2 id="engines">Engines</h2>
 
 <h3>FM</h3>
-<p>Six-operator frequency modulation in the style of the DX7, built on msfa (the core of Dexed): 32 algorithms,
-  four-rate, four-level envelopes, operators on frequency ratios or fixed frequencies, operator feedback, an LFO
-  and a pitch envelope. HOME generates a patch from one of twenty-two families, among them bells and gongs on
-  inharmonic ratios, slowly beating drones, feedback noise, struck sounds with a falling pitch, sounds pulsed by
-  the LFO, glissandi, formant vowels, odd-harmonic tones, ring-modulated bands, plucked strings, struck bars,
-  and stranger ones: free ratios with a wandering pitch, sample-and-hold steps, bouncing pitch
-  envelopes. Each patch is rendered once when
-  it is generated and its level adjusted to a common loudness. Polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>BRIGHTNESS</b> (modulation index), <b>DETUNE</b> or <b>INHARMONIC</b> (carriers and modulators
-  detuned, or operators moved off their ratios), <b>SATURATION</b> (feedback and saturation, or a low-pass),
-  <b>MOTION</b> (LFO depth and a tremolo).</p>
+<p>Six-operator FM in the style of the DX7, built on msfa (the core of Dexed). Patches are generated from
+  twenty-two families: bells, gongs, drones, noise, impacts, glissandi, plucks and stranger sounds.</p>
+<p>Macros: <b>BRIGHTNESS</b>, <b>DETUNE</b>, <b>SATURATION</b>, <b>MOTION</b>.</p>
 
 <h3>ANIMA</h3>
-<p>A lo-fi engine: each voice is computed at half the sample rate (22.05 kHz, nothing above 11 kHz) and drawn out
-  to the full rate by straight lines. A fixed-point port of the anima opcode from Vascular. A voice has two wavetable oscillators (24 single-cycle
-  tables), an FM pair, a stack of up to four transposed copies, a grain generator, filtered noise, a resonant
-  state-variable filter and a tremolo, followed by a sample-rate reducer, a waveshaper, a four-stage phaser, a
-  second filter and a comb resonator tuned to the note. While a key is held, a simulated finger moves over a
-  virtual surface; its position, pressure, speed and the time it has been down are routed to the voice's
-  parameters through a modulation matrix. The key sets the pitch; the movement changes timbre, level and the
-  resonator. Twenty-two kinds of design, among them plucked strings, reeds, organs, crushed pulses, drifting saws,
-  grain clouds and whistling resonances; polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>TONE</b> (all filter cutoffs, four octaves either way, and the FM's brightness), a macro for the
-  main element of the design (<b>GRAINS</b>, <b>NOISE</b>, <b>FM</b>, <b>FORMANT</b> or <b>DRIVE</b>), <b>RESONATOR</b>
-  (from dry to long ringing), <b>MOTION</b> (from a nearly still hand to a quick one with a
-  tremolo).</p>
+<p>A lo-fi synthesizer ported from Vascular's anima opcode: wavetables, FM, grains, noise, filters and a
+  resonator, all moved by a simulated hand while a key is held. Twenty-two kinds.</p>
+<p>Macros: <b>TONE</b>, a macro for the design's main element, <b>RESONATOR</b>, <b>MOTION</b>.</p>
 
 <h3>CALIGULA</h3>
-<p>Modelled on the architecture of the SOMA LYRA-8, after Miguel Moreno's LIRA-8. Eight oscillators in four
-  pairs, each variable from triangle to square. Each pair is frequency-modulated by its partner, by the other
-  pair on its side, by a pair on the other side or by the engine's own output (total feedback). Two LFOs combined
-  into one modulation source change the modulation depth and can gate pairs on and off. Two short modulated delay
-  lines, a drive stage and the total feedback follow. One voice per track: the key sets the note the eight
-  oscillators are tuned around, in intervals chosen when the sound is generated. While a key is held, a simulated
-  hand touches the eight oscillators' sensors, at irregular times or in repeated patterns, and the engine adds
-  short bursts and occasional rises of feedback and drive. Ten kinds of design.</p>
-<p>Macros: <b>WAVEFORM</b> (triangle to square), <b>MOD DEPTH</b> (modulation depth), <b>FEEDBACK</b> or
-  <b>DELAY</b> (total feedback and drive, or the delay), <b>TOUCHES</b> or <b>GATE RATE</b> (how often the hand
-  touches, or the speed of the gating).</p>
+<p>Eight cross-modulating oscillators after the SOMA LYRA-8 (via Miguel Moreno's LIRA-8), with feedback, delays
+  and a simulated hand on the sensors. One voice per track; ten kinds.</p>
+<p>Macros: <b>WAVEFORM</b>, <b>MOD DEPTH</b>, <b>FEEDBACK</b>, <b>TOUCHES</b>.</p>
 
 <h3>RUSSOLO</h3>
-<p>Noise, logic operations and generated buffers, after the techniques of Robert Heel's Noisferatu. It runs at a
-  third of the sample rate in 10-bit values, then reduces bits and holds samples further. Seventeen kinds in four
-  groups: noise (sample-and-hold noise, random clicks through a low-pass, noise gated by two triangles, clicks
-  ringing on short pitched decays); oscillators combined by NOR, XOR or multiplication, squares modulating
-  squares, and triangles at an inharmonic ratio redrawn on a clock; a generated buffer of noise, saw and silent
-  chunks, read at the key's speed, with random jumps, a wandering window, or its address bits forced, flipped or
-  held; and tones fired by chance on the key's harmonics, a random walk over a scale, and slowly beating chords.
-  The key opens an envelope and sets the pitch or read speed. One voice per track.</p>
-<p>Macros: two parameters specific to the kind (for example <b>RATIO</b> and <b>DRIFT</b>, or <b>DENSITY</b> and
-  <b>CLOCK</b>), <b>CRUSH</b> (bit depth and sample hold) and <b>RANDOMNESS</b> (how much chance drives it; above the
-  middle it also stutters).</p>
+<p>Noise, logic and broken buffers after Robert Heel's Noisferatu, crushed and sample-held. One voice per track;
+  seventeen kinds.</p>
+<p>Macros: two per kind, <b>CRUSH</b>, <b>RANDOMNESS</b>.</p>
 
 <h3>DRUID</h3>
-<p>Strings and resonant bodies: a fixed-point port of the resonators of Mutable Instruments Rings by Émilie
-  Gillet. Three resonators: a Karplus-Strong string (Hermite-interpolated delay line, FIR and state-variable
-  damping, dispersion that stretches the partials or, at low settings, makes the bridge buzz like a sitar's);
-  sympathetic strings (a string and three more tuned to intervals of it, driven by its sound); and a modal
-  resonator of up to 16 partials. As the FM-1 has no audio input, the resonators are excited internally: plucked
-  (Rings' plucker), struck, bowed with noise while the key is held, or rattled by random impacts. Ten kinds:
-  PLUCK, BOWED, STRUCK, SITAR, RATTLE, HARP, DRONE, BELL, BOWL, PLATE. Releasing a key damps the sound by an amount
-  set per sound. Polyphonic, from the shared pool of voices.</p>
-<p>Macros: Rings' four controls, <b>STRUCTURE</b> (dispersion, the sympathetic strings' intervals, or the spacing
-  of the partials), <b>BRIGHTNESS</b>, <b>DAMPING</b> (from about 70 ms to 18 s, and no decay at the top) and
-  <b>POSITION</b> (where it is excited and picked up).</p>
+<p>Strings and resonant bodies ported from Mutable Instruments Rings: a string, sympathetic strings and a modal
+  resonator, plucked, struck, bowed or rattled. Ten kinds.</p>
+<p>Macros: <b>STRUCTURE</b>, <b>BRIGHTNESS</b>, <b>DAMPING</b>, <b>POSITION</b>.</p>
 
 <h3>BAYAREA</h3>
-<p>A West Coast voice, ported from the bayarea opcode of Vascular: an oscillator morphing from sine through
-  triangle and square to saw, frequency-modulated through zero by two sines at ratios of it, a wavefolder, then a
-  low-pass gate (a resonant filter and an amplifier struck together) or a sustaining envelope over two resonant
-  low-passes, a saturating output and a bank of three resonators. An LFO moves the shape, folds, FM depths, the
-  envelope and the filter peak by amounts drawn with each sound. Six kinds: BONGO, PLUCK, CHIME, FOLDED, SWELL,
-  DRONE. Polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>SHAPE</b>, <b>FOLDS</b>, <b>FM</b> (both modulators' depth) and <b>DECAY</b>.</p>
+<p>A West Coast voice ported from Vascular's bayarea opcode: a morphing oscillator, through-zero FM, a wavefolder
+  and a low-pass gate. Six kinds.</p>
+<p>Macros: <b>SHAPE</b>, <b>FOLDS</b>, <b>FM</b>, <b>DECAY</b>.</p>
 
 <h3>HIVE</h3>
-<p>A swarm of oscillators, ported from the SWARMER machine of DigiRust and extended: per voice, seven oscillators,
-  each placed at the note, an octave or fifth, a cluster step or an inharmonic partial, each with its own wave
-  (sine, triangle, saw or square), level and LFO; slow noise on the pitches, noise, ring modulation, a 4-pole low-,
-  band- or high-pass filter with its own envelope and LFO, an ADSR and a drive. Twelve kinds: SUB, LEAD, STAB,
-  PAD, DRONE and WASH, and the inharmonic, textural CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES for
-  non-melodic use. Polyphonic, from the shared pool of voices.</p>
-<p>Macros: <b>DETUNE</b>, <b>MOVEMENT</b> (the LFOs' depth), <b>MIX</b> (swarm against main; <b>NOISE</b> on
-  GROUND and AIR) and <b>CUTOFF</b>.</p>
+<p>A swarm of seven oscillators per voice, from DigiRust's SWARMER: detuned, stacked or on inharmonic partials,
+  through a moving filter. Twelve kinds, from leads and pads to non-melodic textures.</p>
+<p>Macros: <b>DETUNE</b>, <b>MOVEMENT</b>, <b>MIX</b>, <b>CUTOFF</b>.</p>
 
 <h2>Install</h2>
 <p>The installer runs in a desktop Chrome, Edge or Opera and talks to the FM-1 over USB MIDI. Nothing to
