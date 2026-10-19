@@ -1,0 +1,21 @@
+<h1>Contact</h1>
+<p>Questions, bug reports and ideas are welcome by email. To keep the address away from spam robots, it is shown
+  only after you answer the question below.</p>
+
+<form class="panel contact" id="contact-check" data-subject="Tonitor">
+  <label for="contact-answer">What is <b id="contact-q">…</b>? Type the answer as a number.</label>
+  <div class="cta">
+    <input id="contact-answer" type="text" inputmode="numeric" autocomplete="off" required>
+    <button class="btn primary" type="submit">Show the address</button>
+  </div>
+  <div class="hp" aria-hidden="true"><label for="contact-website">Leave this empty</label>
+    <input id="contact-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+  <p class="detail" id="contact-msg" aria-live="polite"></p>
+</form>
+
+<div class="panel contact" id="contact-out" hidden>
+  <p><button class="btn primary" id="contact-mail" type="button">Write an email</button></p>
+  <p class="detail">This opens your email program with the subject filled in. The address is
+    <b id="contact-addr"></b>.</p>
+</div>
+<noscript><p>This page needs JavaScript to show the address.</p></noscript>
