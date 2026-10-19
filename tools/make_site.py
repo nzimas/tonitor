@@ -166,7 +166,7 @@ def page(title, current, body, desc, head=""):
     <div class="menu-shade" hidden></div>
     <div class="donate donate-side">
       <a class="btn" href="https://paypal.me/nzimasdev">Donate</a>
-      <p>Tonitor is free. A donation is a voluntary gift, in any amount, through PayPal.</p>
+      <p>Support Tonitor</p>
     </div>
   </aside>
   <div class="content">
@@ -179,7 +179,7 @@ def page(title, current, body, desc, head=""):
       <p>M-VAVE and FM-1 are trademarks of their owner, used only to say which device Tonitor runs on.</p>
       <div class="donate donate-foot">
         <a class="btn" href="https://paypal.me/nzimasdev">Donate</a>
-        <p>Tonitor is free. A donation is a voluntary gift, in any amount, through PayPal.</p>
+        <p>Support Tonitor</p>
       </div>
     </footer>
   </div>
