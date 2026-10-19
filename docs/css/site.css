@@ -190,9 +190,3 @@ main .project h2 { margin: 0; padding: 0; border: 0; font-size: 28px; }
   .features dd { margin-bottom: 10px; }
   main td:first-child { white-space: normal; }
 }
-.contact label { display: block; font-size: 20px; }
-.contact .cta { margin-top: 14px; align-items: center; }
-.contact input { font: inherit; font-size: 22px; width: 7em; padding: 10px 12px; border-radius: 8px; border: 2px solid var(--fg); background: var(--bg); color: var(--fg); }
-.contact .detail { margin-top: 14px; white-space: normal; }
-.contact p { margin: 0; }
-.hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
