@@ -164,14 +164,10 @@ def page(title, current, body, desc, head=""):
       {links}
     </nav>
     <div class="menu-shade" hidden></div>
-    <form class="donate donate-side" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-      <input type="hidden" name="cmd" value="_xclick">
-      <input type="hidden" name="business" value="nzimas.lv@gmail.com">
-      <input type="hidden" name="item_name" value="Support Tonitor">
-      <input type="hidden" name="currency_code" value="EUR">
-      <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" name="submit"
-             title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button">
-    </form>
+    <div class="donate donate-side">
+      <a class="btn" href="https://paypal.me/nzimasdev">Donate</a>
+      <p>Tonitor is free. A donation is a voluntary gift, in any amount, through PayPal.</p>
+    </div>
   </aside>
   <div class="content">
     <main>
@@ -181,14 +177,10 @@ def page(title, current, body, desc, head=""):
       <p>Tonitor is by Nuno Zimas, built on <a href="https://github.com/hugelton/Felucca">Felucca</a>. Firmware: GPL-3.0. Website and logo: MIT.
         <a href="{REPO}">Source on GitHub</a>.</p>
       <p>M-VAVE and FM-1 are trademarks of their owner, used only to say which device Tonitor runs on.</p>
-      <form class="donate donate-foot" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-        <input type="hidden" name="cmd" value="_xclick">
-        <input type="hidden" name="business" value="nzimas.lv@gmail.com">
-        <input type="hidden" name="item_name" value="Support Tonitor">
-        <input type="hidden" name="currency_code" value="EUR">
-        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" name="submit"
-               title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button">
-      </form>
+      <div class="donate donate-foot">
+        <a class="btn" href="https://paypal.me/nzimasdev">Donate</a>
+        <p>Tonitor is free. A donation is a voluntary gift, in any amount, through PayPal.</p>
+      </div>
     </footer>
   </div>
 </div>

@@ -50,8 +50,8 @@ img { max-width: 100%; }
 .side nav a { color: var(--dim); text-decoration: none; padding: 8px 12px; border-radius: 6px; border-left: 3px solid transparent; }
 .side nav a:hover { color: var(--fg); background: var(--bg2); }
 .side nav a[aria-current="page"] { color: var(--fg); background: var(--bg2); border-left-color: var(--l5); font-weight: 700; }
-.donate { margin: auto 0 0; padding-top: 28px; border-top: 1px solid var(--line); display: flex; justify-content: center; }
-.donate input[type="image"] { display: block; }
+.donate { margin: auto 0 0; padding-top: 28px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.donate p { margin: 0; font-size: 16px; line-height: 1.4; color: var(--fg); }
 .donate-foot { display: none; }
 
 .content { flex: 1; min-width: 0; padding: 0 48px; }
