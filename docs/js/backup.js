@@ -41,12 +41,16 @@ function refresh() {
   ui.save.disabled = busy || !onDevice || !onDevice.length;
   ui.restore.disabled = busy || !device || !backup || !ui.agree.checked;
 }
+const SET_NUM = PRE_NUM + 2;   // GLOBAL SETUP's settings (Tonitor 0.51)
+const what = (n) => (n === SET_NUM ? "The global setup" : n >= PRE_NUM ? "The presets" : `Session ${n}`);
 const describe = (recs) => {
   const ses = recs.filter((r) => r.number < PRE_NUM).map((r) => r.number);
-  const pre = recs.some((r) => r.number >= PRE_NUM);
+  const pre = recs.some((r) => r.number >= PRE_NUM && r.number !== SET_NUM);
+  const set = recs.some((r) => r.number === SET_NUM);
   const parts = [];
   parts.push(ses.length ? `${ses.length} session${ses.length > 1 ? "s" : ""} (${ses.join(", ")})` : "no sessions");
   if (pre) parts.push("presets");
+  if (set) parts.push("global setup");
   return parts.join(", ");
 };
 
@@ -100,9 +104,9 @@ async function save() {
     const out = [];
     progress(0);
     for (const rec of onDevice) {
-      say("Reading…", rec.number >= PRE_NUM ? "The presets" : `Session ${rec.number}`);
+      say("Reading…", what(rec.number));
       const bytes = await readOn(device.link, rec, (n) => progress((got += n) / total));
-      out.push({ number: rec.number, kind: rec.number >= PRE_NUM ? "presets" : "session", length: bytes.length, data: b64(bytes) });
+      out.push({ number: rec.number, kind: rec.number === SET_NUM ? "setup" : rec.number >= PRE_NUM ? "presets" : "session", length: bytes.length, data: b64(bytes) });
     }
     const file = { format: "tonitor-backup", version: 1, saved: new Date().toISOString(), records: out };
     const blob = new Blob([JSON.stringify(file, null, 1)], { type: "application/json" });
@@ -157,7 +161,7 @@ async function restore() {
     let sent = 0;
     rprogress(0);
     for (const r of backup) {
-      rsay(`Restoring… ${Math.round((sent / total) * 100)}%`, r.number >= PRE_NUM ? "The presets" : `Session ${r.number}`);
+      rsay(`Restoring… ${Math.round((sent / total) * 100)}%`, what(r.number));
       await writeOn(device.link, r.number, r.bytes, (n) => rprogress((sent += n) / total));
     }
     onDevice = await listOn(device.link);

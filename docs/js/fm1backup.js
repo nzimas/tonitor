@@ -65,7 +65,7 @@ export async function readRecord(link, rec, done = () => {}) {
 export async function writeRecord(link, number, bytes, done = () => {}) {
   const check = (b, what) => {
     if (!b) throw new Error(`The FM-1 stopped answering (${what}).`);
-    if (b[0]) throw new Error(`${number >= PRE_NUM ? "The presets" : "Session " + number}: ${STATUS[b[0]] || "error " + b[0]}.`);
+    if (b[0]) throw new Error(`${number === PRE_NUM + 2 ? "The global setup" : number >= PRE_NUM ? "The presets" : "Session " + number}: ${STATUS[b[0]] || "error " + b[0]}.`);
   };
   check(await ask(link, 0x52, [number & 0xFF, number >> 8, ...w32(bytes.length)], 8000), "making room");
   for (let off = 0; off < bytes.length; off += CHUNK) {
