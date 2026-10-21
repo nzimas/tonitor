@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* USB full-speed device on USB0: a class-compliant USB-MIDI interface.
- * (From Felucca / SLOOP; for TONITOR only the product strings changed: "FM-1 Tonitor".)
+ * (From Felucca / SLOOP; for TONITOR only the product strings changed: "FM-1 Tonitor". From 0.52 its USB audio is
+ * on, at 44.1 kHz, as BIGORNA's build 49.)
  * All SIE traffic happens in usb_poll(), called from the TIMER5 ISR at 2 kHz,
  * so INDEX is never shared and no USB IRQ is needed. MIDI in goes to a ring
  * the audio ISR drains; MIDI out comes from a ring the audio ISR fills.
@@ -72,9 +73,15 @@ static struct {
  * 48..119 with no glitch; one render was once seen 29 frames under the floor: a packet (46) must
  * still be in hand then. */
 #define UA_N 512u                /* ring, frames (16-bit L | R << 16); a power of two */
+#if HALF_FRAMES >= 256u          /* (TONITOR, BIGORNA: 256-frame halves -- the 96 .. 160 band, as above) */
+#define UA_PRIME 128u
+#define UA_LO 96u
+#define UA_HI 160u
+#else
 #define UA_PRIME 104u            /* silence ahead of the first rendered frame */
 #define UA_LO 80u                /* a render may start late: keep a packet and more in hand */
 #define UA_HI 128u
+#endif
 #define UAC_RATE 44100u
 #if FELUCCA_UAC_48K
 /* 48 kHz: the same times in 48 kHz frames (x 160 / 147); a render of HALF_FRAMES gives 139..140 frames */
@@ -89,7 +96,11 @@ _Static_assert(UA_HI48 + UA_REND48 + UA_MAXF < UA_N, "the ring holds the band, a
 #endif
 #define UAC_MAXP (UA_MAXF * 4u)
 _Static_assert(UA_HI + HALF_FRAMES + UA_MAXF < UA_N, "the ring holds the band, a render and a packet");
+#ifdef POOL
+static uint32_t ua_ring[UA_N] POOL;      /* (TONITOR: in the pool -- .data and .bss are nearly full) */
+#else
 static uint32_t ua_ring[UA_N];
+#endif
 static volatile uint32_t ua_w, ua_r;
 static uint32_t ep4tx[UA_MAXF] __attribute__((aligned(4)));
 static struct {

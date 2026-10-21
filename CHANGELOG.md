@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.52
+
+Added
+- USB audio (as BIGORNA's build 49): the FM-1 is a class-compliant USB audio input, "FM-1 Tonitor", carrying its
+  master output, stereo, 16-bit, 44.1 kHz -- as it is rendered, with no resampling. It is Felucca's and SLOOP's USB
+  audio, switched on, fed by the render a block at a time and served at every 1 ms USB frame, also while a half
+  buffer renders. The stream is the master before the MASTER knob: the knob sets the headphone jack's level only.
+  MIDI goes on as before over the same cable. The update loader is unchanged.
+
 ## 0.51
 
 Added

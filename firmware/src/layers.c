@@ -1960,6 +1960,10 @@ static void budget_guard(void)
     }
 }
 
+#if defined(FELUCCA_UAC) && FELUCCA_UAC
+static int32_t usb_blk[2 * CTL];                 /* (the block for USB audio: the master before the MASTER knob, at
+                                                  * unity -- a recording does not follow the headphones' level) */
+#endif
 /* one block: the events, the loops, the work (two cores), the layers, the effects' returns, the master (Q15 stereo,
  * interleaved) */
 static void mix_block(int32_t *out)
@@ -1984,6 +1988,10 @@ static void mix_block(int32_t *out)
     for (i = 0; i < CTL; i++) {
         l_[i] += fx_l[i];                         /* the delay's and the reverb's returns (on the last block's sends) */
         r_[i] += fx_r[i];
+#if defined(FELUCCA_UAC) && FELUCCA_UAC
+        usb_blk[2u * i] = ceiling(l_[i]);
+        usb_blk[2u * i + 1u] = ceiling(r_[i]);
+#endif
         out[2u * i] = ceiling(mulq12(l_[i], master_q12));
         out[2u * i + 1u] = ceiling(mulq12(r_[i], master_q12));
     }
