@@ -7,7 +7,7 @@ typedef struct {
     const char *chars;           /* the characters it has, in order */
     const uint8_t *adv, *bw;     /* advance, bitmap width (from FONT_PAD left of the pen) */
     const uint32_t *off;
-    const uint8_t *data;         /* 4-bit alpha, two pixels a byte */
+    const uint8_t *data;         /* 4-bit alpha, each glyph as runs (tools/gen_font.py) */
 } font_t;
 #include "tonitor_font.h"
 
@@ -131,18 +131,29 @@ static int32_t cv_text(int32_t x, int32_t y, const font_t *f, const char *s, uin
         ramp[a] = swap16((uint32_t)(((br + (r - br) * a / 15) << 11) | ((bgc + (g - bgc) * a / 15) << 5) |
                                     (bb + (b - bb) * a / 15)));
     for (; *s; s++) {
-        int32_t gi = glyph(f, (uint8_t)*s), gx, gy, w = f->bw[gi], bpr = (w + 1) / 2;
+        int32_t gi = glyph(f, (uint8_t)*s), gx, gy, w = f->bw[gi], run = 0;
         const uint8_t *gd = f->data + f->off[gi];
+        uint32_t v = 0;
         for (gy = 0; gy < f->h; gy++) {
-            int32_t py = y + gy - cv_oy;
-            if ((uint32_t)py >= cv_h)
-                continue;
-            for (gx = 0; gx < w; gx++) {
-                int32_t px = x - FONT_PAD + gx;
-                uint32_t v = gd[gy * bpr + gx / 2];
-                v = (gx & 1) ? (v & 15u) : (v >> 4);
-                if (v && (uint32_t)px < cv_w)
-                    cv_px[(uint32_t)py * cv_w + (uint32_t)px] = ramp[v];
+            int32_t py = y + gy - cv_oy, vis = (uint32_t)py < cv_h;
+            for (gx = 0; gx < w;) {          /* the row, a run (or the part of one in it) at a time */
+                int32_t n;
+                if (!run) {
+                    uint32_t b = *gd++;
+                    v = b >> 4;
+                    run = (int32_t)(b & 15u) + 1;
+                    if (run == 16)
+                        run += *gd++;
+                }
+                n = run < w - gx ? run : w - gx;
+                if (v && vis) {
+                    int32_t i, px = x - FONT_PAD + gx;
+                    for (i = 0; i < n; i++, px++)
+                        if ((uint32_t)px < cv_w)
+                            cv_px[(uint32_t)py * cv_w + (uint32_t)px] = ramp[v];
+                }
+                gx += n;
+                run -= n;
             }
         }
         x += f->adv[gi];

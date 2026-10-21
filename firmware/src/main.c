@@ -130,6 +130,8 @@ void fm1_timer5_irq(void)
     }
     if (sub % 5u == 0u)
         owed |= 1u;
+    if (sub % 5u == 2u)
+        uart_midi_poll();                        /* (the TRS jack, 2 kHz, nested in the audio too) */
     if (++sub == 10u)
         sub = 0;
     if (dbg.in_audio) {
@@ -205,7 +207,10 @@ static int bk_wire(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
 static void bk_done(uint32_t num)
 {
     char m[16] = "RESTORED ";
-    if (num >= PRE_NUM)
+    if (num == SET_NUM) {
+        setup_load();                            /* (GLOBAL SETUP's settings: in use at once) */
+        str_cpy(m + 9, "SETUP", 7);
+    } else if (num >= PRE_NUM)
         str_cpy(m + 9, "PRESETS", 7);
     else
         fmt_int(m + 9, (int32_t)num);
@@ -340,8 +345,8 @@ static void bench_blocks(void)
 
 static void fm1_main(void)
 {
-    int32_t knob = 512 * 16;
-    uint32_t healthy_since, t_both = 0;
+    int32_t knob = 512 * 16, batt_acc = 0;
+    uint32_t healthy_since, t_both = 0, batt_at = 0;
     {
         uint32_t f = irq_save();
         flash_ok = FL_FAR(fl_jedec_ram)() == 0x856014u;   /* the expected 1 MiB part */
@@ -350,6 +355,7 @@ static void fm1_main(void)
     if (flash_ok)
         ota_boot_cleanup();                          /* a staging area left by an update */
     ses_scan(flash_ok);                              /* the sessions in flash */
+    setup_load();                                    /* GLOBAL SETUP's settings (MIDI) */
 #if TELEMETRY
     bench_blocks();
 #endif
@@ -370,6 +376,7 @@ static void fm1_main(void)
         say("1 CORE", 4000);
     audio_init();
     usb_start();
+    uart_midi_init();                                /* the TRS MIDI IN jack (before TIMER5: PORTH) */
     fm1_timer5_start(isr_timer5, 4);
     fm1_guard_lock_top();
     fm1_irq_enable_all();
@@ -390,6 +397,14 @@ static void fm1_main(void)
                 knob += (a * 16 - knob) / 8;
                 k10 = (uint32_t)(knob / 16);
                 master_q12 = (int32_t)((k10 * k10) >> 8);   /* 0 .. ~4096 */
+            }
+        }
+        if ((uint32_t)(m - batt_at) >= 20u) {        /* the battery's divider (ADC 3), 50 times a second, smoothed */
+            int32_t b = fm1_adc_read(FM1_ADC_BATT);  /* over ~0.6 s (x32: no step left unreached; BIGORNA's is /32) */
+            batt_at = m;
+            if (b > 0) {
+                batt_acc = batt_acc ? batt_acc + (b * 32 - batt_acc) / 32 : b * 32;
+                batt_raw = batt_acc / 32;
             }
         }
         {   /* OCT- and OCT+ held 5 s: UBOOT, the chip's own updater (a way back whatever happens) */
@@ -413,6 +428,8 @@ static void fm1_main(void)
         if (usb.uboot_req)
             enter_uboot("UBOOT (USB)");
         ui_input();
+        setup_poll();                                /* (GLOBAL SETUP left: its changes written) */
+        midi_poll();                                 /* (the tracks' CCs sent as they change) */
         ui_leds();
         ui_draw();
 #if TELEMETRY

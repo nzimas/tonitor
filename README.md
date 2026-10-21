@@ -95,9 +95,10 @@ FM-1's flash only when you save a session — into a user data area that other f
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1 2 3 4 5 6**. The chosen track's button is lit; the others glow while they sound. **Held** (0.8 s): **copy** the track, or **paste** the copy onto it — see [Copying a track](#copying-a-track). |
 | **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA** or **HIVE**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
+| **SHIFT + PRESETS** | in the track's view, a **new sound of the family before or after** on the track's engine (the family's name shows under the engine). At the first or last family, a new sound of that family again. |
 | **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
 | **SHIFT + HOME** | a **new sound of the same family** (kind, species) as the chosen track's sound — to explore a family you like. The screen says SAME FAMILY. |
-| **OCT− / OCT+** | the chosen track's octave, −3 to +3. OCT− is lit below the middle, OCT+ above. |
+| **OCT− / OCT+** | the chosen track's octave, −3 to +3, shown at the top right of the screen (+1, −2; nothing at 0). OCT− is lit below the middle, OCT+ above. |
 | **SHIFT + OCT− / OCT+** | **every loop** of every track down or up **one step of the scale** (see [the loopers](#the-loopers)). |
 | **SHIFT + a track's button held + OCT− / OCT+** | **that track's loops** only, down or up one step of the scale (TRANSP T3 +2). |
 | the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
@@ -109,9 +110,10 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
 | all black keys | play no notes. They glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT is lit only while held. |
+| **SHIFT + ARP** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)); SHIFT + ARP again, or a track button, goes back. (SHIFT + SAVE before 0.51.) |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
-| **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one, and now and then, at odds of its own, it is changed or joined: dropped this time round (5 %), late by 5–40 ms (25 %), an octave up or down (8 %), replaced or joined by a note that was not recorded — a step or two of the scale away, or a fifth (8 %), preceded by a grace note a step away (4 %), struck 2–4 times quickly (4 %), joined by a third or fifth above (10 %), echoed 1–4 times 120–400 ms apart, each quieter, sometimes climbing or falling a step each time (15 %); the notes of a chord are sometimes strummed 20–60 ms apart (12 %). Every note stays in the scale. The loops' **pace** is no longer steady either: it rises and falls slowly, and every few seconds on average it halts for a moment and resumes at once, bursts to 2–3× for a moment, grinds to a stop and snaps back, or climbs to 2–2.5× and drops suddenly (not while REC records). Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
+| **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen, under the octave and the battery, while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one, and now and then, at odds of its own, it is changed or joined: dropped this time round (5 %), late by 5–40 ms (25 %), an octave up or down (8 %), replaced or joined by a note that was not recorded — a step or two of the scale away, or a fifth (8 %), preceded by a grace note a step away (4 %), struck 2–4 times quickly (4 %), joined by a third or fifth above (10 %), echoed 1–4 times 120–400 ms apart, each quieter, sometimes climbing or falling a step each time (15 %); the notes of a chord are sometimes strummed 20–60 ms apart (12 %). Every note stays in the scale. The loops' **pace** is no longer steady either: it rises and falls slowly, and every few seconds on average it halts for a moment and resumes at once, bursts to 2–3× for a moment, grinds to a stop and snaps back, or climbs to 2–2.5× and drops suddenly (not while REC records). Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
 | **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
 | **PLAY** | on BALLSY's or BRICKLAYER's page: starts or stops that sequencer (PLAY or STOP on the screen; PLAY blinks with the sequencer's key while it plays). On every other page, pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit, steadily, while they play. **SHIFT and PLAY**, from any track: if any loop or sequencer plays, every loop and sequencer on every track stops (ALL STOPPED; the loops are kept); if none plays, every loop and every sequencer that is on starts, all together from their starts (ALL PLAYING). PLAY alone still starts or stops the chosen track's own. |
 | **SELECT** knob | the chosen track's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a track starts at 87 % (0 dB). |
@@ -120,14 +122,14 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **KNOB 3** | the chosen track's **crush**: the middle is off (as it starts). **Left** takes the bit depth down from 16 to 1.5 bits (the sound coarsens, then breaks up, quiet tails gating out); **right** takes the sample rate down from 44.1 kHz to ~300 Hz (metallic aliasing, then a stepped buzz). Both along curves that keep the first half of the way playable; the rate glides, it does not jump. While you turn it, the **whole screen is its dial** (BITS 6.5, RATE 2.6K). After the granulator, before the track's limiter. Saved with the session. |
 | **KNOB 4** | the chosen track's **reverb send**, 0–100 (40 at the start). While you turn it, the **whole screen is its dial** (SEND 40), as for the filter and the granulator. |
 | **SAVE** | the **SESSIONS page**: **PRESETS** turns through the **64 slots** (the number shown very large: **red** when the slot holds a session, faint **grey** with EMPTY under it when it does not; the session loaded says LOADED). **SAVE** on a saved slot **loads** it; on an empty slot it starts a **new session** there: a clean slate, as when the FM-1 is switched on — the loops and latches gone, every track on its first engine with new sounds and its settings at their defaults, the scale, reverb and transposition too (the session you were in stays saved as it was) — and the next save goes there. Either way back to playing. A track button goes back without either. |
-| **SHIFT + SAVE** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)); SHIFT + SAVE again, or a track button, goes back. |
+| **SHIFT + SAVE** | **GLOBAL SETUP**: the FM-1's own settings, MIDI for now (see [Global setup and MIDI](#global-setup-and-midi)). SAVE is lit while it is up; a track button goes back. |
 | **SAVE held** (0.8 s) | **save** into the session loaded or chosen, at once; the whole screen flashes SAVED and the number. With none loaded or chosen yet (just after switching on), the first empty slot is offered: **PRESETS** chooses **NO** / **YES**, **SAVE** answers. **On the SESSIONS page**, SAVE held saves into the slot shown, whatever is loaded: an empty one asks SAVE NEW; one holding a session asks **OVERWRITE?** in red, on **NO** until PRESETS turns it to YES; SAVE answers. |
 | **SEQ** | the **REVERB page** (SEQ lit). There **KNOB 1–4** are **SIZE**, **DECAY**, **DAMP**, **MIX**. SEQ again, or a track button, goes back. |
 | **SHIFT + SEQ** | the **DELAY page** (SEQ lit). There **KNOB 1–4** are **TIME** (20 ms – 2 s), **FEEDBACK**, **DAMP**, **MIX**. SHIFT + SEQ again, SEQ (to the REVERB page) or a track button goes back. See [The delay](#the-delay). |
 | **SHIFT + KNOB 3** | the chosen track's **distortion**, 0–100 (0, off, at the start); its dial reads DISTORTION n and the amount. See [The distortion](#the-distortion). |
 | **SHIFT + KNOB 4** | the chosen track's **delay send**, 0–100 (0 at the start); its dial reads DELAY n / SEND. |
 | **ALGORITHM** knob | the chosen track's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Tracks start spread out: 1 in the middle, 2 half right, 3 and 4 a quarter left and right, 5 and 6 near the middle. |
-| USB MIDI in | notes play the chosen track, as the keys do. |
+| MIDI in (USB, and the TRS jack) | notes play the tracks by channel, CCs set their level, pan, macros, filter and sends (see [Global setup and MIDI](#global-setup-and-midi)). |
 | **MASTER** | the level. |
 
 ### Generative paths
@@ -381,8 +383,10 @@ it.
 
 ### The screen
 
-From top to bottom: the **track number** (very large, in the track's colour), its **engine** (FM or
-ANIMA, in white), the **family of its sound** (in the track's colour). When something changes (NEW,
+From top to bottom: the **track number** (very large, in the track's colour), with the **battery** at the top
+right (three bars green, two green, one amber, one red when low; a white bolt on a computer's USB power, when
+the reading is the supply's, not the battery's -- coarse levels, not a percentage) and the track's **octave**
+to its left (+1, −2; nothing at 0), VAR under them while the loops VARY; its **engine** (in white), the **family of its sound** (in the track's colour). When something changes (NEW,
 OCT +1, LOOP), a black-on-white message replaces the family for a moment. While the chosen track's
 looper is armed the band below the engine flashes **ARMED** in red; while it records it shows **REC**,
 white on red. A message too long for the band at its usual size (EXPERIMENTAL) is drawn a size smaller.
@@ -433,12 +437,43 @@ from there across the 16 white keys, so a pentatonic scale spans more than three
 The screen splits the longer names over its two lines (MIXO- LYDIAN, HUNGAR- IAN MINOR, OCTA- TONIC, PROME- THEUS)
 rather than squeezing the letters together.
 
-USB MIDI notes are not quantised.
+MIDI notes are not quantised.
+
+### Global setup and MIDI
+
+**SHIFT + SAVE** opens **GLOBAL SETUP**, the FM-1's own settings, kept apart from the sessions (a track
+button, or SHIFT + SAVE at its top level, goes back; what changed is kept when you leave). It has one section,
+**MIDI**, for now. **PRESETS** moves through the entries and **SAVE** goes into one; on a setting SAVE puts
+the focus on its value (a white field), PRESETS changes it and SAVE sets it, while **SHIFT + SAVE** leaves it
+as it was, or goes back a level. Each level below the top starts with **BACK**.
+
+| Part | Settings | At the start |
+| --- | --- | --- |
+| **IN CHAN** | TRACK 1 to 6: the channel each track listens to (OFF, 1–16); AUTO: the channel that plays the chosen track | 1 to 6; AUTO 16 |
+| **OUT CHAN** | TRACK 1 to 6: the channel each track sends on (OFF, 1–16) | 1 to 6 |
+| **RECEIVE** | NOTES, CC (ON / OFF) | ON, ON |
+| **SEND** | NOTES, CC (ON / OFF) | OFF, OFF |
+| **PORTS** | USB IN, TRS IN (the 3.5 mm MIDI IN jack, Type A) | ON, ON |
+
+MIDI comes in over USB and on the TRS jack. A note plays every track whose IN channel it is on (and the chosen
+track on the AUTO channel), at its velocity. The CCs a track answers to, on the same channels, and sends when
+SEND CC is on:
+
+| CC | | CC | |
+| --- | --- | --- | --- |
+| 7 | level | 74 | filter (64 off; below, low-pass; above, high-pass) |
+| 10 | pan | 91 | reverb send |
+| 16–19 | the four macros of the track's sound | 92 | delay send |
+
+With SEND NOTES on, each track sends the notes it plays — from the keys, the loops, BALLSY, BRICKLAYER and
+MIDI — on its OUT channel, over USB. With SEND CC on, the values above go out when they change, whatever
+changed them. There is no MIDI clock, transport or program change: Tonitor has no tempo or patterns. The
+Backup page keeps the setup with the sessions and presets.
 
 ### Presets
 
 Each engine has **64 presets**, P1 to P64, for the sounds you want to keep and bring back on any track.
-Hold **SHIFT** and press **SAVE**: the PRESETS page of the chosen track's engine opens, four slots a page.
+Hold **SHIFT** and press **ARP**: the PRESETS page of the chosen track's engine opens, four slots a page.
 **PRESETS** turns through them; a slot holding a sound shows its number in red and the sound's name, an
 empty one EMPTY in grey.
 

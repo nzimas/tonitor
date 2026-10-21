@@ -82,7 +82,7 @@ static struct {
     int8_t mac[NLAYER][NENG][NMAC];   /* the macros on each layer's sound of each engine (0: as drawn) */
     uint32_t latch[NLAYER];      /* the keys latched on each layer (lit while it is chosen) */
     uint8_t latch_note[NLAYER][NKEY];
-    uint8_t midi_layer[128];
+    uint8_t midi_mask[128];      /* each MIDI note held: the tracks it plays on (a bit each; setup.c) */
     uint32_t keys;               /* the keys down last time */
     char msg[16];
     uint32_t msg_until;
@@ -121,6 +121,8 @@ static struct {
     uint8_t ses_yes;             /* the question's answer */
     uint16_t ses_new;            /* the number it asks about */
     uint8_t ses_over;            /* .. and it holds a session: the question is OVERWRITE */
+    uint8_t set_page;            /* GLOBAL SETUP up (setup.c) */
+    int32_t shown_top;           /* (the track view's top corners as drawn: the octave, the battery, VAR) */
     uint8_t pre_page;            /* 0 none, SP_LIST the presets of pre_eng, SP_ASK the question before saving over one */
     uint8_t pre_eng;             /* the engine whose presets they are (the layer's, as SHIFT and SAVE opened them) */
     uint8_t pre_ix;              /* the slot chosen, 1 .. 64 */
@@ -615,21 +617,26 @@ static const char *mac_name(uint32_t l, uint32_t j)
            : hv_mac_name(&hv_buf[l][hv_pub[l]], j);
 }
 
-/* HOME: a new sound for the layer chosen */
-static void new_sound(int same)                  /* same: of the family (kind, species) the track plays now */
+/* the family (kind, species) layer l plays on its engine now */
+static int32_t cur_kind(uint32_t l)
+{
+    return ui.engine[l] == ENG_FM    ? (int32_t)fm_buf[l][fm_pub[l]].family
+           : ui.engine[l] == ENG_ANIMA ? (int32_t)an_buf[l][an_pub[l]].kind
+           : ui.engine[l] == ENG_CAL   ? (int32_t)cal_buf[l][cal_pub[l]].kind
+           : ui.engine[l] == ENG_RUS   ? (int32_t)rus_buf[l][rus_pub[l]].kind
+           : ui.engine[l] == ENG_DRUID ? (int32_t)dr_buf[l][dr_pub[l]].kind
+           : ui.engine[l] == ENG_BAY   ? (int32_t)ba_buf[l][ba_pub[l]].kind
+                                       : (int32_t)hv_buf[l][hv_pub[l]].kind;
+}
+/* a new sound for the layer chosen, of family kind (-1: any); msg said first (0: none, the family's name shows) */
+static void new_sound_of(int32_t kind, const char *msg)
 {
     uint32_t l = ui.sel;
     int ok;
-    new_kind = !same ? -1
-               : ui.engine[l] == ENG_FM    ? (int32_t)fm_buf[l][fm_pub[l]].family
-               : ui.engine[l] == ENG_ANIMA ? (int32_t)an_buf[l][an_pub[l]].kind
-               : ui.engine[l] == ENG_CAL   ? (int32_t)cal_buf[l][cal_pub[l]].kind
-               : ui.engine[l] == ENG_RUS   ? (int32_t)rus_buf[l][rus_pub[l]].kind
-               : ui.engine[l] == ENG_DRUID ? (int32_t)dr_buf[l][dr_pub[l]].kind
-               : ui.engine[l] == ENG_BAY   ? (int32_t)ba_buf[l][ba_pub[l]].kind
-                                           : (int32_t)hv_buf[l][hv_pub[l]].kind;
-    say(same ? "SAME FAMILY" : "NEW", 900);
-    ui.home_until = fm1_ms + 400u;
+    new_kind = kind;
+    if (msg)
+        say(msg, 900);
+    ui.home_until = fm1_ms + (msg ? 400u : 300u);
     ui_draw();                                   /* the message first: an FM patch takes ~30 ms to measure */
     ok = ui.engine[l] == ENG_FM      ? new_fm(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_ANIMA ? new_anima(l, next_seed(), ui.path[l])
@@ -647,6 +654,8 @@ static void new_sound(int same)                  /* same: of the family (kind, s
         mac_apply(l);
     }
 }
+/* HOME: a new sound for the layer chosen; same: of the family it plays now (SHIFT + HOME) */
+static void new_sound(int same) { new_sound_of(same ? cur_kind(ui.sel) : -1, same ? "SAME FAMILY" : "NEW"); }
 
 /* --------------------------------------------------------------- input --- */
 static int32_t enc_take(uint32_t role) { return fm1_enc_take(PANEL_ENC[role]); }
@@ -655,29 +664,13 @@ static int32_t enc_take(uint32_t role) { return fm1_enc_take(PANEL_ENC[role]); }
 static int32_t knob_take(uint32_t role, int sh) { return sh && (role == EN_K3 || role == EN_K4) ? 0 : enc_take(role); }
 static int btn_bit(uint32_t mask, uint32_t label) { return (int)((mask >> PANEL_BTN[label]) & 1u); }
 
-static void midi_take(void)                      /* USB MIDI notes (usb.c's ring) */
-{
-    while (mi_r != mi_w) {
-        uint32_t pkt = midi_in_q[mi_r % MQ], cin = pkt & 15u, note = (pkt >> 16) & 0x7Fu, vel = pkt >> 24 & 0x7Fu;
-#if TELEMETRY
-        if (((pkt >> 8) & 15u) < NLAYER && cin == 9u && vel)
-            ui.sel = (uint8_t)((pkt >> 8) & 15u);   /* (a diagnostic build: the MIDI channel chooses the track) */
-#endif
-        RING_PUBLISH();
-        mi_r++;
-        if (cin == 9u && vel) {
-            if (ui.midi_layer[note] != 0xFFu)
-                note_release(ui.midi_layer[note], note);
-            ui.midi_layer[note] = ui.sel;
-            note_press(ui.sel, note);
-        } else if (cin == 8u || cin == 9u) {
-            if (ui.midi_layer[note] != 0xFFu) {
-                note_release(ui.midi_layer[note], note);
-                ui.midi_layer[note] = 0xFFu;
-            }
-        }
-    }
-}
+/* GLOBAL SETUP and the MIDI in (setup.c, after the sessions') */
+static void setup_open(void);
+static void setup_press(int sh);
+static void setup_preset(int32_t s);
+static void setup_draw(void);
+static void midi_take(void);
+static int32_t batt_raw;                         /* the battery's divider, smoothed (main.c), 0 .. 1023; 0 none yet */
 
 static void ui_input(void)
 {
@@ -703,13 +696,14 @@ static void ui_input(void)
             ui.sel = (uint8_t)l;
             ui.vary_shown = 0;
             ui.env_nat_ok = 0;
-            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page || ui.bl_page) {   /* a layer chosen:
+            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page || ui.bl_page ||
+                ui.set_page) {   /* a layer chosen:
                                                                                                     * back to it */
                 ui.rv_page = 0;
                 ui.env_page = ui.bb_page = ui.bl_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
-                ui.pre_page = 0;
+                ui.pre_page = ui.set_page = 0;
                 ui.force = 1;
             }
         }
@@ -741,19 +735,11 @@ static void ui_input(void)
         ui.fx = fx;
         ui.env_page = ui.bb_page = ui.bl_page = 0;
         ui.ses_page = 0;
-        ui.pre_page = 0;
+        ui.pre_page = ui.set_page = 0;
         ui.sc_page = 0;
         ui.force = 1;
     }
-    if (btn_bit(press, B_ARP)) {
-        ui.sc_page = (uint8_t)!ui.sc_page;
-        ui.rv_page = 0;
-        ui.env_page = ui.bb_page = ui.bl_page = 0;
-        ui.ses_page = 0;
-        ui.pre_page = 0;
-        ui.force = 1;
-    }
-    if (btn_bit(press, B_SAVE) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and SAVE: the presets, or back */
+    if (btn_bit(press, B_ARP) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and ARP: the presets, or back */
         if (ui.pre_page)
             ui.pre_page = 0;
         else {
@@ -761,10 +747,25 @@ static void ui_input(void)
             ui.pre_eng = ui.engine[ui.sel];
             if (!ui.pre_ix)
                 ui.pre_ix = 1;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.set_page = 0;
         }
         ui.force = 1;
-    } else if (btn_bit(press, B_SAVE)) {
+    } else if (btn_bit(press, B_ARP)) {
+        ui.sc_page = (uint8_t)!ui.sc_page;
+        ui.rv_page = 0;
+        ui.env_page = ui.bb_page = ui.bl_page = 0;
+        ui.ses_page = 0;
+        ui.pre_page = ui.set_page = 0;
+        ui.force = 1;
+    }
+    if (btn_bit(press, B_SAVE) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and SAVE: GLOBAL SETUP; in it, back */
+        if (ui.set_page)
+            setup_press(1);
+        else if (!ui.ses_page)
+            setup_open();
+    } else if (btn_bit(press, B_SAVE) && ui.set_page)
+        setup_press(0);                          /* (SAVE in GLOBAL SETUP: into, or set) */
+    else if (btn_bit(press, B_SAVE)) {
         ui.save_t0 = fm1_ms;
         ui.save_down = 1;
         ui.save_long = 0;
@@ -1060,7 +1061,20 @@ static void ui_input(void)
         say(m, 1200);
     }
     s = enc_take(EN_PRESET);
-    if (s && ui.pre_page == SP_LIST) {           /* PRESETS: through the presets */
+    if (s && ui.set_page) {                      /* PRESETS: through GLOBAL SETUP */
+        setup_preset(s);
+        s = 0;
+    } else if (s && sh) {                        /* SHIFT + PRESETS: the family before or after, a new sound of it (the
+                                                  * track's view only) */
+        if (!ui.rv_page && !ui.sc_page && !ui.env_page && !(ui.bb_page && bb.on[ui.sel]) && !(ui.bl_page && bl.on[ui.sel]) &&
+            !ui.pre_page && !ui.ses_page && !ui.ovd) {
+            uint32_t e = ui.engine[ui.sel];
+            int32_t n = e == ENG_FM ? FF_N : e == ENG_ANIMA ? AK_N : e == ENG_CAL ? CS_N : e == ENG_RUS ? RK_N
+                        : e == ENG_DRUID ? DK_N : e == ENG_BAY ? BK_N : HK_N;
+            new_sound_of(clampi(cur_kind(ui.sel) + s, 0, n - 1), 0);   /* (at the first or last: that one again) */
+        }
+        s = 0;
+    } else if (s && ui.pre_page == SP_LIST) {           /* PRESETS: through the presets */
         ui.pre_ix = (uint8_t)clampi((int32_t)ui.pre_ix + s, 1, PRE_SLOTS);
         s = 0;
     } else if (s && ui.pre_page == SP_ASK) {
@@ -1140,7 +1154,7 @@ static void ui_input(void)
             bl_toggle(ui.sel);
             ui.bl_page = bl.on[ui.sel];
             if (ui.bl_page)
-                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bb_page = 0;
+                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.set_page = ui.env_page = ui.bb_page = 0;
             say(bl.on[ui.sel] ? "BRICKLAYER" : "BRICKLAYER OFF", 900);
             ui.force = 1;
             ui.env_down = 0;
@@ -1155,14 +1169,14 @@ static void ui_input(void)
         ui.env_done = 1;
         ui.bl_page = (uint8_t)!ui.bl_page;
         if (ui.bl_page)
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bb_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.set_page = ui.env_page = ui.bb_page = 0;
         ui.force = 1;
     }
     if (ui.env_down && !(keys >> KEY_ENV & 1u)) {   /* let go soon: the ENVELOPE page up or down */
         ui.env_down = 0;
         if (!ui.env_done) {
             ui.env_page = (uint8_t)!ui.env_page;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.bb_page = ui.bl_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.set_page = ui.bb_page = ui.bl_page = 0;
             ui.force = 1;
         }
     }
@@ -1174,7 +1188,7 @@ static void ui_input(void)
             bb_toggle(ui.sel);
             ui.bb_page = bb.on[ui.sel];
             if (ui.bb_page)
-                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bl_page = 0;
+                ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.set_page = ui.env_page = ui.bl_page = 0;
             say(bb.on[ui.sel] ? "BALLSY" : "BALLSY OFF", 900);
             ui.force = 1;
             ui.edit_down = 0;
@@ -1189,7 +1203,7 @@ static void ui_input(void)
         ui.edit_done = 1;
         ui.bb_page = (uint8_t)!ui.bb_page;
         if (ui.bb_page)
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.env_page = ui.bl_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.pre_page = ui.set_page = ui.env_page = ui.bl_page = 0;
         ui.force = 1;
     }
     if (ui.edit_down && !(keys >> KEY_EDIT & 1u)) {   /* let go soon: EDIT on or off */
@@ -1297,6 +1311,7 @@ static void ui_leds(void)
     }
     fm1_led_key(PANEL_BTN[B_HOME], (int32_t)(ui.home_until - fm1_ms) > 0);
     fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page);
+    fm1_led_key(PANEL_BTN[B_SAVE], ui.set_page);   /* (GLOBAL SETUP up) */
     fm1_led_key(PANEL_BTN[B_ARP], ui.sc_page);
     fm1_led_key(PANEL_BTN[B_OCTDN], ui.oct[ui.sel] < 0);
     fm1_led_key(PANEL_BTN[B_OCTUP], ui.oct[ui.sel] > 0);
@@ -1347,13 +1362,54 @@ static void ui_leds(void)
 #define C_REC RGB(255, 30, 30)
 #define C_SEND RGB(140, 190, 255)
 
+/* the battery, top right (0.51, as BIGORNA's build 56): three bars green, two green, one amber, one red when low; a
+ * white bolt on a USB host's power (the reading is then the supply's). MELODEE's thresholds; -1 none yet, 4 USB */
+static int32_t batt_key(void)
+{
+    if (!batt_raw)
+        return -1;
+    if (usb.config && !usb.suspended)
+        return 4;
+    return batt_raw >= 591 ? 3 : batt_raw >= 561 ? 2 : batt_raw >= 531 ? 1 : 0;
+}
+static int32_t draw_batt(int32_t x, int32_t y)   /* (right edge x): the octave's right edge */
+{
+    int32_t k = batt_key(), w = 18, h = 10, x0 = x - w - 3, i;
+    uint16_t c = k >= 2 ? C_OK : k == 1 ? RGB(255, 170, 0) : RGB(255, 40, 40);
+    if (k < 0)
+        return x;
+    cv_rect(x0, y, w, 2, C_WHITE);
+    cv_rect(x0, y + h - 2, w, 2, C_WHITE);
+    cv_rect(x0, y, 2, h, C_WHITE);
+    cv_rect(x0 + w - 2, y, 2, h, C_WHITE);
+    cv_rect(x0 + w, y + 3, 3, h - 6, C_WHITE);
+    if (k == 4) {                                /* (the bolt) */
+        cv_rect(x0 + 8, y + 2, 3, 3, C_WHITE);
+        cv_rect(x0 + 6, y + 4, 6, 2, C_WHITE);
+        cv_rect(x0 + 7, y + 5, 3, 3, C_WHITE);
+    } else
+        for (i = 0; i < (k ? k : 1); i++)
+            cv_rect(x0 + 3 + i * 4, y + 3, 3, 4, c);
+    return x0 - 8;
+}
+static int32_t top_key(void)                     /* (what the top corners show: drawn again when it changes) */
+{
+    return (ui.oct[ui.sel] + 3) * 100 + (batt_key() + 1) * 10 + (int32_t)(ui.vary_shown ? ui.vary_shown - 1u : loop[ui.sel].vary);
+}
 static void draw_number(void)
 {
     char d[2] = {(char)('1' + ui.sel), 0};
+    ui.shown_top = top_key();
     CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK) {
+        int32_t x = draw_batt(237, 2 + ((int32_t)FONT_S.h - 10) / 2);
         cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
-        if (ui.vary_shown ? ui.vary_shown - 1u : loop[ui.sel].vary) {   /* VARY: VAR, top right */
-            cv_text(236 - text_w(&FONT_S, "VAR"), 2, &FONT_S, "VAR", C_WHITE);
+        if (ui.oct[ui.sel]) {                    /* the octave, top right, left of the battery: +1, -2 */
+            int32_t o = ui.oct[ui.sel];
+            char t[3] = {o < 0 ? '-' : '+', (char)('0' + (o < 0 ? -o : o)), 0};
+            cv_text(x - text_w(&FONT_S, t), 2, &FONT_S, t, C_WHITE);
+        }
+        if (ui.vary_shown ? ui.vary_shown - 1u : loop[ui.sel].vary) {   /* VARY: VAR, top right, under them */
+            cv_text(236 - text_w(&FONT_S, "VAR"), 2 + FONT_S.h + 4, &FONT_S, "VAR", C_WHITE);
         }
         if (ui.chord_on[ui.sel]) {               /* chord mode: CHO, top left; the form under it, smaller and dimmer */
             static const char *const AB[CH_N] = {"TRI", "IN1", "IN2", "SU2", "SU4", "OPN", "4TH"};
@@ -1941,6 +1997,14 @@ static void ui_draw(void)
     int32_t px;
     if (draw_flash())
         return;
+    if (ui.set_page) {                           /* GLOBAL SETUP (setup.c) */
+        if (ui.shown_page != 10)
+            ui.force = 1;
+        setup_draw();
+        ui.shown_page = 10;
+        ui.force = 0;
+        return;
+    }
     if ((int32_t)(ui.dial_until - fm1_ms) > 0 && !ui.ses_page && !ui.sc_page && !ui.rv_page && !ui.pre_page && !ui.ovd &&
         !ui.env_page) {
         if (ui.shown_page != 4 ||
@@ -2018,7 +2082,7 @@ static void ui_draw(void)
         c = lp;
         msg = st == LR_REC ? 2 : (fm1_ms / 250u) & 1u ? 2 : 3;
     }
-    if (ui.force || ui.shown_sel != ui.sel) {
+    if (ui.force || ui.shown_sel != ui.sel || ui.shown_top != top_key()) {
         draw_number();
         ui.shown_sel = ui.sel;
         ui.shown_eng = ui.shown_msg = ui.shown_pan = ui.shown_level = -100;   /* the rest follows the layer */
@@ -2047,7 +2111,6 @@ static void ui_init(void)
 {
     uint32_t l;
     memset(&ui, 0, sizeof ui);
-    memset(ui.midi_layer, 0xFF, sizeof ui.midi_layer);
     for (l = 0; l < NLAYER; l++) {
         ui.engine[l] = lay[l].engine;
         ui.level[l] = LEVEL_UNITY;

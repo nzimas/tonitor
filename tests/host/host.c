@@ -113,6 +113,15 @@ static int audio_worker_join(void)
     return 1;
 }
 static void audio_worker_check(void) {}
+/* usb.c's side, as the tests see it: no host attached; what would be sent out kept, for the MIDI tests */
+static struct { uint8_t config, suspended; } usb;
+static uint32_t host_mout[256], host_mout_n;
+static void midi_out_event(uint32_t pkt)
+{
+    if (host_mout_n < 256u)
+        host_mout[host_mout_n] = pkt;
+    host_mout_n++;
+}
 #define MQ 64u
 static uint32_t midi_in_q[MQ];
 static volatile uint32_t mi_w, mi_r;
@@ -146,6 +155,7 @@ static uint8_t host_led[64];
 static void fm1_led_key(uint32_t id, int on) { if (id < 64u) host_led[id] = (uint8_t)!!on; }
 #include "ui.c"
 #include "sessions.c"
+#include "setup.c"
 #include "backup.c"
 
 /* the flash, emulated: NOR (erased to 0xFF, programming only clears bits); erases counted */
@@ -2187,16 +2197,16 @@ static int cmd_paths(const char *dir)
     return fail ? 1 : 0;
 }
 
-/* presets: SHIFT and SAVE opens the layer's engine's; SAVE held saves into the slot chosen (asked over a full one,
- * NO first), SAVE loads; each engine its own 64; they outlive a restart and leave the sessions be; the sound loaded is
- * the sound saved, bit for bit */
+/* presets: SHIFT and ARP opens the layer's engine's (SHIFT and SAVE before 0.51); SAVE held saves into the slot
+ * chosen (asked over a full one, NO first), SAVE loads; each engine its own 64; they outlive a restart and leave the
+ * sessions be; the sound loaded is the sound saved, bit for bit */
 static void shift_save(void)
 {
     press_phys(KEY_SHIFT, 1);
-    host_press |= 1u << PANEL_BTN[B_SAVE];
-    fm1_in.buttons |= 1u << PANEL_BTN[B_SAVE];
+    host_press |= 1u << PANEL_BTN[B_ARP];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_ARP];
     ui_input();
-    fm1_in.buttons &= ~(1u << PANEL_BTN[B_SAVE]);
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_ARP]);
     ui_input();
     press_phys(KEY_SHIFT, 0);
 }
@@ -2216,7 +2226,7 @@ static int cmd_presets(const char *dir)
     keep = fm_buf[0][fm_pub[0]];
     shift_save();
     if (ui.pre_page != SP_LIST || ui.pre_eng != ENG_FM || ui.pre_ix != 1u)
-        printf("FAIL presets: SHIFT and SAVE do not open FM's presets on P1\n"), fail++;
+        printf("FAIL presets: SHIFT and ARP do not open FM's presets on P1\n"), fail++;
     save_btn(900);                                /* P1 empty: saved at once */
     if (pre_kind(ENG_FM, 1) != keep.family || ui.pre_page != SP_LIST)
         printf("FAIL presets: SAVE held did not save into P1 (%d)\n", pre_kind(ENG_FM, 1)), fail++;
@@ -5365,6 +5375,129 @@ static int cmd_cores(int ncores)
     return ncores > 1 && host_jobs < 1000;
 }
 
+/* 0.51: GLOBAL SETUP (SHIFT + SAVE) -- its pages, a value set and kept across a restart; the MIDI in by channel and
+ * port, a CC on a track, the notes sent out; the presets on SHIFT + ARP; SHIFT + PRESETS through the families; the
+ * battery and the octave at the top right */
+static void host_midi(uint32_t pkt)
+{
+    midi_in_q[mi_w % MQ] = pkt;
+    mi_w++;
+}
+static int cmd_setup(void)
+{
+    uint32_t fail = 0, k, found;
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    setup_load();
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_SAVE);
+    press_phys(KEY_SHIFT, 0);
+    setup_poll();                                     /* (the main loop's pass: the page seen up) */
+    ui_draw();
+    ppm("build/screens/screen-30-setup.ppm");
+    if (!ui.set_page)
+        printf("FAIL setup: SHIFT + SAVE does not open GLOBAL SETUP\n"), fail++;
+    press_btn(B_SAVE);                                /* MIDI */
+    host_enc[PANEL_ENC[EN_PRESET]] = 3;               /* IN CHAN -> SEND */
+    ui_input();
+    press_btn(B_SAVE);                                /* SEND: NOTES */
+    press_btn(B_SAVE);                                /* its value .. */
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;               /* .. ON */
+    ui_input();
+    ui_draw();
+    ppm("build/screens/screen-31-setup-value.ppm");
+    press_btn(B_SAVE);                                /* set */
+    if (!mcfg.send_note)
+        printf("FAIL setup: MIDI > SEND > NOTES was not set ON\n"), fail++;
+    for (k = 0; k < 3u; k++) {                        /* back, back, out */
+        press_phys(KEY_SHIFT, 1);
+        press_btn(B_SAVE);
+        press_phys(KEY_SHIFT, 0);
+    }
+    if (ui.set_page)
+        printf("FAIL setup: SHIFT + SAVE does not go back and out\n"), fail++;
+    setup_poll();
+    mcfg.send_note = 0;
+    ses_scan(1);                                      /* (a restart) */
+    setup_load();
+    if (!mcfg.send_note)
+        printf("FAIL setup: the setting is not kept\n"), fail++;
+    /* the MIDI in: channel 3 to track 3, channel 16 to the chosen track, CC 7 to a track's level, the TRS port off */
+    press_btn(LAYER_BTN[1]);
+    host_midi(0x09u | 0x92u << 8 | 60u << 16 | 100u << 24);
+    host_midi(0x09u | 0x9Fu << 8 | 64u << 16 | 100u << 24);
+    host_midi(0x0Bu | 0xB0u << 8 | 7u << 16 | 0u << 24);
+    ui_input();
+    run_blocks(10, 0);
+    for (k = 0, found = 0; k < NVOICE; k++) {
+        found |= (vox[k].gate && vox[k].layer == 2u && vox[k].note == 60u) ? 1u : 0u;
+        found |= (vox[k].gate && vox[k].layer == 1u && vox[k].note == 64u) ? 2u : 0u;
+    }
+    if (found != 3u)
+        printf("FAIL setup: the MIDI notes do not reach their tracks by channel (%u)\n", found), fail++;
+    if (ui.level[0] != 0)
+        printf("FAIL setup: CC 7 does not set track 1's level (%d)\n", ui.level[0]), fail++;
+    host_midi(0x08u | 0x82u << 8 | 60u << 16);
+    host_midi(0x08u | 0x8Fu << 8 | 64u << 16);
+    mcfg.trs_in = 0;
+    host_midi(0x19u | 0x92u << 8 | 67u << 16 | 100u << 24);   /* (cable 1: the jack) */
+    ui_input();
+    run_blocks(10, 0);
+    for (k = 0, found = 0; k < NVOICE; k++)
+        found |= vox[k].gate && (vox[k].note == 60u || vox[k].note == 64u || vox[k].note == 67u);
+    if (found)
+        printf("FAIL setup: a note-off is lost, or the jack is heard with TRS IN off\n"), fail++;
+    mcfg.trs_in = 1;
+    /* the notes out (SEND NOTES on): a key on track 1, its note on and off on channel 1 */
+    press_btn(LAYER_BTN[0]);
+    host_mout_n = 0;
+    press_key(0, 1);
+    run_blocks(10, 0);
+    press_key(0, 0);
+    run_blocks(10, 0);
+    for (k = 0, found = 0; k < host_mout_n && k < 256u; k++)
+        found |= ((host_mout[k] >> 8) & 0xFFu) == 0x90u ? 1u : ((host_mout[k] >> 8) & 0xFFu) == 0x80u ? 2u : 0u;
+    if (found != 3u)
+        printf("FAIL setup: a key's note is not sent on and off (%u packets, %u)\n", host_mout_n, found), fail++;
+    /* the presets: SHIFT + ARP */
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_ARP);
+    press_phys(KEY_SHIFT, 0);
+    if (!ui.pre_page || ui.sc_page)
+        printf("FAIL setup: SHIFT + ARP does not open the presets\n"), fail++;
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_ARP);
+    press_phys(KEY_SHIFT, 0);
+    if (ui.pre_page)
+        printf("FAIL setup: SHIFT + ARP again does not close them\n"), fail++;
+    /* SHIFT + PRESETS: the family after, then (at the last) that one again */
+    {
+        int32_t k0 = cur_kind(0), k1, n = FF_N;
+        press_phys(KEY_SHIFT, 1);
+        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        ui_input();
+        press_phys(KEY_SHIFT, 0);
+        run_blocks(40, 0);
+        k1 = cur_kind(0);
+        if (ui.engine[0] != ENG_FM || k1 != (k0 + 1 < n ? k0 + 1 : n - 1))
+            printf("FAIL setup: SHIFT + PRESETS does not go to the next family (%d -> %d)\n", k0, k1), fail++;
+        printf("setup: SHIFT + PRESETS: %s -> %s\n", FF_NAME[k0 % FF_N], FF_NAME[k1 % FF_N]);
+    }
+    /* the top right: the battery, the octave */
+    batt_raw = 600;
+    ui.oct[0] = 2;
+    ui.force = 1;
+    ui_draw();
+    ppm("build/screens/screen-32-battery-octave.ppm");
+    usb.config = 1;
+    ui_draw();
+    ppm("build/screens/screen-33-battery-usb.ppm");
+    usb.config = 0;
+    printf("setup: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 /* BRICKLAYER: SHIFT + the envelope key (the key blinks; the track's envelope left as it is); REC its entry (lit,
  * the looper untouched); notes added, spread evenly over LENGTH, played; SHIFT + a key, SHIFT + REC, REC held:
  * notes out; the loops' transposition moving them; the page down and up by holding the key, a short press still
@@ -6275,6 +6408,8 @@ int main(int argc, char **argv)
         return cmd_bayarea(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "hivediv"))
         return cmd_hivediv();
+    if (argc >= 2 && !strcmp(argv[1], "setup"))
+        return cmd_setup();
     if (argc >= 3 && !strcmp(argv[1], "cores"))
         return cmd_cores(atoi(argv[2]));
     if (argc >= 3 && !strcmp(argv[1], "hive"))

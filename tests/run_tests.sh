@@ -36,6 +36,7 @@ build/host dist
 build/host druid build/sounds
 build/host bayarea build/sounds
 build/host hive build/sounds
+build/host setup
 c2=$(build/host cores 2)                              # the two cores: the same sound
 c1=$(build/host cores 1)
 echo "$c2"

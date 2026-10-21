@@ -31,6 +31,7 @@
 #define NVOICE 12                /* the voices of all the layers (FM and ANIMA) */
 enum { ENG_FM, ENG_ANIMA, ENG_CAL, ENG_RUS, ENG_DRUID, ENG_BAY, ENG_HIVE, NENG };
 static const char *const ENG_NAME[NENG] = {"FM", "ANIMA", "CALIGULA", "RUSSOLO", "DRUID", "BAYAREA", "HIVE"};
+#include "midi.c"                /* (the MIDI settings, the notes sent out) */
 
 static fm_patch_t fm_buf[NLAYER][2];
 static an_design_t an_buf[NLAYER][2];
@@ -482,7 +483,7 @@ static void lim_block(int32_t *env, int32_t *g, int32_t *x, uint32_t n)
 }
 
 /* --------------------------------------------------------- events --- */
-enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK, EV_LOOP_XP, EV_LOOP_MODE };
+enum { EV_ON, EV_OFF, EV_ENGINE, EV_STOP, EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_SET, EV_LOOPS, EV_LOOP_TRK, EV_LOOP_XP, EV_LOOP_MODE, EV_MIDI_OFF };
 typedef struct { uint8_t type, layer, note, val; } ev_t;
 #define EV_UNHEARD 0x80u         /* (EV_ON, EV_OFF: in val, a sequencer's note -- the looper does not record it) */
 #define EVQ 64u
@@ -663,6 +664,7 @@ static void note_on(uint32_t l, uint32_t note, uint32_t src)
 {
     layer_t *y = &lay[l];
     uint32_t best;
+    midi_note_out(l, note, note_vel, 1);          /* (SEND NOTES: on the track's OUT channel) */
     if (cal_note(l, note, 1, src))
         return;
     best = voice_pick(l, y->xfade != 0);
@@ -693,6 +695,7 @@ static void note_off(uint32_t l, uint32_t note, uint32_t src)
 {
     layer_t *y = &lay[l];
     uint32_t k;
+    midi_note_out(l, note, 0, 0);
     if (cal_note(l, note, 0, src))
         return;
     for (k = 0; k < NVOICE; k++) {
@@ -1429,6 +1432,7 @@ static void events_take(void)        /* audio ISR, at a block start */
             y->want_engine = (uint8_t)(e.val < NENG ? e.val : 0);
             break;
         case EV_STOP:
+            midi_layer_off(e.layer);
             org_defer[e.layer] = 0;
             org_est[e.layer] = AE_OFF;
             cal_init(&cal_rt[e.layer], 0xC0u + e.layer);
@@ -1447,6 +1451,10 @@ static void events_take(void)        /* audio ISR, at a block start */
             break;
         case EV_LOOP_SET:
             loop_set(e.layer, e.val);
+            break;
+        case EV_MIDI_OFF:                         /* (SEND NOTES turned off: what was sent on, off) */
+            for (k = 0; k < NLAYER; k++)
+                midi_layer_off(k);
             break;
         case EV_LOOP_MODE:                        /* (note: 0 the direction, 1 the speed, 2 VARY; val: which) */
             loop_mode(e.layer, e.note, e.val);
@@ -1960,6 +1968,7 @@ static void mix_block(int32_t *out)
     uint32_t i, l;
     uint32_t c0 = COST_NOW();
     an_cache_now = blk_clock + 1u;                /* (ANIMA's wavetables from RAM while the ISR renders) */
+    midi_main_drain();                            /* (the main loop's MIDI out: the CCs) */
     events_take();
     loops_run();
     budget_guard();

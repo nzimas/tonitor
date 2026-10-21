@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.51
+
+Added
+- GLOBAL SETUP on SHIFT + SAVE (after BIGORNA): the FM-1's own settings, kept apart from the sessions. One section,
+  MIDI, with IN CHAN (each track's channel, and AUTO for the chosen track), OUT CHAN (each track's), RECEIVE and
+  SEND (notes, CC), and PORTS (USB IN, TRS IN). PRESETS moves, SAVE enters and sets, SHIFT + SAVE goes back; BACK
+  heads each level. The settings are kept in flash, and the Backup page saves and restores them.
+- MIDI IN on the TRS jack (after BIGORNA and MELODEE 1.4.5), beside USB. Notes go to the tracks by channel, at
+  their velocity; CC 7 level, 10 pan, 16-19 the four macros, 74 the filter, 91 the reverb send, 92 the delay
+  send.
+- MIDI out over USB: each track's notes (from the keys, the loops, BALLSY, BRICKLAYER and MIDI) on its OUT
+  channel with SEND NOTES; the CCs above when their values change, with SEND CC.
+- SHIFT + PRESETS in the track's view: a new sound of the family before or after, on the track's engine (after
+  BIGORNA). At the first or last family, a new sound of that family again.
+- A battery meter at the top right (after BIGORNA): three bars green, two green, one amber, one red when low; a
+  white bolt on a computer's USB power.
+- The track's octave at the top right, left of the battery (+1, -2; nothing at 0).
+
+Changed
+- The PRESETS page moves to SHIFT + ARP (SHIFT + SAVE is GLOBAL SETUP's).
+- MIDI notes no longer all play the chosen track: each track listens on its own channel (1 to 6 at the start),
+  and channel 16 plays the chosen track.
+- VAR moves under the octave and the battery.
+- The screen's type is stored in runs (about 116 KB of flash freed, for this and what comes); the screen is the same,
+  pixel for pixel.
+
 ## 0.50
 
 Changed
