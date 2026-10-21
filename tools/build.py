@@ -38,7 +38,7 @@ CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-fu
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
 PRODUCT = "FM-1_700"                # package identity; release builds are FM-1_7XY
-VERSION = "0.52"
+VERSION = "0.53"
 
 
 def toolchain():

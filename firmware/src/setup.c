@@ -109,7 +109,7 @@ static void setup_open(void)
     ui.set_page = 1;
     set.lvl = 0;
     set.edit = 0;
-    ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.pre_page = 0;
+    ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.pre_page = ui.mod_page = 0;
     ui.force = 1;
 }
 /* SAVE (SHIFT: back) on the page */

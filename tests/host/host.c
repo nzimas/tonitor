@@ -470,13 +470,15 @@ static void cmd_screens(const char *dir)
     ui_draw();
     snprintf(path, sizeof path, "%s/screen-11-send.ppm", dir);
     ppm(path);
-    press_btn(B_SEQ);                        /* the REVERB page, DECAY turned */
+    press_btn(B_SEQ);                        /* the REVERB page (SEQ's second), DECAY turned */
+    press_btn(B_SEQ);
     host_enc[PANEL_ENC[EN_K2]] = 3;
     ui_input();
     ui_draw();
     snprintf(path, sizeof path, "%s/screen-12-reverb.ppm", dir);
     ppm(path);
-    press_btn(B_SEQ);                        /* and back */
+    press_btn(B_SEQ);                        /* and back (by MOD) */
+    press_btn(B_SEQ);
     fm1_ms += 2000;
     ui_draw();
     snprintf(path, sizeof path, "%s/screen-13-back.ppm", dir);
@@ -919,9 +921,11 @@ static int cmd_sessions(const char *dir)
     host_enc[PANEL_ENC[EN_ALGO]] = 7;
     host_enc[PANEL_ENC[EN_K4]] = 5;
     press_btn(B_OCTUP);
+    press_btn(B_SEQ);                        /* (DELAY, then REVERB) */
     press_btn(B_SEQ);
     host_enc[PANEL_ENC[EN_K1]] = 8;
     ui_input();
+    press_btn(B_SEQ);                        /* (MOD, then back) */
     press_btn(B_SEQ);
     press_btn(B_ENV);
     press_btn(B_REC);
@@ -3984,11 +3988,9 @@ static int cmd_delay(const char *dir)
     grain_reset();
     memset(host_flash, 0xFF, sizeof host_flash);
     ses_scan(1);
-    press_phys(KEY_SHIFT, 1);
     press_btn(B_SEQ);
-    press_phys(KEY_SHIFT, 0);
     if (!ui.rv_page || ui.fx != 1u)
-        printf("FAIL delay: SHIFT + SEQ does not open the DELAY page\n"), fail++;
+        printf("FAIL delay: SEQ does not open the DELAY page first\n"), fail++;
     host_enc[PANEL_ENC[EN_K1]] = -5;
     host_enc[PANEL_ENC[EN_K2]] = 10;
     ui_input();
@@ -4002,6 +4004,11 @@ static int cmd_delay(const char *dir)
     if (!ui.rv_page || ui.fx != 0u)
         printf("FAIL delay: SEQ does not go to the REVERB page\n"), fail++;
     press_btn(B_SEQ);
+    if (ui.rv_page || !ui.mod_page)
+        printf("FAIL delay: SEQ does not go on to the MOD page\n"), fail++;
+    press_btn(B_SEQ);
+    if (ui.rv_page || ui.mod_page)
+        printf("FAIL delay: SEQ after MOD does not go back to playing\n"), fail++;
     press_btn(B_FX);
     {
         int8_t sd = ui.send[0];
@@ -5471,6 +5478,23 @@ static int cmd_setup(void)
     press_phys(KEY_SHIFT, 0);
     if (ui.pre_page)
         printf("FAIL setup: SHIFT + ARP again does not close them\n"), fail++;
+    /* the presets: ARP held saves the track's sound into the slot chosen, ARP pressed loads it */
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_ARP);
+    press_phys(KEY_SHIFT, 0);
+    ui.pre_ix = 9;
+    host_press |= 1u << PANEL_BTN[B_ARP];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_ARP];
+    ui_input();
+    fm1_ms += 900;
+    ui_input();
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_ARP]);
+    ui_input();
+    if (pre_kind(ui.engine[0], 9) < 0 || !ui.pre_page)
+        printf("FAIL setup: ARP held on the PRESETS page does not save into the slot\n"), fail++;
+    press_btn(B_ARP);
+    if (ui.pre_page || ui.sc_page)
+        printf("FAIL setup: ARP pressed on the PRESETS page does not load the slot\n"), fail++;
     /* SHIFT + PRESETS: the family after, then (at the last) that one again */
     {
         int32_t k0 = cur_kind(0), k1, n = FF_N;
@@ -5495,6 +5519,109 @@ static int cmd_setup(void)
     ppm("build/screens/screen-33-battery-usb.ppm");
     usb.config = 0;
     printf("setup: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* 0.53: the modulation matrix -- SEQ's third page; an LFO on the filter moving it while a note holds; kept by a
+ * session and a copy; HOME's draws: often on FM's drones, never on ANIMA's or CALIGULA's */
+static int cmd_mod(const char *dir)
+{
+    uint32_t fail = 0, b, k, n;
+    int32_t lo = 0, hi = 0;
+    char path[512];
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    press_btn(B_FX);
+    for (k = 0; k < 3u; k++)
+        press_btn(B_SEQ);                             /* DELAY, REVERB, MOD */
+    if (!ui.mod_page)
+        printf("FAIL mod: the third SEQ is not the MOD page\n"), fail++;
+    host_enc[PANEL_ENC[EN_K2]] = 70;                  /* LFO 1: RATE 70 (~2 Hz) */
+    ui_input();
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-38-mod-lfo.ppm", dir);
+    ppm(path);
+    host_enc[PANEL_ENC[EN_PRESET]] = 2;               /* MOD A */
+    ui_input();
+    host_enc[PANEL_ENC[EN_K1]] = 1;                   /* SOURCE LFO 1 */
+    host_enc[PANEL_ENC[EN_K2]] = MD_FLT;              /* DEST FILTER */
+    host_enc[PANEL_ENC[EN_K3]] = 30;                  /* AMOUNT +60 */
+    ui_input();
+    if (lay_mod[0].lfo[0].rate != 70u || lay_mod[0].s[0].src != MSRC_L1 || lay_mod[0].s[0].dst != MD_FLT ||
+        lay_mod[0].s[0].amt != 60)
+        printf("FAIL mod: the knobs do not set the LFO and the slot (%u %u %u %d)\n", lay_mod[0].lfo[0].rate,
+               lay_mod[0].s[0].src, lay_mod[0].s[0].dst, lay_mod[0].s[0].amt), fail++;
+    press_key(0, 1);
+    for (b = 0; b < 2000u; b++) {
+        run_blocks(1, 0);
+        if (mst[0].off[MD_FLT] < lo)
+            lo = mst[0].off[MD_FLT];
+        if (mst[0].off[MD_FLT] > hi)
+            hi = mst[0].off[MD_FLT];
+        if (b == 1000u) {
+            ui.force = 1;
+            ui_draw();
+            snprintf(path, sizeof path, "%s/screen-39-mod-slot.ppm", dir);
+            ppm(path);
+        }
+    }
+    press_key(0, 0);
+    printf("mod: LFO 1 at RATE 70 on the filter, +60: the offset swings %d .. %d (of +-%d)\n", lo, hi, FLT_MAX);
+    if (lo > -30 || hi < 30)
+        printf("FAIL mod: the LFO does not swing the filter\n"), fail++;
+    if (ses_save(1) != SES_OK)
+        printf("FAIL mod: not saved\n"), fail++;
+    memset(lay_mod, 0, sizeof lay_mod);
+    ses_load_slot(1);
+    if (lay_mod[0].s[0].dst != MD_FLT || lay_mod[0].s[0].amt != 60 || lay_mod[0].lfo[0].rate != 70u)
+        printf("FAIL mod: a session does not keep it\n"), fail++;
+    clip_copy(0);
+    clip_paste(3);
+    if (memcmp(&lay_mod[3], &lay_mod[0], sizeof lay_mod[0]))
+        printf("FAIL mod: a copy does not take it\n"), fail++;
+    {   /* HOME's draws, by engine and family */
+        static const struct { uint32_t e, kind; const char *name; } C[] = {
+            {ENG_FM, 1, "FM DRONE"}, {ENG_FM, 3, "FM IMPACT"}, {ENG_HIVE, HK_PAD, "HIVE PAD"}, {ENG_HIVE, HK_STAB, "HIVE STAB"},
+            {ENG_BAY, 5, "BAYAREA DRONE"}, {ENG_DRUID, 6, "DRUID DRONE"}, {ENG_ANIMA, 0, "ANIMA"}, {ENG_CAL, 0, "CALIGULA"}};
+        uint32_t c;
+        for (c = 0; c < NELEM(C); c++) {
+            for (n = 0, k = 0; k < 200u; k++) {
+                mod_draw(5, C[c].e, C[c].kind, 1000u + k * 7919u, PATH_OPEN);
+                n += mod_on(5);
+            }
+            printf("mod: HOME on %-14s: %3u of 200 with a modulation\n", C[c].name, n);
+            if ((C[c].e == ENG_ANIMA || C[c].e == ENG_CAL) ? n != 0u : C[c].kind == 1u && C[c].e == ENG_FM && n < 120u)
+                printf("FAIL mod: %s's draws\n", C[c].name), fail++;
+        }
+    }
+    {   /* SHIFT + SEQ: thrown anew -- two to four slots, every value in its range, the destinations of all sorts */
+        mod_t before = lay_mod[0];
+        uint32_t seen = 0, bad = 0, i;
+        press_btn(B_FX);
+        press_phys(KEY_SHIFT, 1);
+        press_btn(B_SEQ);
+        press_phys(KEY_SHIFT, 0);
+        if (!memcmp(&before, &lay_mod[0], sizeof before) || !mod_on(0) || ui.rv_page || ui.mod_page)
+            printf("FAIL mod: SHIFT + SEQ does not throw track 1's modulation anew (or opens a page)\n"), fail++;
+        for (k = 0; k < 300u; k++) {
+            mod_random(5, 77u + k * 2654435761u);
+            for (i = 0, n = 0; i < NMSLOT; i++)
+                if (lay_mod[5].s[i].src) {
+                    n++;
+                    seen |= 1u << lay_mod[5].s[i].dst;
+                }
+            bad += n < 2u;
+            memcpy(&before, &lay_mod[5], sizeof before);
+            mod_check();
+            bad += memcmp(&before, &lay_mod[5], sizeof before) != 0;
+        }
+        printf("mod: SHIFT + SEQ, 300 throws: %u destinations of %u seen, %u bad\n", (unsigned)__builtin_popcount(seen), MD_N, bad);
+        if (bad || __builtin_popcount(seen) < (int)MD_N)
+            printf("FAIL mod: the throws\n"), fail++;
+    }
+    printf("mod: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
 
@@ -6408,6 +6535,8 @@ int main(int argc, char **argv)
         return cmd_bayarea(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "hivediv"))
         return cmd_hivediv();
+    if (argc >= 3 && !strcmp(argv[1], "mod"))
+        return cmd_mod(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "setup"))
         return cmd_setup();
     if (argc >= 3 && !strcmp(argv[1], "cores"))

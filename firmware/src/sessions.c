@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 23u           /* 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 24u           /* 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -461,6 +461,7 @@ static void ses_emit(void)
     ses_out(bl.spd, NLAYER);
     ses_out(bb.run, NLAYER);                            /* (format 23: playing) */
     ses_out(bl.run, NLAYER);
+    ses_out(lay_mod, sizeof lay_mod);                   /* (format 24: the modulation) */
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
 {
@@ -750,6 +751,7 @@ static int pre_load(uint32_t l, uint32_t e, uint32_t slot)
     }
     ui.env_on[l][e] = 0;                               /* (a preset: its own envelope, as drawn) */
     mac_apply(l);
+    mod_draw(l, e, r.kind, r.seed, ses_c2_path(&h, r.word));   /* (and the modulation drawn with it, as HOME's) */
     return SES_OK;
 }
 
@@ -783,6 +785,7 @@ static void ses_fresh(uint32_t num)
         ev_post(EV_LOOP_CLEAR, l, 0, 0);
     }
     ses_events_drain();
+    memset(lay_mod, 0, sizeof lay_mod);
     ui.sel = 0;
     ui.edit = 0;
     ui.scale = 0;
@@ -889,6 +892,7 @@ static struct {
     dr_design_t dr;
     ba_design_t ba;
     hv_design_t hv;
+    mod_t mod;
     uint8_t ntrk;
     uint16_t mute;
     uint32_t nev;
@@ -942,6 +946,7 @@ static void clip_copy(uint32_t l)
     clip.dr = dr_buf[l][dr_pub[l]];
     clip.ba = ba_buf[l][ba_pub[l]];
     clip.hv = hv_buf[l][hv_pub[l]];
+    clip.mod = lay_mod[l];
     clip.ntrk = (uint8_t)nt;
     clip.mute = p->mute;
     clip.play = p->play;
@@ -1018,6 +1023,7 @@ static void clip_paste(uint32_t l)
     dr_buf[l][dk] = clip.dr;
     ba_buf[l][bk] = clip.ba;
     hv_buf[l][hk] = clip.hv;
+    lay_mod[l] = clip.mod;
     RING_PUBLISH();
     cal_pub[l] = (uint8_t)ck;
     rus_pub[l] = (uint8_t)rk;
@@ -1466,6 +1472,11 @@ static int ses_load(uint32_t i)
             bb_set_run(l, brun[l] != 0);
             bl_set_run(l, lrun[l] != 0);
         }
+    }
+    memset(lay_mod, 0, sizeof lay_mod);                 /* the modulation (before format 24: none) */
+    if (h.format >= 24u) {
+        ses_in(lay_mod, sizeof lay_mod);
+        mod_check();
     }
     for (l = 0; l < NLAYER; l++) {
         mac_apply(l);

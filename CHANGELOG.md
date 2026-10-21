@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.53
+
+Fixed
+- Presets are saved where their page is opened: on the PRESETS page (SHIFT + ARP), ARP held saves the track's sound
+  into the slot chosen and ARP pressed loads it (or answers OVERWRITE?). SAVE still does the same there.
+
+Added
+- A modulation matrix per track: two LFOs (SHAPE: sine, triangle, saw up, saw down, square, steps, drift; RATE
+  0.01-20 Hz; MODE free, note, once; FADE in up to 10 s) and four slots, each FROM a source (LFO 1, LFO 2,
+  velocity, key, a random value per note) TO a destination (the sound's four macros, filter, grains, crush,
+  drive, reverb send, delay send, level, pan, either LFO's rate) by an AMOUNT (-100 to +100). It moves the
+  track's own values once a block. On the MOD page, SEQ's third. Sessions and copies keep it (session format 24).
+- HOME draws a modulation with some sounds: often with the slow, sustained families of FM, HIVE, BAYAREA and
+  DRUID, now and then a velocity on the brightness of struck and plucked ones, never with ANIMA or CALIGULA. A
+  preset loaded draws it again.
+
+Changed
+- SEQ goes through three pages, press after press: DELAY, REVERB, MOD, then back to playing. SHIFT + SEQ no
+  longer opens the delay: it throws the chosen track's modulation anew (MOD RANDOM) -- both LFOs, and two to four
+  slots from any source to any destination, by amounts that may go far.
+
 ## 0.52
 
 Added

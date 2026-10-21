@@ -370,6 +370,11 @@ static int32_t flt_oct(int32_t v)
  * so that however hard it is driven the clipped wave stays lopsided and keeps its even harmonics; below 6 the
  * amount also fades the stage in */
 static volatile int8_t lay_dist[NLAYER];
+#define LEVEL_MAX 23
+#define LEVEL_UNITY 20
+#define PAN_MAX 20
+static volatile int8_t lay_lvl[NLAYER], lay_pan[NLAYER];   /* (the level and pan knobs as set: for the modulation) */
+#include "mod.c"                 /* (the modulation matrix: per track, a block at a time) */
 typedef struct {
     int32_t amt;                 /* the amount as it glides, x 256 */
     int32_t pre, post;           /* the emphasis's low-passes (700 Hz), before and after */
@@ -664,6 +669,7 @@ static void note_on(uint32_t l, uint32_t note, uint32_t src)
 {
     layer_t *y = &lay[l];
     uint32_t best;
+    mod_note(l, note, note_vel);                  /* (the modulation's sources: this note) */
     midi_note_out(l, note, note_vel, 1);          /* (SEND NOTES: on the track's OUT channel) */
     if (cal_note(l, note, 1, src))
         return;
@@ -1609,6 +1615,7 @@ static void blk_render(void)
     int any1 = 0;
     for (l = 0; l < NLAYER; l++) {
         layer_t *y = &lay[l];
+        mod_block(l);                            /* (the modulation: its LFOs a step on, its offsets) */
         if (!y->xfade && change_due(l)) {
             if (layer_sounding(l))
                 y->xfade = FADE;                  /* out first, then the change */
@@ -1616,7 +1623,7 @@ static void blk_render(void)
                 change_apply(l);
         }
         for (i = 0; i < NMAC; i++) {
-            int32_t m = lay_mac[l][i], a = m < 0 ? -m : m, q = (int32_t)isqrt32((uint32_t)(a * MAC_MAX));
+            int32_t m = mod_val(l, MD_MAC1 + i, lay_mac[l][i], -MAC_MAX, MAC_MAX), a = m < 0 ? -m : m, q = (int32_t)isqrt32((uint32_t)(a * MAC_MAX));
             blk_mac[l][i] = (int8_t)m;
             blk_felt[l][i] = (int8_t)(m < 0 ? -q : q);   /* (the organisms' macros felt early: the square root of the
                                                           * turn; FM and ANIMA take theirs as turned) */
@@ -1807,7 +1814,8 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             change_apply(l);
         }
     }
-    if (!any && !(gran[l].tail && (lay_gr[l] || gran[l].amt))) {   /* (grains ring on a while after the voices) */
+    int32_t m_gr = mod_val(l, MD_GR, lay_gr[l], -FLT_MAX, FLT_MAX);   /* (the knobs as the modulation moves them) */
+    if (!any && !(gran[l].tail && (m_gr || gran[l].amt))) {   /* (grains ring on a while after the voices) */
         y->meter -= y->meter >> 4;
         y->g = lay_gain[l];
         y->pl = lay_pl[l];
@@ -1817,7 +1825,7 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
         return;
     }
     {   /* the DJ filter */
-        int32_t v = lay_flt[l], a = v < 0 ? -v : v;
+        int32_t v = mod_val(l, MD_FLT, lay_flt[l], -FLT_MAX, FLT_MAX), a = v < 0 ? -v : v;
         int32_t amt1 = a >= 4 ? Q15 : a * (Q15 / 4);
         int32_t q1 = 2896 + (a >= 24 ? 13488 : a * 13488 / 24);         /* Q 0.707 .. 4, Q12 */
         if (v)
@@ -1842,14 +1850,28 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             y->f_amt = amt1;
         }
     }
-    gran_block(l, buf, CTL, lay_gr[l], (int)any);       /* the granulator */
-    crush_block(y, buf, CTL, lay_cr[l]);                 /* the crush */
+    gran_block(l, buf, CTL, m_gr, (int)any);             /* the granulator */
+    crush_block(y, buf, CTL, mod_val(l, MD_CR, lay_cr[l], -FLT_MAX, FLT_MAX));   /* the crush */
     for (i = 0; i < CTL; i++)
         buf[i] = mulq12(buf[i], LAYER_GAIN);
     lim_block(&y->lim_env, &y->lim_g, buf, CTL);
-    dist_block(&dist[l], buf, CTL, lay_dist[l]);         /* the distortion (before the level and the sends) */
+    dist_block(&dist[l], buf, CTL, mod_val(l, MD_DIST, lay_dist[l], 0, 100));   /* the distortion (before the level, sends) */
     {   /* the layer's level, then its pan, gliding from the last block's to the knobs' */
         int32_t g1 = lay_gain[l], pl1 = lay_pl[l], pr1 = lay_pr[l], sd1 = lay_send[l], dd1 = lay_dsend[l];
+        if (mst[l].off[MD_LVL]) {                 /* (the modulation's level: 1.5 dB a step, as the knob's) */
+            int32_t lv = mod_val(l, MD_LVL, lay_lvl[l], 0, LEVEL_MAX);
+            g1 = lv <= 0 ? 0 : (int32_t)(exp2_q16((lv - LEVEL_UNITY) * 16328) >> 2);
+        }
+        if (mst[l].off[MD_PAN]) {                 /* (.. its pan) */
+            int32_t ph = (int32_t)((uint32_t)(mod_val(l, MD_PAN, lay_pan[l], -PAN_MAX, PAN_MAX) + PAN_MAX) *
+                                   (0x40000000u / (2u * PAN_MAX)));
+            pl1 = sin_ph((uint32_t)ph + 0x40000000u);
+            pr1 = sin_ph((uint32_t)ph);
+        }
+        if (mst[l].off[MD_RV])                    /* (.. its sends) */
+            sd1 = clampi(sd1 + mst[l].off[MD_RV] * 327, 0, 32767);
+        if (mst[l].off[MD_DL])
+            dd1 = clampi(dd1 + mst[l].off[MD_DL] * 327, 0, 32767);
         int32_t dg = (g1 - y->g) / CTL, dl = (pl1 - y->pl) / CTL, dr = (pr1 - y->pr) / CTL, ds = (sd1 - y->sd) / CTL;
         int32_t dds = (dd1 - y->dsd) / CTL, g = y->g, pl = y->pl, pr = y->pr, sd = y->sd, dsd = y->dsd;
         for (i = 0; i < CTL; i++) {

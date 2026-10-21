@@ -122,6 +122,9 @@ static struct {
     uint16_t ses_new;            /* the number it asks about */
     uint8_t ses_over;            /* .. and it holds a session: the question is OVERWRITE */
     uint8_t set_page;            /* GLOBAL SETUP up (setup.c) */
+    uint8_t mod_page, mod_ix;    /* the MOD page up (SEQ's third); its entry: LFO 1, LFO 2, MOD A .. D */
+    int8_t mod_touched;          /* (the row just turned, until mod_touch_until) */
+    uint32_t mod_touch_until, mod_drawn_at;
     int32_t shown_top;           /* (the track view's top corners as drawn: the octave, the battery, VAR) */
     uint8_t pre_page;            /* 0 none, SP_LIST the presets of pre_eng, SP_ASK the question before saving over one */
     uint8_t pre_eng;             /* the engine whose presets they are (the layer's, as SHIFT and SAVE opened them) */
@@ -130,6 +133,8 @@ static struct {
     int16_t shown_pre;           /* (what the page shows: slot, question and answer) */
     uint32_t save_t0;            /* SAVE pressed at: held 0.8 s is a save, shorter a press */
     uint8_t save_down, save_long;
+    uint32_t arp_t0;             /* ARP pressed at, on the PRESETS page: held 0.8 s saves, shorter loads */
+    uint8_t arp_down, arp_long;
     uint8_t trk_down, trk_done;  /* a track's button held (its number + 1) since trk_t0: copy, or paste */
     uint32_t trk_t0;
     int8_t shown_ses;            /* (the page as last drawn) */
@@ -183,9 +188,7 @@ static void say(const char *s, uint32_t ms)
     ui.msg_until = fm1_ms + ms;
 }
 
-#define LEVEL_MAX 23
-#define LEVEL_UNITY 20
-#define PAN_MAX 20
+/* (LEVEL_MAX, LEVEL_UNITY, PAN_MAX: layers.c, the modulation's too) */
 static const int8_t PAN_DEF[NLAYER] = {0, 10, -5, 5, -2, 2};   /* (track 1 in the middle) */
 #define SEND_DEF 40
 enum { DIAL_FLT, DIAL_GR, DIAL_SEND, DIAL_CR, DIAL_DSEND, DIAL_DIST, DIAL_MAC };   /* the knobs whose dial covers the screen (DIAL_MAC + j: EDIT's j) */
@@ -360,6 +363,8 @@ static void level_pan_apply(uint32_t l)
     lay_send[l] = ui.send[l] * 32767 / 100;
     lay_dsend[l] = ui.dsend[l] * 32767 / 100;
     lay_dist[l] = ui.dist[l];
+    lay_lvl[l] = ui.level[l];
+    lay_pan[l] = ui.pan[l];
     lay_flt[l] = ui.flt[l];
     lay_gr[l] = ui.gr[l];
     lay_cr[l] = ui.cr[l];
@@ -628,6 +633,16 @@ static int32_t cur_kind(uint32_t l)
            : ui.engine[l] == ENG_BAY   ? (int32_t)ba_buf[l][ba_pub[l]].kind
                                        : (int32_t)hv_buf[l][hv_pub[l]].kind;
 }
+static uint32_t cur_seed(uint32_t l)             /* (the seed of the sound layer l plays on its engine now) */
+{
+    return ui.engine[l] == ENG_FM    ? fm_buf[l][fm_pub[l]].seed
+           : ui.engine[l] == ENG_ANIMA ? an_buf[l][an_pub[l]].seed
+           : ui.engine[l] == ENG_CAL   ? cal_buf[l][cal_pub[l]].seed
+           : ui.engine[l] == ENG_RUS   ? rus_buf[l][rus_pub[l]].seed
+           : ui.engine[l] == ENG_DRUID ? dr_buf[l][dr_pub[l]].seed
+           : ui.engine[l] == ENG_BAY   ? ba_buf[l][ba_pub[l]].seed
+                                       : hv_buf[l][hv_pub[l]].seed;
+}
 /* a new sound for the layer chosen, of family kind (-1: any); msg said first (0: none, the family's name shows) */
 static void new_sound_of(int32_t kind, const char *msg)
 {
@@ -652,6 +667,7 @@ static void new_sound_of(int32_t kind, const char *msg)
         memset(ui.mac[l][ui.engine[l]], 0, NMAC);
         ui.env_on[l][ui.engine[l]] = 0;          /* (its own envelope too) */
         mac_apply(l);
+        mod_draw(l, ui.engine[l], (uint32_t)cur_kind(l), cur_seed(l), ui.path[l]);   /* (its modulation, or none) */
     }
 }
 /* HOME: a new sound for the layer chosen; same: of the family it plays now (SHIFT + HOME) */
@@ -670,6 +686,8 @@ static void setup_press(int sh);
 static void setup_preset(int32_t s);
 static void setup_draw(void);
 static void midi_take(void);
+static void mod_knob(uint32_t l, uint32_t ix, uint32_t j, int32_t s);   /* (the MOD page: below) */
+static void draw_mod_page(void);
 static int32_t batt_raw;                         /* the battery's divider, smoothed (main.c), 0 .. 1023; 0 none yet */
 
 static void ui_input(void)
@@ -696,14 +714,14 @@ static void ui_input(void)
             ui.sel = (uint8_t)l;
             ui.vary_shown = 0;
             ui.env_nat_ok = 0;
-            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page || ui.bl_page ||
+            if (ui.rv_page || ui.ses_page || ui.sc_page || ui.pre_page || ui.env_page || ui.bb_page || ui.bl_page || ui.mod_page ||
                 ui.set_page) {   /* a layer chosen:
                                                                                                     * back to it */
                 ui.rv_page = 0;
                 ui.env_page = ui.bb_page = ui.bl_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
-                ui.pre_page = ui.set_page = 0;
+                ui.pre_page = ui.set_page = ui.mod_page = 0;
                 ui.force = 1;
             }
         }
@@ -729,10 +747,25 @@ static void ui_input(void)
             }
         }
     }
-    if (btn_bit(press, B_SEQ)) {                 /* the REVERB page; with SHIFT, the DELAY page (again: back) */
-        uint8_t fx = (uint8_t)((fm1_in.notes >> KEY_SHIFT) & 1u);
-        ui.rv_page = (uint8_t)!(ui.rv_page && ui.fx == fx);
-        ui.fx = fx;
+    if (btn_bit(press, B_SEQ) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and SEQ: the chosen track's modulation
+                                                                         * thrown anew (both LFOs, the slots) */
+        mod_random(ui.sel, next_seed());
+        say("MOD RANDOM", 900);
+        ui.mod_touched = -1;
+        ui.force = 1;
+    } else if (btn_bit(press, B_SEQ)) {          /* SEQ, again and again: DELAY, REVERB, MOD, back to playing */
+        if (ui.mod_page)
+            ui.mod_page = 0;
+        else if (ui.rv_page && ui.fx)
+            ui.fx = 0;
+        else if (ui.rv_page) {
+            ui.rv_page = 0;
+            ui.mod_page = 1;
+            ui.mod_touched = -1;
+        } else {
+            ui.rv_page = 1;
+            ui.fx = 1;
+        }
         ui.env_page = ui.bb_page = ui.bl_page = 0;
         ui.ses_page = 0;
         ui.pre_page = ui.set_page = 0;
@@ -747,15 +780,20 @@ static void ui_input(void)
             ui.pre_eng = ui.engine[ui.sel];
             if (!ui.pre_ix)
                 ui.pre_ix = 1;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.set_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.set_page = ui.mod_page = 0;
         }
         ui.force = 1;
+    } else if (btn_bit(press, B_ARP) && ui.pre_page) {   /* the PRESETS page (where SHIFT + ARP opens it): ARP held saves
+                                                          * into the slot, pressed loads it (or answers OVERWRITE?) */
+        ui.arp_t0 = fm1_ms;
+        ui.arp_down = 1;
+        ui.arp_long = 0;
     } else if (btn_bit(press, B_ARP)) {
         ui.sc_page = (uint8_t)!ui.sc_page;
         ui.rv_page = 0;
         ui.env_page = ui.bb_page = ui.bl_page = 0;
         ui.ses_page = 0;
-        ui.pre_page = ui.set_page = 0;
+        ui.pre_page = ui.set_page = ui.mod_page = 0;
         ui.force = 1;
     }
     if (btn_bit(press, B_SAVE) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and SAVE: GLOBAL SETUP; in it, back */
@@ -769,6 +807,17 @@ static void ui_input(void)
         ui.save_t0 = fm1_ms;
         ui.save_down = 1;
         ui.save_long = 0;
+    }
+    if (ui.arp_down) {
+        if (!btn_bit(fm1_in.buttons, B_ARP)) {
+            ui.arp_down = 0;
+            if (!ui.arp_long && ui.pre_page)
+                pre_short();
+        } else if (!ui.arp_long && (uint32_t)(fm1_ms - ui.arp_t0) >= 800u) {
+            ui.arp_long = 1;
+            if (ui.pre_page)
+                pre_long();
+        }
     }
     if (ui.save_down) {
         if (!btn_bit(fm1_in.buttons, B_SAVE)) {
@@ -822,6 +871,12 @@ static void ui_input(void)
         for (j = 0; j < 4u; j++)
             if ((s = knob_take(K[j], sh)) != 0)
                 bb_knob(ui.sel, j, s);
+    } else if (ui.mod_page) {                    /* KNOB 1..4: the MOD entry's */
+        static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t j;
+        for (j = 0; j < 4u; j++)
+            if ((s = knob_take(K[j], sh)) != 0)
+                mod_knob(ui.sel, ui.mod_ix, j, s);
     } else if (ui.rv_page) {                     /* KNOB 1..4: the reverb, or the delay */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
@@ -1064,9 +1119,14 @@ static void ui_input(void)
     if (s && ui.set_page) {                      /* PRESETS: through GLOBAL SETUP */
         setup_preset(s);
         s = 0;
+    } else if (s && ui.mod_page) {               /* PRESETS: through MOD's entries */
+        ui.mod_ix = (uint8_t)clampi((int32_t)ui.mod_ix + s, 0, 2 + (int32_t)NMSLOT - 1);
+        ui.mod_touched = -1;
+        ui.force = 1;
+        s = 0;
     } else if (s && sh) {                        /* SHIFT + PRESETS: the family before or after, a new sound of it (the
                                                   * track's view only) */
-        if (!ui.rv_page && !ui.sc_page && !ui.env_page && !(ui.bb_page && bb.on[ui.sel]) && !(ui.bl_page && bl.on[ui.sel]) &&
+        if (!ui.rv_page && !ui.mod_page && !ui.sc_page && !ui.env_page && !(ui.bb_page && bb.on[ui.sel]) && !(ui.bl_page && bl.on[ui.sel]) &&
             !ui.pre_page && !ui.ses_page && !ui.ovd) {
             uint32_t e = ui.engine[ui.sel];
             int32_t n = e == ENG_FM ? FF_N : e == ENG_ANIMA ? AK_N : e == ENG_CAL ? CS_N : e == ENG_RUS ? RK_N
@@ -1310,7 +1370,7 @@ static void ui_leds(void)
                                                   : p->play && p->ntrk);                               /* as its key) */
     }
     fm1_led_key(PANEL_BTN[B_HOME], (int32_t)(ui.home_until - fm1_ms) > 0);
-    fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page);
+    fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page || ui.mod_page);
     fm1_led_key(PANEL_BTN[B_SAVE], ui.set_page);   /* (GLOBAL SETUP up) */
     fm1_led_key(PANEL_BTN[B_ARP], ui.sc_page);
     fm1_led_key(PANEL_BTN[B_OCTDN], ui.oct[ui.sel] < 0);
@@ -1494,6 +1554,120 @@ static void draw_pan(void)
 
 /* the REVERB page: a title, then a row a parameter: its name, its value, a bar under them */
 #define C_DELAY RGB(255, 170, 90)
+/* the MOD page (SEQ's third): the chosen track's modulation, an entry at a time (PRESETS): LFO 1, LFO 2, then the
+ * slots MOD A .. D. Four rows, KNOB 1 .. 4 each its own; MOD's fourth row shows what the slot does now */
+static void mod_knob(uint32_t l, uint32_t ix, uint32_t j, int32_t s)
+{
+    mod_t *m = &lay_mod[l];
+    if (ix < 2u) {
+        mlfo_t *f = &m->lfo[ix];
+        if (j == 0u)
+            f->shape = (uint8_t)clampi(f->shape + s, 0, MS_N - 1);
+        else if (j == 1u)
+            f->rate = (uint8_t)clampi(f->rate + s, 0, 100);
+        else if (j == 2u)
+            f->mode = (uint8_t)clampi(f->mode + s, 0, MM_N - 1);
+        else
+            f->fade = (uint8_t)clampi(f->fade + 2 * s, 0, 100);
+    } else {
+        mslot_t *q = &m->s[ix - 2u];
+        if (j == 0u)
+            q->src = (uint8_t)clampi(q->src + s, 0, MSRC_N - 1);
+        else if (j == 1u)
+            q->dst = (uint8_t)clampi(q->dst + s, 0, MD_N - 1);
+        else if (j == 2u)
+            q->amt = (int8_t)clampi(q->amt + 2 * s, -100, 100);
+        else
+            return;
+    }
+    ui.mod_touched = (int8_t)j;
+    ui.mod_touch_until = fm1_ms + 1500u;
+    ui.force = 1;
+}
+/* a row, on two lines (a name and its value side by side do not fit at a readable size: TO, INHARMONIC): the name small
+ * and grey with its bar beside it (0 none, 1 from the left, 2 from the middle; v -100 .. 100), the value under it */
+static void draw_mod_row(uint32_t j, const char *name, const char *val, int bar, int32_t v, int touched)
+{
+    uint16_t bg = touched ? C_WHITE : C_BLACK, fg = touched ? C_BLACK : C_WHITE, col = LAYER_COL[ui.sel];
+    cv_begin(240, 47, bg);
+    cv_text(6, 0, &FONT_XS, name, touched ? C_BLACK : RGB(175, 175, 175));
+    if (bar) {
+        int32_t x0 = 6 + text_w(&FONT_XS, name) + 12, w0 = 234 - x0, y0 = 6;   /* (after the name) */
+        cv_rect(x0, y0, w0, 7, touched ? C_GREY : RGB(60, 60, 60));
+        if (bar == 1)
+            cv_rect(x0, y0, clampi(v, 0, 100) * w0 / 100, 7, touched ? C_BLACK : col);
+        else {
+            int32_t c = x0 + w0 / 2, w = clampi(v, -100, 100) * (w0 / 2) / 100;
+            cv_rect(w >= 0 ? c : c + w, y0, w >= 0 ? w : -w, 7, touched ? C_BLACK : col);
+            cv_rect(c - 1, y0 - 2, 2, 11, touched ? C_BLACK : C_WHITE);
+        }
+    }
+    if (val[0])
+        cv_text(6, 47 - FONT_S.h - 1, &FONT_S, val, fg);
+    cv_rect(0, 46, 240, 1, RGB(50, 50, 50));
+    cv_blit(0, 52 + 47 * j);
+}
+static void draw_mod_page(void)
+{
+    uint32_t l = ui.sel, ix = ui.mod_ix;
+    int32_t t = (int32_t)(ui.mod_touch_until - fm1_ms) > 0 ? ui.mod_touched : -1;
+    const mod_t *m = &lay_mod[l];
+    char v[16];
+    ui.mod_drawn_at = fm1_ms;
+    if (ui.force) {
+        char ti[8] = "LFO 1";
+        if (ix == 1u)
+            ti[4] = '2';
+        else if (ix >= 2u) {
+            str_cpy(ti, "MOD A", sizeof ti);
+            ti[4] = (char)('A' + ix - 2u);
+        }
+        cv_begin(240, 52, C_BLACK);
+        cv_text_c(3, &FONT_L, ti, LAYER_COL[l]);   /* (in the track's colour: the chosen track's modulation) */
+        cv_blit(0, 0);
+    }
+    if (ix < 2u) {
+        const mlfo_t *f = &m->lfo[ix];
+        uint32_t ch = (uint32_t)(((uint64_t)100u * exp2_q16(f->rate * 7189)) >> 16);   /* (0.01 Hz units, x 100) */
+        if (!ui.force)
+            return;                              /* (an LFO's rows change only with its knobs) */
+        draw_mod_row(0, "SHAPE", MS_NAME[f->shape % MS_N], 0, 0, t == 0);
+        fmt_fix(v, (int32_t)(ch < 100000u ? ch / 100u : ch / 1000u), ch < 100000u ? 2 : 1);
+        str_cpy(v + str_len(v), " HZ", 4);
+        draw_mod_row(1, "RATE", v, 1, f->rate, t == 1);
+        draw_mod_row(2, "MODE", MM_NAME[f->mode % MM_N], 0, 0, t == 2);
+        if (f->fade) {
+            fmt_fix(v, f->fade, 1);
+            str_cpy(v + str_len(v), " S", 3);
+        } else
+            str_cpy(v, "OFF", 4);
+        draw_mod_row(3, "FADE", v, 1, f->fade, t == 3);
+        return;
+    }
+    {
+        const mslot_t *q = &m->s[ix - 2u];
+        int32_t now = 0;
+        if (ui.force) {
+            const char *d = q->dst < 4u ? mac_name(l, q->dst) : MD_NAME[q->dst % MD_N];
+            draw_mod_row(0, "FROM", MSRC_NAME[q->src % MSRC_N], 0, 0, t == 0);
+            draw_mod_row(1, "TO", d, 0, 0, t == 1);
+            fmt_int(v, q->amt);
+            if (q->amt > 0) {
+                v[0] = '+';
+                fmt_int(v + 1, q->amt);
+            }
+            draw_mod_row(2, "AMOUNT", v, 2, q->amt, t == 2);
+        }
+        if (q->src && q->amt) {                  /* (what it does now: the source times the amount) */
+            int32_t sv = q->src == MSRC_L1 || q->src == MSRC_L2 ? mst[l].val[q->src - MSRC_L1]
+                         : q->src == MSRC_VEL ? ((int32_t)mst[l].vel - 127) * 258
+                         : q->src == MSRC_KEY ? clampi(((int32_t)mst[l].key - 60) * 683, -Q15, Q15) : mst[l].rnd;
+            now = sv * q->amt / Q15;
+        }
+        draw_mod_row(3, "NOW", "", 2, now, 0);
+    }
+}
+
 static void draw_rv_title(void)
 {
     cv_begin(240, 52, C_BLACK);
@@ -2002,6 +2176,15 @@ static void ui_draw(void)
             ui.force = 1;
         setup_draw();
         ui.shown_page = 10;
+        ui.force = 0;
+        return;
+    }
+    if (ui.mod_page) {                           /* MOD (SEQ's third page) */
+        if (ui.shown_page != 11)
+            ui.force = 1;
+        if (ui.force || (uint32_t)(fm1_ms - ui.mod_drawn_at) >= 40u)
+            draw_mod_page();
+        ui.shown_page = 11;
         ui.force = 0;
         return;
     }
