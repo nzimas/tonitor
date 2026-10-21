@@ -9,6 +9,7 @@ const ui = {
   status: $("status"), detail: $("detail"), facts: $("facts"), dev: $("f-dev"), fileInfo: $("f-file"),
   bar: $("bar"), fill: $("bar").firstElementChild, connect: $("connect"), save: $("save"),
   file: $("file"), agree: $("agree"), restore: $("restore"),
+  rStatus: $("r-status"), rDetail: $("r-detail"), rBar: $("r-bar"), rFill: $("r-bar").firstElementChild,
 };
 let updater = null, device = null, onDevice = null, backup = null, busy = false;
 
@@ -20,6 +21,20 @@ function say(status, detail = "", kind = "") {
 function progress(f) {
   ui.bar.hidden = f === null;
   if (f !== null) ui.fill.style.width = `${Math.round(f * 100)}%`;
+}
+// the restore's own status and bar, under its button
+function rsay(status, detail = "", kind = "") {
+  ui.rStatus.hidden = !status;
+  ui.rStatus.textContent = status;
+  ui.rStatus.className = "status" + (kind ? " " + kind : "");
+  ui.rDetail.hidden = !detail;
+  ui.rDetail.textContent = detail;
+}
+function rprogress(f) {
+  ui.rBar.hidden = f === null;
+  if (f === null) return;
+  ui.rFill.style.width = `${Math.round(f * 100)}%`;
+  if (/^Restoring/.test(ui.rStatus.textContent)) ui.rStatus.textContent = `Restoring… ${Math.round(f * 100)}%`;
 }
 function refresh() {
   ui.connect.disabled = busy;
@@ -122,9 +137,9 @@ async function openFile() {
     backup = recs;
     ui.facts.hidden = false;
     ui.fileInfo.textContent = `${describe(recs)}, saved ${(j.saved || "").slice(0, 10)}`;
-    say(device ? "File opened" : "File opened: now find the FM-1", "Tick the box, then restore it.");
+    rsay(device ? "File opened" : "File opened: now find the FM-1 (above)", "Tick the box, then restore it.");
   } catch (e) {
-    say("The file could not be opened", e.message, "bad");
+    rsay("The file could not be opened", e.message, "bad");
   }
   refresh();
 }
@@ -140,19 +155,19 @@ async function restore() {
   try {
     const total = backup.reduce((a, r) => a + r.bytes.length, 0);
     let sent = 0;
-    progress(0);
+    rprogress(0);
     for (const r of backup) {
-      say("Restoring…", r.number >= PRE_NUM ? "The presets" : `Session ${r.number}`);
-      await writeOn(device.link, r.number, r.bytes, (n) => progress((sent += n) / total));
+      rsay(`Restoring… ${Math.round((sent / total) * 100)}%`, r.number >= PRE_NUM ? "The presets" : `Session ${r.number}`);
+      await writeOn(device.link, r.number, r.bytes, (n) => rprogress((sent += n) / total));
     }
     onDevice = await listOn(device.link);
     if (onDevice) ui.dev.textContent = describe(onDevice);
-    say("Restored", `${describe(backup)} written to the FM-1.`, "ok");
+    rsay("Restored", `${describe(backup)} written to the FM-1.`, "ok");
   } catch (e) {
-    say("The restore did not finish", e.message + " What was written before stays; run it again to finish.", "bad");
+    rsay("The restore did not finish", e.message + " What was written before stays; run it again to finish.", "bad");
   } finally {
     window.removeEventListener("beforeunload", guard);
-    progress(null);
+    rprogress(null);
     busy = false;
     refresh();
   }
