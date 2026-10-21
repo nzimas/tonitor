@@ -10,7 +10,7 @@
 #define TONITOR_ID "FM-1_700"    /* the package identity (tools/build.py sets it) */
 #endif
 #ifndef TONITOR_VERSION
-#define TONITOR_VERSION "0.49"
+#define TONITOR_VERSION "0.50"
 #endif
 #define FELUCCA_ID TONITOR_ID
 #ifndef TELEMETRY
@@ -20,10 +20,15 @@
 #define FELUCCA_OTA_DRYRUN 0
 #define FELUCCA_CDC 0
 #define FELUCCA_UAC 0
+#define FM1_CORE1 1              /* CPU1 renders half the voices and the effects (hal/fm1_multicore.h; after BIGORNA
+                                  * build 32 and Melodee 1.4.5) */
 
 #include "fm1_time.h"
 #include "fm1_sys.h"
+#include "fm1_power.h"
 #include "fm1_irq.h"
+#include "fm1_core1_bar.h"
+#include "fm1_multicore.h"
 #include "fm1_guard.h"
 #include "fm1_input.h"
 #include "fm1_timer.h"

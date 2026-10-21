@@ -360,6 +360,14 @@ static void fm1_main(void)
     layers_init();
     ui_init();
     sounds_init();                                   /* a sound of each engine for every layer (~0.2 s) */
+    /* CPU1: after a supply setup that held, on a boot after no failed one, and not barred since power-on. It starts
+     * through the mask ROM before it reaches our RAM loop: the PC limit only after (Melodee) */
+    if (fm1_core1_boot_allowed(fm1_power_ready, bootguard.failed))
+        fm1_multicore_start();
+    fm1_guard_enable(FM1_GUARD_PC);
+    if (!audio_worker_online)                        /* (CPU1 held: until power-off after a fault, or a failed boot --
+                                                      * half the room for voices. Said, not silent) */
+        say("1 CORE", 4000);
     audio_init();
     usb_start();
     fm1_timer5_start(isr_timer5, 4);
@@ -482,6 +490,7 @@ void fm1_cstart(void)
     src = fm1_boot.rst_src;
     wdt = fm1_boot.wdt_con;
     fm1_wdt_arm(0x0D);
+    fm1_core1_stop();                                /* CPU1 held before the RAM is cleared and copied (Melodee) */
     if ((p3 & 1u) && !(p3 & (4u | 0x40u)))
         bootguard_clear(&bootguard);                /* a power-on: no failed boot to count */
     boot_mode = bootguard_begin(&bootguard);
@@ -499,12 +508,15 @@ void fm1_cstart(void)
     for (s = _ft_load, d = _ft_start; d < _ft_end; s++, d++)
         *d = *s;                                     /* the audio's hottest code, run from RAM too */
     fm1_mailbox_clear();
-    fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
+    fm1_power_ready = (uint8_t)fm1_power_init();   /* stock V15's supplies, before CPU1 (Melodee: its RAM reads) */
+    fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS);   /* (the PC limit once CPU1 has started) */
     fm1_boot.p3_rst = (uint8_t)p3;
     fm1_boot.rst_src = src;
     fm1_boot.wdt_con = (uint8_t)wdt;
-    if (boot_mode == BOOT_RECOVERY || recovery_key())
+    if (boot_mode == BOOT_RECOVERY || recovery_key()) {
+        fm1_guard_enable(FM1_GUARD_PC);
         recovery_main();                             /* two failed boots, or OCT- held at power-on */
+    }
     fm1_main();
     for (;;)
         ;

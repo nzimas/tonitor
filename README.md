@@ -858,7 +858,7 @@ loopers, sessions and screen code on the computer, and the browser installer aga
 
 `firmware/src/tonitor.c` is the single compilation unit: `fm.c` (FM, around msfa's `fm6_core.c`),
 `anima.c` (ANIMA), `cal.c` (CALIGULA), `russolo.c` (RUSSOLO), `druid.c` (DRUID), `bayarea.c` (BAYAREA), `hive.c` (HIVE), `gran.c` (the granulator), `reverb.c`, `layers.c` (the six tracks,
-the loopers, the mix), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
+the loopers, the mix; each block the voices, the organisms and the master effects are dealt to the FM-1's two cores, `audio_worker.h` and `hal/fm1_multicore.h`), `ui.c` (panel and screen), `sessions.c`, `gfx.c`, `dsp.h` (fixed-point helpers),
 `main.c` (boot, interrupts). Based on Felucca and earlier open FM-1 firmware work: `firmware/hal/`, `firmware/loader/`,
 `usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `libc.c`, the build checks and the installer. The website and the
 browser installer are in `docs/` (served by GitHub Pages); `tools/make_site.py` builds its pages from `site/` (home, install), this README (the manual) and `CHANGELOG.md` and publishes `build/tonitor.fwsc` for the installer.

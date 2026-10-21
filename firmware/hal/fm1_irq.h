@@ -12,6 +12,8 @@
  *
  * The application supplies fm1_fault(const fm1_crash_t *) which reports the
  * crash (LCD) and resets; the record survives in .noinit for the next boot.
+ * With FM1_CORE1 a CPU1 fault holds CPU1 and lets CPU0 go on (fm1_core1_fault_c, from Melodee 1.4.5,
+ * keremimo/melodee, Kerem Kilic (Ellic Studio), GPL-3.0-only).
  */
 #pragma once
 #include <stdint.h>
@@ -29,6 +31,10 @@
 #define FM1_DBG_MSG (*(volatile uint32_t *)0x1EEE244u)
 #define FM1_DBG_MSG_CLR (*(volatile uint32_t *)0x1EEE248u)
 #define FM1_DBG_EN (*(volatile uint32_t *)0x1EEE340u)
+/* DBG_MSG sources by core (SDK cpu/wl82/debug.c): read/write MMU, PC and write
+ * limits, bus-invalid fetch/read/write */
+#define FM1_DBG_C1 ((1u << 6) | (1u << 8) | (1u << 10) | (1u << 11) | (7u << 16))
+#define FM1_DBG_C0 ((1u << 7) | (1u << 9) | (1u << 12) | (1u << 13) | (7u << 19))
 
 enum { FM1_IRQ_EXCEPTION = 1, FM1_IRQ_ALNK0 = 11, FM1_IRQ_SPI1 = 16, FM1_IRQ_UART1 = 20,
        FM1_IRQ_SARADC = 24, FM1_IRQ_SPI2 = 37, FM1_IRQ_TIMER5 = 63, FM1_IRQ_SOFT0 = 120 };
@@ -37,6 +43,7 @@ static inline uint32_t fm1_icfg(void) { uint32_t v; __asm__ volatile("%0 = icfg"
 static inline void fm1_icfg_set(uint32_t v) { __asm__ volatile("icfg = %0" ::"r"(v) : "memory"); }
 static inline void fm1_irq_off(void) { __asm__ volatile("cli" ::: "memory"); }
 static inline void fm1_irq_on(void) { __asm__ volatile("csync\n\tsti" ::: "memory"); }
+static inline uint32_t fm1_cnum(void) { uint32_t v; __asm__ volatile("%0 = cnum" : "=r"(v)); return v; }
 
 #define FM1_CRASH_MAGIC 0x43525348u          /* "CRSH" */
 typedef struct {
@@ -88,14 +95,102 @@ static void fm1_irq_enable_all(void)
     fm1_irq_on();
 }
 
+/* CPU1 faults (keremimo/melodee#17: on some units CPU1 misreads shared SRAM).
+ * CPU1 enables no interrupt, so the debug unit's errors about it (a fetch
+ * outside the PC limits, a bus error) raise the exception on CPU0, whose own
+ * state is intact. CPU1 is held, the fault recorded, the audio worker retires
+ * (audio_worker.h) and CPU0 resumes. CPU1 can also take the exception itself:
+ * it records it and parks until CPU0 holds it. Only CPU0 can finish restoring
+ * the debug guards after a hold. */
+static struct { volatile uint32_t count; uint32_t echoes, cpu, dbg, emu, pc, rets; } fm1_core1_fault;
+static volatile uint32_t fm1_core1_in_fault;     /* (CPU1 set it entering the handler: BIGORNA build 32) */
+
+static int fm1_core1_fault_c(const uint32_t *f)   /* 1: handled, CPU0 resumes */
+{
+#if FM1_CORE1
+    uint32_t cpu = fm1_cnum(), dbg = FM1_DBG_MSG, was;
+    if (cpu) {
+        fm1_core1_in_fault = 1;
+        __asm__ volatile("csync" ::: "memory");
+    }
+    if (!cpu && (dbg & FM1_DBG_C0))
+        return 0;                                   /* CPU0's own */
+    /* (BIGORNA build 32) the bus-invalid flags (bits 4, 5: an unmapped read or write) name no core: CPU0 takes the
+     * exception too when CPU1 makes one. CPU1 says so entering the handler: wait for it (~1 ms at most), and if it
+     * did, the fault is CPU1's */
+    if (!cpu && (dbg & 0x30u) && !(dbg & FM1_DBG_C1)) {
+        volatile uint32_t n;
+        for (n = 0; n < 40000u && !fm1_core1_in_fault; n++)
+            ;
+        if (fm1_core1_in_fault)
+            dbg |= 1u << 16;                        /* (as CPU1's: held below, CPU0 goes on) */
+    }
+    /* CPU1 took it too and cleared DBG_MSG first. Once per CPU1 fault, so a
+     * genuine CPU0 exception with DBG_MSG clear that lands in that window is
+     * resumed once; it faults again and is reported then. */
+    if (!cpu && !(dbg & FM1_DBG_C1)) {
+        if (fm1_core1_fault.echoes >= fm1_core1_fault.count)
+            return 0;                               /* else CPU0's own */
+        fm1_core1_fault.echoes++;
+        return 1;
+    }
+    if (!cpu && fm1_core1_fault.count >= 16u)
+        return 0;                                   /* a hold that did not take */
+    if (!cpu)
+        fm1_core1_stop();
+    fm1_core1_fault.cpu = cpu;
+    fm1_core1_fault.dbg = dbg;
+    fm1_core1_fault.emu = *(volatile uint32_t *)(cpu ? 0x1EEF2D4u : 0x1EEF0D4u);   /* the faulting core's EMU_MSG */
+    fm1_core1_fault.pc = f[16];
+    fm1_core1_fault.rets = f[25];
+    fm1_core1_fault.count++;                        /* (before DBG_MSG clears: see the echo above) */
+    was = FM1_DBG_WR_EN & 1u;                       /* (writing 0xE7 toggles the unlock) */
+    if (!was)
+        FM1_DBG_WR_EN = 0xE7u;
+    FM1_DBG_MSG_CLR = dbg;
+    if (!was)
+        FM1_DBG_WR_EN = 0xE7u;
+    if (cpu) {
+        __asm__ volatile("csync" ::: "memory");     /* publish the fault; CPU0 joins and holds us */
+        for (;;)
+            ;
+    }
+    return 1;
+#else
+    (void)f;
+    return 0;
+#endif
+}
+
 /* called from fm1_fatal_common (fm1_vec.S) with the saved frame:
  * f[0..15] r0..r15, f[16] reti, f[17] rete, f[18] retx, f[19] stub+6,
- * f[20] psr, f[21] icfg, f[22] usp, f[23] ssp, f[24] sp, f[25] interrupted rets */
+ * f[20] psr, f[21] icfg, f[22] usp, f[23] ssp, f[24] sp, f[25] interrupted rets.
+ * Returns only to resume CPU0 after a CPU1 fault. */
+/* each core's last entry into the fault handler, across the reset (a diagnosis: which core, what the debug unit
+ * said as it entered) */
+typedef struct { uint32_t magic, n, cpu, dbg, emu0, emu1, pc; } fm1_fault_seen_t;
+fm1_fault_seen_t fm1_fault_seen[2] __attribute__((section(".noinit")));
 void fm1_fault_c(uint32_t *f)
 {
     static volatile uint32_t in_fault;
-    uint32_t i, count = fm1_crash.magic == FM1_CRASH_MAGIC ? fm1_crash.count : 0;
-    uint32_t early = fm1_crash.magic == FM1_CRASH_MAGIC ? fm1_crash.early : 0;
+    uint32_t i, count, early;
+#if FM1_CORE1
+    {
+        uint32_t c = fm1_cnum() & 1u;
+        fm1_fault_seen_t *z = &fm1_fault_seen[c];
+        z->n = z->magic == 0x53454E31u ? z->n + 1u : 1u;
+        z->magic = 0x53454E31u;
+        z->cpu = fm1_cnum();
+        z->dbg = FM1_DBG_MSG;
+        z->emu0 = *(volatile uint32_t *)0x1EEF0D4u;
+        z->emu1 = *(volatile uint32_t *)0x1EEF2D4u;
+        z->pc = f[16];
+    }
+#endif
+    if (fm1_core1_fault_c(f))
+        return;
+    count = fm1_crash.magic == FM1_CRASH_MAGIC ? fm1_crash.count : 0;
+    early = fm1_crash.magic == FM1_CRASH_MAGIC ? fm1_crash.early : 0;
     fm1_irq_off();
     if (in_fault++)                           /* fault while reporting: reset at once */
         *(volatile uint32_t *)0x10000u |= 1u << 4;

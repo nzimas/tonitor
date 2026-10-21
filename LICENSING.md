@@ -14,6 +14,7 @@ headers; changes are noted in each file.
 | What | Licence | Where |
 | --- | --- | --- |
 | Tonitor's own code: `firmware/src/{tonitor,anima,fm,gran,reverb,layers,ui,balls,bricks,delay,sessions,backup,gfx,main}.c`, `dsp.h`, `tools/{build,gen_tables,gen_font,sdk_from_package}.py`, `tests/`, the scripts | GPL-3.0-only | |
+| From **Melodee** 1.4.5 (Copyright (C) 2026 Kerem Kilic (Ellic Studio), keremimo/melodee), as adapted in BIGORNA (Nuno Zimas): the dual-core start, hold and fault handling, its job mailbox and the stock supply setup -- `firmware/hal/{fm1_multicore,fm1_core1_stop,fm1_core1_bar,fm1_power}.h`, `firmware/src/audio_worker.h`, the CPU1 parts of `firmware/hal/{fm1_irq,fm1_sys}.h`, `fm1_vec.S` and `crt0.S` | GPL-3.0-only | <https://github.com/keremimo/melodee> |
 | The browser installer, a port of `tools/fm1_install.py` (Felucca / SLOOP) to JavaScript | GPL-3.0-only | `docs/js/fm1ota.js` |
 | The backup page's scripts | GPL-3.0-only | `docs/js/backup.js`, `docs/js/fm1backup.js` |
 | The firmware package the installer writes, built from this tree (with the JieLi SDK files below) | GPL-3.0-only | `docs/firmware/tonitor.fwsc` |

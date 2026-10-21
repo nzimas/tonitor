@@ -106,9 +106,21 @@ static void fm1_reset_reason(void)
     fm1_boot.wdt_con = fm1_p33_read(FM1_P3_WDT_CON);
 }
 
+/* FM1_CORE1 (the app, fw.c): CPU1 held before any reset (BIGORNA build 32, after Melodee). The update loader leaves
+ * it 0: it never starts CPU1, and stays as it was proven */
+#ifndef FM1_CORE1
+#define FM1_CORE1 0
+#endif
+#if FM1_CORE1
+#include "fm1_core1_stop.h"
+#else
+#define fm1_core1_stop() ((void)0)
+#endif
+
 static void fm1_reboot(void)
 {
     __asm__ volatile("cli");
+    fm1_core1_stop();
     fm1_p33_or(FM1_P3_PR_PWR, 0x10);
     for (;;)
         ;
@@ -119,6 +131,7 @@ static void fm1_enter_uboot(void)
     static const char k[16] = "usb_update_mode";
     uint32_t i;
     __asm__ volatile("cli");
+    fm1_core1_stop();
     /* CPU0 write limits (fm1_guard.h) may cover the mailbox: drop them all */
     if (!(*(volatile uint32_t *)0x1EEE240u & 1u))
         *(volatile uint32_t *)0x1EEE240u = 0xE7u;
@@ -132,6 +145,10 @@ static void fm1_enter_uboot(void)
 
 FM1_INLINE void fm1_core_reset(void)
 {
+#if FM1_CORE1
+    __asm__ volatile("cli" ::: "memory");
+    fm1_core1_stop();
+#endif
     FM1_PWR_CON |= 0x10u;
     for (;;)
         ;
@@ -141,6 +158,7 @@ FM1_INLINE void fm1_enter_update(const uint8_t *parm)
 {
     uint32_t i;
     __asm__ volatile("cli");
+    fm1_core1_stop();                                /* before writing the bootloader's update record */
     if (!(*(volatile uint32_t *)0x1EEE240u & 1u))       /* drop CPU0 write limits, as fm1_enter_uboot */
         *(volatile uint32_t *)0x1EEE240u = 0xE7u;
     *(volatile uint32_t *)0x1EEE348u = 0;

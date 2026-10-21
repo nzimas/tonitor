@@ -36,6 +36,11 @@ build/host dist
 build/host druid build/sounds
 build/host bayarea build/sounds
 build/host hive build/sounds
+c2=$(build/host cores 2)                              # the two cores: the same sound
+c1=$(build/host cores 1)
+echo "$c2"
+echo "$c1"
+[ "$(echo "$c2" | sed 's/.*hash \([0-9a-f]*\).*/\1/')" = "$(echo "$c1" | sed 's/.*hash \([0-9a-f]*\).*/\1/')" ] || { echo "FAIL cores: two cores and one differ"; exit 1; }
 build/host balls build/screens
 build/host bricks build/screens
 build/host vary
@@ -59,7 +64,8 @@ build/host filter build/screens
 build/host crush build/screens
 build/host caligula build/sounds
 build/host russolo build/sounds
-build/host grain build/sounds && mv build/sounds/screen-*.ppm build/screens/
+build/host grain build/sounds
+mv build/sounds/screen-*.ppm build/screens/
 build/host render build/sounds 3 > build/sounds/stats.txt
 build/host mix build/sounds
 build/host screens build/screens

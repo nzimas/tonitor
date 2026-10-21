@@ -684,6 +684,12 @@ static void ui_input(void)
     uint32_t rel, press = fm1_input_edges(&rel), keys, ch, k, l;
     int32_t s;
     int sh;
+    {   /* CPU1 retired as it plays (a fault, a stall, a misread): said, once */
+        static uint8_t was_on;
+        if (was_on && !audio_worker_online)
+            say("1 CORE", 4000);
+        was_on = (uint8_t)audio_worker_online;
+    }
     bb_tick();                                   /* (the balls: their time, their notes) */
     bl_tick();                                   /* (BRICKLAYER's steps) */
     if (ui.vary_shown && loop[ui.sel].vary == ui.vary_shown - 1u)

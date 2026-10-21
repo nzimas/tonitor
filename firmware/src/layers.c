@@ -1513,36 +1513,195 @@ static void voice_take(uint32_t k)
         voice_off(to, k);
 }
 
+/* ------------------------------------------- the block's work, on two cores --- */
+/* Each block the work that needs no other is dealt to the two cores (hal/fm1_multicore.h, after BIGORNA build 32
+ * and Melodee 1.4.5): every sounding voice of the pool, every layer's organism (CALIGULA, RUSSOLO), and the master
+ * delay and reverb -- the dearest first, each to the core with less so far (CPU1 starts with the effects). Each
+ * renders into a buffer of its own; then CPU0 takes each layer's buffers in turn as before (the track's envelope,
+ * the fades, the filter, the grains, the crush, the level, the sends). The effects run a block behind, on the
+ * sends of the block before (their returns 32 samples, 0.73 ms, later); on one core in the same order, so the
+ * sound is the same with one core or two. Only CPU0 writes the voices' state outside their own memory */
+static int8_t blk_mac[NLAYER][NMAC], blk_felt[NLAYER][NMAC];   /* each layer's macros for the block (as turned, felt) */
+static int32_t vr_buf[NVOICE][CTL] POOL __attribute__((aligned(32)));   /* each voice's sound, this block */
+static int32_t or_buf[NLAYER][CTL] POOL __attribute__((aligned(32)));   /* each layer's organism's */
+static int32_t fx_dl[CTL], fx_rv[CTL], fx_l[CTL], fx_r[CTL];   /* the effects: the last block's sends, their returns */
+static uint32_t vr_ticks[NVOICE], or_ticks[NLAYER], fx_ticks;
+static uint8_t vr_alive[NVOICE], vr_lay[NVOICE], or_live[NLAYER];   /* (vr_lay: the layer it was rendered for) */
+static uint8_t vr_core[NVOICE], or_core[NLAYER], fx_core;   /* CPU1's share */
+
+static void voice_render(uint32_t k)
+{
+    voice_t *v = &vox[k];
+    uint32_t l = v->layer, e = lay[l].engine, c0 = COST_NOW();
+    int32_t *vb = vr_buf[k];
+    int alive;
+    if (e == ENG_FM)
+        alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, blk_mac[l]);
+    else if (e == ENG_DRUID) {
+        memcpy(vmem[k].dr.mac, blk_felt[l], NMAC);
+        alive = dr_render(&vmem[k].dr, &dr_buf[l][dr_use[l]], vb, CTL);
+    } else if (e == ENG_BAY) {
+        memcpy(vmem[k].ba.mac, blk_felt[l], NMAC);
+        alive = ba_render(&vmem[k].ba, &ba_buf[l][ba_use[l]], vb, CTL);
+    } else if (e == ENG_HIVE) {
+        memcpy(vmem[k].hv.mac, blk_felt[l], NMAC);
+        alive = hv_render(&vmem[k].hv, &hv_buf[l][hv_use[l]], vb, CTL);
+    } else {
+        memcpy(vmem[k].an.mac, blk_mac[l], NMAC);
+        alive = an_render(&vmem[k].an, &an_buf[l][an_use[l]], vb, CTL);
+    }
+    COST_ADD(e);
+    vr_ticks[k] = COST_NOW() - c0;
+    vr_alive[k] = (uint8_t)alive;
+    vr_lay[k] = (uint8_t)l;
+}
+static void org_render(uint32_t l)               /* the layer's organism */
+{
+    uint32_t c0 = COST_NOW();
+    int32_t *b = or_buf[l];
+    memset(b, 0, CTL * sizeof b[0]);
+    if (lay[l].engine == ENG_CAL) {
+        memcpy(cal_rt[l].mac, blk_felt[l], NMAC);
+        or_live[l] = (uint8_t)cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], b);
+    } else {
+        memcpy(rus_rt[l].mac, blk_felt[l], NMAC);
+        or_live[l] = (uint8_t)rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], b);
+    }
+    if (or_live[l])
+        COST_ADD(lay[l].engine);                 /* (the host's model: a silent organism costs nothing) */
+    or_ticks[l] = COST_NOW() - c0;
+}
+static void fx_render(void)                      /* the master delay, then the reverb (its echoes into it too) */
+{
+    uint32_t c0 = COST_NOW();
+    memset(fx_l, 0, sizeof fx_l);
+    memset(fx_r, 0, sizeof fx_r);
+    dl_block(fx_dl, fx_l, fx_r, fx_rv);
+    rv_block(fx_rv, fx_l, fx_r, CTL);            /* (its tail goes on with no layer sounding) */
+    fx_ticks = COST_NOW() - c0;
+}
+static void blk_job(void *ctx)                   /* CPU1's share */
+{
+    uint32_t k;
+    (void)ctx;
+    if (fx_core)
+        fx_render();
+    for (k = 0; k < NVOICE; k++)
+        if (vr_core[k])
+            voice_render(k);
+    for (k = 0; k < NLAYER; k++)
+        if (or_core[k])
+            org_render(k);
+}
+/* the changes due, the macros; then the work dealt, rendered on both cores, and CPU1's joined */
+static void blk_render(void)
+{
+    uint32_t cst[NVOICE + NLAYER + 1u], s0 = 0, s1, l, k, j, n = 0, i;
+    uint8_t ord[NVOICE + NLAYER + 1u];           /* (0 .. NVOICE-1 a voice, then the organisms, then the effects) */
+    int any1 = 0;
+    for (l = 0; l < NLAYER; l++) {
+        layer_t *y = &lay[l];
+        if (!y->xfade && change_due(l)) {
+            if (layer_sounding(l))
+                y->xfade = FADE;                  /* out first, then the change */
+            else
+                change_apply(l);
+        }
+        for (i = 0; i < NMAC; i++) {
+            int32_t m = lay_mac[l][i], a = m < 0 ? -m : m, q = (int32_t)isqrt32((uint32_t)(a * MAC_MAX));
+            blk_mac[l][i] = (int8_t)m;
+            blk_felt[l][i] = (int8_t)(m < 0 ? -q : q);   /* (the organisms' macros felt early: the square root of the
+                                                          * turn; FM and ANIMA take theirs as turned) */
+        }
+    }
+    audio_worker_check();
+    for (k = 0; k < NVOICE + NLAYER + 1u; k++) {  /* (the work by its last cost, the dearest first ..) */
+        uint32_t c;
+        if (k < NVOICE) {
+            vr_core[k] = 0;
+            vr_lay[k] = 0xFFu;
+            if (!vox[k].sounding || eng_organism(lay[vox[k].layer].engine))
+                continue;
+            c = vox[k].cost ? vox[k].cost : eng_cost[lay[vox[k].layer].engine & 7u];
+        } else if (k < NVOICE + NLAYER) {
+            l = k - NVOICE;
+            or_core[l] = or_live[l] = 0;
+            if (!eng_organism(lay[l].engine))
+                continue;
+            c = org_cost[l] ? org_cost[l] : eng_cost[lay[l].engine];
+        } else {
+            fx_core = 0;
+            c = fx_ticks;
+        }
+        cst[k] = c;
+        for (j = n; j > 0u && cst[ord[j - 1u]] < c; j--)
+            ord[j] = ord[j - 1u];
+        ord[j] = (uint8_t)k;
+        n++;
+    }
+    if (audio_worker_online) {
+        s1 = 0;
+        for (j = 0; j < n; j++) {                /* (.. each to the core with less so far) */
+            k = ord[j];
+            if (k == NVOICE + NLAYER || s1 <= s0) {   /* (the effects on CPU1) */
+                if (k < NVOICE)
+                    vr_core[k] = 1;
+                else if (k < NVOICE + NLAYER)
+                    or_core[k - NVOICE] = 1;
+                else
+                    fx_core = 1;
+                s1 += cst[k];
+            } else
+                s0 += cst[k];
+        }
+        any1 = audio_worker_submit(blk_job, 0);
+    }
+    if (!any1) {                                 /* (CPU1 off, or not free: all here) */
+        memset(vr_core, 0, sizeof vr_core);
+        memset(or_core, 0, sizeof or_core);
+        fx_core = 0;
+    }
+    if (!fx_core)
+        fx_render();
+    for (k = 0; k < NVOICE; k++)
+        if (vox[k].sounding && !vr_core[k] && !eng_organism(lay[vox[k].layer].engine))
+            voice_render(k);
+    for (l = 0; l < NLAYER; l++)
+        if (eng_organism(lay[l].engine) && !or_core[l])
+            org_render(l);
+    if (any1 && !audio_worker_join()) {          /* (CPU1 lost: retired; its share silent this block, kept going) */
+        for (k = 0; k < NVOICE; k++)
+            if (vr_core[k]) {
+                memset(vr_buf[k], 0, sizeof vr_buf[k]);
+                vr_alive[k] = 1;
+                vr_ticks[k] = 0;
+                vr_lay[k] = vox[k].layer;
+            }
+        for (l = 0; l < NLAYER; l++)
+            if (or_core[l]) {
+                memset(or_buf[l], 0, sizeof or_buf[l]);
+                or_live[l] = 1;
+                or_ticks[l] = 0;
+            }
+        if (fx_core) {
+            memset(fx_l, 0, sizeof fx_l);
+            memset(fx_r, 0, sizeof fx_r);
+        }
+    }
+    an_cache_fill();                             /* (a wavetable missed this block, copied in now: no core rendering) */
+}
+
 static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin, int32_t *dlin)
 {
     layer_t *y = &lay[l];
-    int32_t buf[CTL], vb[CTL], pk = 0;
+    int32_t buf[CTL], *vb, pk = 0;
     uint32_t i, k, any = 0;
-    if (!y->xfade && change_due(l)) {
-        if (layer_sounding(l))
-            y->xfade = FADE;                      /* out first, then the change */
-        else
-            change_apply(l);
-    }
-    int8_t mac[NMAC], felt[NMAC];
-    for (i = 0; i < NMAC; i++) {
-        int32_t m = lay_mac[l][i], a = m < 0 ? -m : m, q = (int32_t)isqrt32((uint32_t)(a * MAC_MAX));
-        mac[i] = (int8_t)m;
-        felt[i] = (int8_t)(m < 0 ? -q : q);       /* (the organisms' macros felt early: the square root of the turn;
-                                                   * FM and ANIMA take theirs as turned, and feel them so themselves) */
-    }
     for (i = 0; i < CTL; i++)
         buf[i] = 0;
     org_cost[l] = 0;
     if (y->engine == ENG_CAL || y->engine == ENG_RUS) {   /* the organism: one for the layer */
-        uint32_t c0 = COST_NOW(), live;
-        if (y->engine == ENG_CAL) {
-            memcpy(cal_rt[l].mac, felt, NMAC);
-            live = (uint32_t)cal_render(&cal_rt[l], &cal_buf[l][cal_use[l]], buf);
-        } else {
-            memcpy(rus_rt[l].mac, felt, NMAC);
-            live = (uint32_t)rus_render(&rus_rt[l], &rus_buf[l][rus_use[l]], buf);
-        }
+        uint32_t live = or_live[l];
+        memcpy(buf, or_buf[l], sizeof buf);
         if (org_defer[l] && (!lay_env_on[l] || org_est[l] == AE_DONE)) {   /* (released: the note kept, let go) */
             if (y->engine == ENG_CAL) {
                 cal_note_off(&cal_rt[l], org_defer[l] - 1u, org_dsrc[l]);
@@ -1563,8 +1722,7 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
         }
         if (live) {
             any = 1;
-            COST_ADD(y->engine);
-            org_cost[l] = COST_NOW() - c0;
+            org_cost[l] = or_ticks[l];
             eng_cost[y->engine] = (eng_cost[y->engine] * 7u + org_cost[l] + 7u) / 8u;
         }
     }
@@ -1573,28 +1731,17 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
         int alive;
         if (v->layer != l || !v->sounding)
             continue;
+        if (vr_lay[k] != l)                      /* (taken for this layer since the deal: rendered now, here) */
+            voice_render(k);
+        vb = vr_buf[k];
+        alive = vr_alive[k];
         {
-            uint32_t c0 = COST_NOW(), c;
-            if (y->engine == ENG_FM)
-                alive = fm_render(&v->fm, &fm_buf[l][fm_use[l]], vb, mac);
-            else if (y->engine == ENG_DRUID) {
-                memcpy(vmem[k].dr.mac, felt, NMAC);
-                alive = dr_render(&vmem[k].dr, &dr_buf[l][dr_use[l]], vb, CTL);
-            } else if (y->engine == ENG_BAY) {
-                memcpy(vmem[k].ba.mac, felt, NMAC);
-                alive = ba_render(&vmem[k].ba, &ba_buf[l][ba_use[l]], vb, CTL);
-            } else if (y->engine == ENG_HIVE) {
-                memcpy(vmem[k].hv.mac, felt, NMAC);
-                alive = hv_render(&vmem[k].hv, &hv_buf[l][hv_use[l]], vb, CTL);
-            } else {
-                memcpy(vmem[k].an.mac, mac, NMAC);
-                alive = an_render(&vmem[k].an, &an_buf[l][an_use[l]], vb, CTL);
+            uint32_t c = vr_ticks[k];
+            if (c) {                             /* (0: CPU1 lost it, nothing measured) */
+                v->cost = (uint16_t)(c > 0xFFFFu ? 0xFFFFu : c);
+                if (alive)
+                    eng_cost[y->engine & 7u] = (eng_cost[y->engine & 7u] * 7u + c + 7u) / 8u;
             }
-            COST_ADD(y->engine);
-            c = COST_NOW() - c0;
-            v->cost = (uint16_t)(c > 0xFFFFu ? 0xFFFFu : c);
-            if (alive)
-                eng_cost[y->engine & 7u] = (eng_cost[y->engine & 7u] * 7u + c + 7u) / 8u;
         }
         if (alive && v->est) {                     /* the track's own envelope over the voice */
             int32_t e0 = v->elv;
@@ -1771,7 +1918,7 @@ static void shed(uint32_t late)
  * overload guard does that, when the audio is late after all) */
 static void budget_guard(void)
 {
-    uint32_t pred = blk_last + blk_new, l, k;
+    uint32_t pred = blk_last + (audio_worker_online ? blk_new / 2u : blk_new), l, k;   /* (two cores: half each) */
     blk_new = 0;
     for (k = 0; k < NVOICE; k++)                  /* (those already fading out are as good as gone) */
         if (vox[k].sounding && vox[k].fade && !vox[k].pend)
@@ -1805,14 +1952,14 @@ static void budget_guard(void)
     }
 }
 
-/* one block: the events, the loops, the layers, the reverb, the master (Q15 stereo, interleaved) */
+/* one block: the events, the loops, the work (two cores), the layers, the effects' returns, the master (Q15 stereo,
+ * interleaved) */
 static void mix_block(int32_t *out)
 {
     int32_t l_[CTL], r_[CTL], rvin[CTL], dlin[CTL];
     uint32_t i, l;
     uint32_t c0 = COST_NOW();
     an_cache_now = blk_clock + 1u;                /* (ANIMA's wavetables from RAM while the ISR renders) */
-    an_cache_filled = 0;
     events_take();
     loops_run();
     budget_guard();
@@ -1820,16 +1967,19 @@ static void mix_block(int32_t *out)
         shed(shed_req > 1u);
         shed_req = 0;
     }
+    blk_render();
     for (i = 0; i < CTL; i++)
         l_[i] = r_[i] = rvin[i] = dlin[i] = 0;
     for (l = 0; l < NLAYER; l++)
         layer_block(l, l_, r_, rvin, dlin);
-    dl_block(dlin, l_, r_, rvin);                 /* the master delay, before the reverb (its echoes into it too) */
-    rv_block(rvin, l_, r_, CTL);                  /* the master reverb (its tail goes on with no layer sounding) */
     for (i = 0; i < CTL; i++) {
+        l_[i] += fx_l[i];                         /* the delay's and the reverb's returns (on the last block's sends) */
+        r_[i] += fx_r[i];
         out[2u * i] = ceiling(mulq12(l_[i], master_q12));
         out[2u * i + 1u] = ceiling(mulq12(r_[i], master_q12));
     }
+    memcpy(fx_dl, dlin, sizeof fx_dl);            /* (this block's sends, for the effects next block) */
+    memcpy(fx_rv, rvin, sizeof fx_rv);
     blk_last = COST_NOW() - c0;
     an_cache_now = 0;
     blk_clock++;
@@ -1869,6 +2019,10 @@ static void layers_init(void)
     rv_init();
     gran_init();
     dl_init();
+    memset(fx_dl, 0, sizeof fx_dl);               /* (the effects' sends from the block before, and their returns) */
+    memset(fx_rv, 0, sizeof fx_rv);
+    memset(fx_l, 0, sizeof fx_l);
+    memset(fx_r, 0, sizeof fx_r);
 }
 
 /* the ISR has taken the last sound published for this layer and engine (or waits ~20 ms for it) */

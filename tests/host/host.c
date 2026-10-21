@@ -89,6 +89,30 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 #include "bayarea.c"
 #include "hive.c"
 #include "reverb.c"
+/* CPU1's mailbox (src/audio_worker.h), as one core sees it: a job posted runs at the join -- the units of work are
+ * apart, so the sound is the same as with the two cores at once. host_cores 1: CPU1 off (the one-core path) */
+static int audio_worker_online;            /* (0: one core, as the host times it -- the sum of both; cores sets it) */
+static void (*host_job)(void *);
+static int host_jobs_n;
+static void *host_job_ctx;
+static int audio_worker_submit(void (*fn)(void *), void *ctx)
+{
+    if (!audio_worker_online)
+        return 0;
+    host_job = fn;
+    host_job_ctx = ctx;
+    return 1;
+}
+static int audio_worker_join(void)
+{
+    if (host_job) {
+        host_job(host_job_ctx);
+        host_jobs_n++;
+    }
+    host_job = 0;
+    return 1;
+}
+static void audio_worker_check(void) {}
 #define MQ 64u
 static uint32_t midi_in_q[MQ];
 static volatile uint32_t mi_w, mi_r;
@@ -3366,12 +3390,11 @@ static int cmd_anref(void)
                         an_note_off(&v);
                     if (b == 900u)
                         an_note_on(&v, &d, pitch_inc((int32_t)(43u + 9u * s) * 16), 0);
-                    if (cached) {                     /* (as the ISR: the RAM copies, one copied a block) */
+                    if (cached)                       /* (as the ISR: the RAM copies, one copied a block) */
                         an_cache_now = ++clk;
-                        an_cache_filled = 0;
-                    }
                     if (!an_render(&v, &d, out, CTL))
                         memset(out, 0, sizeof out);
+                    an_cache_fill();
                     an_cache_now = 0;
                     for (i = 0; i < CTL; i++)
                         hk = (hk ^ (uint32_t)out[i]) * 16777619u;
@@ -5295,6 +5318,53 @@ static int cmd_hivediv(void)
     return fail ? 1 : 0;
 }
 
+/* the two cores: a busy piece (six layers on six engines, chords, the delay and the reverb fed) rendered with CPU1
+ * (host_job at the join) or without; run as "cores 2" and "cores 1", the two hashes must be the same */
+#define host_jobs host_jobs_n
+static int cmd_cores(int ncores)
+{
+    static const uint8_t ENG[NLAYER] = {ENG_FM, ENG_ANIMA, ENG_CAL, ENG_DRUID, ENG_BAY, ENG_HIVE};
+    uint32_t l, b, i, h = 2166136261u, g;
+    audio_worker_online = ncores > 1;
+    layers_init();
+    ui_init();
+    sounds_init();
+    master_q12 = 4096;
+    for (l = 0; l < NLAYER; l++) {
+        press_btn(LAYER_BTN[l]);
+        for (g = 0; ui.engine[l] != ENG[l] && g < 10u; g++) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        ui.dsend[l] = 50;
+        level_pan_apply(l);
+    }
+    for (b = 0; b < 44100u * 14u / CTL; b++) {
+        if (b % (44100u * 2u / CTL) == 0u && b / (44100u * 2u / CTL) < NLAYER) {
+            l = b / (44100u * 2u / CTL);
+            press_btn(LAYER_BTN[l]);
+            for (i = 0; i < 3u; i++)
+                press_key(i * 2u + l, 1);
+        }
+        if (b == 44100u * 12u / CTL)
+            for (l = 0; l < NLAYER; l++) {
+                press_btn(LAYER_BTN[l]);
+                for (i = 0; i < 3u; i++)
+                    press_key(i * 2u + l, 0);
+            }
+        run_blocks(1, 0);
+        for (i = 0; i < 2u * CTL; i++)
+            h = (h ^ (uint32_t)mix_out[i]) * 16777619u;
+    }
+    for (l = 0, i = 0; l < NVOICE; l++)
+        i += vox[l].sounding;
+    printf("cores %d: hash %08x, CPU1 jobs %d, ui engines %u %u %u %u %u %u\n", ncores, h, host_jobs, ui.engine[0],
+           ui.engine[1], ui.engine[2], ui.engine[3], ui.engine[4], ui.engine[5]);
+    if (ncores > 1 && host_jobs < 1000)
+        printf("FAIL cores: CPU1 was given no work\n");
+    return ncores > 1 && host_jobs < 1000;
+}
+
 /* BRICKLAYER: SHIFT + the envelope key (the key blinks; the track's envelope left as it is); REC its entry (lit,
  * the looper untouched); notes added, spread evenly over LENGTH, played; SHIFT + a key, SHIFT + REC, REC held:
  * notes out; the loops' transposition moving them; the page down and up by holding the key, a short press still
@@ -6205,6 +6275,8 @@ int main(int argc, char **argv)
         return cmd_bayarea(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "hivediv"))
         return cmd_hivediv();
+    if (argc >= 3 && !strcmp(argv[1], "cores"))
+        return cmd_cores(atoi(argv[2]));
     if (argc >= 3 && !strcmp(argv[1], "hive"))
         return cmd_hive(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "bricks"))

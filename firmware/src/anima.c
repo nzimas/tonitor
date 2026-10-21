@@ -160,28 +160,39 @@ AINL int32_t an_rd(const int16_t *d, uint32_t ph)
 #endif
 #define AN_SVF(c, hz, q) svf_coef(c, AN_HALF ? clampi((hz) * 2, 16, TANG_FMAX) : (hz), q)
 #ifndef AN_CACHE_N
-#define AN_CACHE_N 15u              /* (~30 KB of the pool: as many as leave it its 8 KB headroom) */
+#define AN_CACHE_N 13u              /* (~26 KB of the pool: as many as leave it its 8 KB headroom beside CPU1's
+                                     * stacks and the two cores' buffers) */
 #endif
 static int16_t an_cache[AN_CACHE_N][AN_TSIZE + 1u] POOL;
 static uint16_t an_cache_tag[AN_CACHE_N];       /* the table x AN_LEVELS + its level, + 1 (0: empty) */
 static uint32_t an_cache_used[AN_CACHE_N];      /* the block it was last asked for */
 static uint32_t an_cache_now;                   /* the ISR's block (+ 1) while it renders; 0 elsewhere */
-static uint8_t an_cache_filled;                 /* a table copied in this block */
+static uint16_t an_cache_wish;                  /* a table missed in this block (its tag), copied in after */
+/* a table, from RAM if it is there; else from the flash, and wished for (two cores may render ANIMA voices at
+ * once: they only read the cache; CPU0 copies a table in after both are done, an_cache_fill) */
 static const int16_t *an_tab(uint32_t k, uint32_t inc)
 {
     uint32_t lv = inc < AN_INC_200 ? 0u : inc < AN_INC_600 ? 1u : inc < AN_INC_2000 ? 2u : 3u, tag = k * AN_LEVELS + lv + 1u;
-    uint32_t i, room = AN_CACHE_N;
-    const int16_t *flash = &AN_WT[(tag - 1u) * (AN_TSIZE + 1u)];
+    uint32_t i;
     if (!an_cache_now)
-        return flash;
+        return &AN_WT[(tag - 1u) * (AN_TSIZE + 1u)];
     for (i = 0; i < AN_CACHE_N; i++)
         if (an_cache_tag[i] == tag) {
             an_cache_used[i] = an_cache_now;
             return an_cache[i];
         }
-    if (an_cache_filled)
-        return flash;
+    an_cache_wish = (uint16_t)tag;
+    return &AN_WT[(tag - 1u) * (AN_TSIZE + 1u)];
+}
+static void an_cache_fill(void)                 /* the table wished for this block copied in (one a block) */
+{
+    uint32_t i, room = AN_CACHE_N, tag = an_cache_wish;
+    an_cache_wish = 0;
+    if (!tag || !an_cache_now)
+        return;
     for (i = 0; i < AN_CACHE_N; i++) {
+        if (an_cache_tag[i] == tag)
+            return;
         if (!an_cache_tag[i]) {
             room = i;
             break;
@@ -190,12 +201,10 @@ static const int16_t *an_tab(uint32_t k, uint32_t inc)
             room = i;
     }
     if (room == AN_CACHE_N)
-        return flash;                           /* (all of them in use: this one from the flash) */
-    memcpy(an_cache[room], flash, sizeof an_cache[room]);
+        return;                                 /* (all of them in use) */
+    memcpy(an_cache[room], &AN_WT[(tag - 1u) * (AN_TSIZE + 1u)], sizeof an_cache[room]);
     an_cache_tag[room] = (uint16_t)tag;
     an_cache_used[room] = an_cache_now;
-    an_cache_filled = 1;
-    return an_cache[room];
 }
 
 typedef struct {
