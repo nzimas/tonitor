@@ -43,6 +43,11 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="054">0.54</h2>
+<p>Fixed</p>
+<ul>
+<li>USB audio was not offered on macOS 12 (Monterey): the FM-1 did not appear as an input there, while other FM-1 firmwares do. The FM-1 now offers 44.1 kHz and 48 kHz, as SLOOP does; at 48 kHz it resamples (SLOOP's polyphase filter, uac_fir.h), which costs some CPU only while a program records at 48 kHz. 44.1 kHz is still the rate the FM-1 renders at, and the better one to record at.</li>
+</ul>
 <h2 id="053">0.53</h2>
 <p>Fixed</p>
 <ul>
