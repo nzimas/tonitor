@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.55
+
+Fixed
+- USB audio on macOS 12 to 15: the FM-1 now lists its audio streaming interface before its MIDI one in the audio
+  control's collection (as SLOOP 2.7.2, after Felucca 1.5.1). macOS up to 15 drops the MIDI interface from that list
+  as it reads it, and with MIDI listed first it stopped before the audio interface: no audio input appeared (MIDI
+  still worked). macOS 26 was not affected. The device's version number changes too (bcdDevice), so a computer
+  reads the description again.
+
+Changed
+- USB audio is 44.1 kHz only again (0.54's 48 kHz did not help; 44.1 kHz is the rate the FM-1 renders at, with no
+  resampling).
+
 ## 0.54
 
 Fixed
