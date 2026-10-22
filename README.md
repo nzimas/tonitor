@@ -599,7 +599,8 @@ Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 
 Connected to a computer (or a phone or tablet that takes USB audio), the FM-1 is also a **USB audio input**:
 choose "FM-1 Tonitor" as the input in the recording program. It carries the master output, stereo, 16-bit, at
-**44.1 kHz** (the rate the FM-1 renders at; there is no 48 kHz). The stream is taken before the **MASTER** knob,
+**44.1 kHz** (the rate the FM-1 renders at) or 48 kHz (resampled, at some cost in CPU: record at 44.1 kHz when
+you can). The stream is taken before the **MASTER** knob,
 so the knob sets the headphones' level and not the recording's. No driver is needed; MIDI goes on over the same
 cable.
 

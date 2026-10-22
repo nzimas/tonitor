@@ -85,9 +85,15 @@ static struct {
 #define UAC_RATE 44100u
 #if FELUCCA_UAC_48K
 /* 48 kHz: the same times in 48 kHz frames (x 160 / 147); a render of HALF_FRAMES gives 139..140 frames */
+#if HALF_FRAMES >= 256u          /* (TONITOR, BIGORNA: 256-frame halves) */
+#define UA_PRIME48 139u
+#define UA_LO48 104u
+#define UA_HI48 174u
+#else
 #define UA_PRIME48 113u
 #define UA_LO48 87u
 #define UA_HI48 139u
+#endif
 #define UA_REND48 ((HALF_FRAMES * 160u + 146u) / 147u)
 #define UA_MAXF 49u              /* frames in the largest packet: 48 + 1 */
 _Static_assert(UA_HI48 + UA_REND48 + UA_MAXF < UA_N, "the ring holds the band, a render and a packet (48 kHz)");
