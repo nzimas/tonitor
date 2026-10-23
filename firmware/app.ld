@@ -24,7 +24,7 @@ SECTIONS
     .ram_text : { _rt_start = .; KEEP(*(.ram_text*)) . = ALIGN(4); _rt_end = .; } > RAMTEXT AT > XIP
     _rt_load = LOADADDR(.ram_text);
     /* the audio's hottest code (FAST), run from RAM: never waits for the flash's cache. It may call into XIP */
-    .fast_text : { . = ALIGN(4); _ft_start = .; KEEP(*(.fast_text*)) . = ALIGN(4); _ft_end = .; } > RAMTEXT AT > XIP
+    .fast_text : { . = ALIGN(4); _ft_start = .; KEEP(*(.fast_text*)) . = ALIGN(4); KEEP(*(.fast_data*)) . = ALIGN(4); _ft_end = .; } > RAMTEXT AT > XIP
     _ft_load = LOADADDR(.fast_text);
     /* data in what the RAM for code leaves free (DLYMEM: part of the delay's line), zeroed by its owner */
     .dly (NOLOAD) : { . = ALIGN(4); *(.dly_mem*) . = ALIGN(4); } > RAMTEXT

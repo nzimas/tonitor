@@ -15,10 +15,10 @@ clang -O2 -std=gnu99 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-
     -Ifirmware/src -Ibuild/gen tests/host/host.c -o build/host
 build/host check
 clang -O2 -std=gnu99 -w -Ifirmware/src -Ibuild/gen tests/golden/golden.c -o build/golden
-for g in 0 1 2 3 4; do
+for g in 0 1 2 3 4 5 6; do
     build/golden $g | diff -q - tests/golden/gen$g.txt >/dev/null || { echo "FAIL golden: generation $g no longer draws its sounds again"; exit 1; }
 done
-echo "golden: generations 0 to 4 as they were"
+echo "golden: generations 0 to 6 as they were"
 build/host flows
 build/host latch
 build/host presets build/screens

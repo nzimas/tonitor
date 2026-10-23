@@ -170,7 +170,7 @@ static uint32_t an_cache_now;                   /* the ISR's block (+ 1) while i
 static uint16_t an_cache_wish;                  /* a table missed in this block (its tag), copied in after */
 /* a table, from RAM if it is there; else from the flash, and wished for (two cores may render ANIMA voices at
  * once: they only read the cache; CPU0 copies a table in after both are done, an_cache_fill) */
-static const int16_t *an_tab(uint32_t k, uint32_t inc)
+static FAST const int16_t *an_tab(uint32_t k, uint32_t inc)
 {
     uint32_t lv = inc < AN_INC_200 ? 0u : inc < AN_INC_600 ? 1u : inc < AN_INC_2000 ? 2u : 3u, tag = k * AN_LEVELS + lv + 1u;
     uint32_t i;
@@ -184,6 +184,7 @@ static const int16_t *an_tab(uint32_t k, uint32_t inc)
     an_cache_wish = (uint16_t)tag;
     return &AN_WT[(tag - 1u) * (AN_TSIZE + 1u)];
 }
+static __typeof__(&an_tab) volatile an_tab_fp = an_tab;   /* (the flash's way into the RAM code) */
 static void an_cache_fill(void)                 /* the table wished for this block copied in (one a block) */
 {
     uint32_t i, room = AN_CACHE_N, tag = an_cache_wish;
@@ -280,7 +281,7 @@ typedef struct {
 /* ------------------------------------------------------ the envelope --- */
 enum { EN_IDLE, EN_ATT, EN_HOLD, EN_DEC, EN_SUS, EN_REL };
 /* e^(-a), a in Q16, Q16 */
-static int32_t an_expneg(int32_t a)
+AINL int32_t an_expneg(int32_t a)
 {
     return (int32_t)exp2_q16(-(int32_t)(((int64_t)a * 94548) >> 16));   /* log2(e) = 1.4427, Q16 */
 }
@@ -292,7 +293,7 @@ static void an_env_times(an_voice_t *v, const an_design_t *d)
     v->decK = Q16 - an_expneg((int32_t)(218760u / (uint32_t)clampi(d->dec, 1, 600000)));
     v->relK = an_expneg((int32_t)(218760u / (uint32_t)clampi(d->rel, 1, 600000)));
 }
-static int32_t an_env_tick(an_voice_t *v, const an_design_t *d)   /* once a block, Q24 */
+static FAST int32_t an_env_tick(an_voice_t *v, const an_design_t *d)   /* once a block, Q24 */
 {
     if (v->env_hold) {
         v->est = EN_SUS;
@@ -334,6 +335,7 @@ static int32_t an_env_tick(an_voice_t *v, const an_design_t *d)   /* once a bloc
     }
     return v->ev;
 }
+static __typeof__(&an_env_tick) volatile an_env_tick_fp = an_env_tick;   /* (the flash's way into the RAM code) */
 
 /* ---------------------------------------------------------- geometry --- */
 /* sin / cos of an angle in radians, Q16 -> Q15 */
@@ -803,11 +805,13 @@ static void an_control(an_voice_t *v, const an_design_t *d)
     } else if (mac[2])
         v->resMix = mulq15(v->resMix, (MAC_MAX + mac[2]) * (Q15 / MAC_MAX));
 }
+static __typeof__(&an_control) volatile an_control_fp = an_control;   /* (the RAM code's way into the flash) */
 
 /* ------------------------------------------------------- one block --- */
 /* renders n (= CTL) samples, Q15 into out; returns 0 when the voice is silent for good */
 #ifndef AN_RENDER_PLACE
-#define AN_RENDER_PLACE __attribute__((noinline))   /* (FAST, from RAM: measured no faster -- the cost is the work) */
+#define AN_RENDER_PLACE FAST     /* (from RAM: alone no faster, but beside the other engines the flash cache thrashed --
+                                  * the SMK-37 chip benchmark, build 31) */
 #endif
 /* a block's samples, e / a the envelope and the amplitude moving by de / da a sample; its mean square back, for the
  * leveller. Everything a sample touches is held in locals for the block (the compiler cannot otherwise tell the
@@ -882,7 +886,7 @@ static AN_RENDER_PLACE int64_t an_samples(an_voice_t *v, const an_design_t *d, i
                             g->inc = w == 0 ? inc << 1 : w == 1 ? inc >> 1 : w == 2 ? inc + (inc >> 1) : inc << 2;
                         } else
                             g->inc = inc;
-                        g->tab = an_tab(d->tableGran, g->inc);
+                        g->tab = an_tab_fp(d->tableGran, g->inc);
                         break;
                     }
             }
@@ -998,7 +1002,7 @@ static int64_t (*volatile an_samples_at)(an_voice_t *, const an_design_t *, int3
 #if TELEMETRY
 static uint32_t an_t_ctl, an_t_smp, an_t_n;    /* (a diagnostic build: the control's and the samples' ticks, summed) */
 #endif
-static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
+static FAST int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t n)
 {
     int32_t e0, e1, de, a0, da;
     int64_t ms;
@@ -1007,7 +1011,7 @@ static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t
 #endif
     if (!v->live)
         return 0;
-    an_control(v, d);
+    an_control_fp(v, d);
 #if TELEMETRY
     if (an_cache_now)
         t1 = fm1_ticks();
@@ -1107,6 +1111,7 @@ static int an_render(an_voice_t *v, const an_design_t *d, int32_t *out, uint32_t
     }
     return 1;
 }
+static __typeof__(&an_render) volatile an_render_fp = an_render;   /* (the flash's way into the RAM code) */
 
 /* ------------------------------------------------------- the designs --- */
 static an_map AM_(uint8_t s, int32_t lo, int32_t hi, int32_t slope)
@@ -2355,7 +2360,7 @@ static void an_measure(an_design_t *d)
         an_note_on(&an_probe, d, pitch_inc((p ? 69 : 48) * 16), 1);
         acc = 0;
         for (b = 0; b < AN_PROBE_BLOCKS; b++) {
-            if (!an_render(&an_probe, d, out, CTL))
+            if (!an_render_fp(&an_probe, d, out, CTL))
                 break;
             acc += an_probe.blkms;
             if ((b % AN_PROBE_WIN) == AN_PROBE_WIN - 1u) {

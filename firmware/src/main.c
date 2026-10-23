@@ -357,6 +357,133 @@ static void bench_blocks(void)
 }
 #endif
 
+#if TELEMETRY
+/* the chip's own benchmark (a diagnostic build): some seconds after start, on track 1 alone, each engine's sounds
+ * with one note and with four, the track's effects, then all six tracks at once -- the voice's cost as measured
+ * here (eng_cost) and the audio's load (load_pct, the render's share of a half buffer, average and highest),
+ * sent as lines of text over USB-MIDI (SysEx F0 7D 55 <ASCII> F7; tools/chipbench.py prints them) */
+static struct { uint32_t ph, t, sum, n, mx; uint8_t e, s; } cb;
+static const uint8_t CB_ENG[6] = {ENG_FM, ENG_ANIMA, ENG_CAL, ENG_HIVE, ENG_DRUID, ENG_BAY};   /* (six engines, a track
+                                                                                          * each: the SMK-37's order) */
+static void cb_say(const char *s)
+{
+    uint8_t f[110];
+    uint32_t n = 0;
+    f[n++] = 0xF0; f[n++] = 0x7D; f[n++] = 0x55;
+    while (*s && n < 108u)
+        f[n++] = (uint8_t)(*s++ & 0x7Fu);
+    f[n++] = 0xF7;
+    if (usb.config && so_w - so_r + (n + 2u) / 3u < SXQ)
+        ota_wire_send(f, n);
+}
+static char *cb_put(char *b, const char *s) { str_cpy(b, s, 64); return b + str_len(b); }
+static char *cb_num(char *b, int32_t v, int dec) { fmt_fix(b, v, dec); return b + str_len(b); }
+static void cb_load(char *b, const char *what)       /* "what load avg A% max M%" */
+{
+    b = cb_put(b, what);
+    b = cb_put(b, " load ");
+    b = cb_num(b, (int32_t)(cb.n ? cb.sum * 10u / cb.n : 0u), 1);
+    b = cb_put(b, "% max ");
+    b = cb_num(b, (int32_t)cb.mx, 0);
+    cb_put(b, "%");
+}
+static void cb_notes(uint32_t n, int on)
+{
+    static const uint8_t K[4] = {12, 14, 16, 19};
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        chord_press(0, scale_note((int32_t)K[i] - 12, 0), 0, on);
+}
+static void cb_tick(void)
+{
+    /* the second run: idle with and without the delay and reverb; then the six tracks one engine (FM) against six
+     * engines, with the same notes; and six engines without the delay and reverb */
+    enum { W_START, IDLE, IDLE_NOFX, SETUP, PLAY, MEAS, DONE };
+    static const struct { uint8_t mixed, notes, nofx; const char *what; } C[6] = {
+        {0, 1, 0, "six tracks FM, 1 note each"}, {0, 2, 0, "six tracks FM, 2 notes each"},
+        {1, 1, 0, "six tracks six engines, 1 note each"}, {1, 1, 1, "six engines, 1 note each, no delay/reverb"},
+        {1, 2, 0, "six tracks six engines, 2 notes each"}, {1, 2, 1, "six engines, 2 notes each, no delay/reverb"}};
+    static char line[110];
+    uint32_t now = fm1_ms, el = now - cb.t, l;
+    if (cb.ph == DONE)
+        return;
+    if (load_pct) {
+        cb.sum += load_pct;
+        cb.n++;
+        cb.mx = load_pct > cb.mx ? load_pct : cb.mx;
+    }
+#define CB_NEXT(p) do { cb.ph = (p); cb.t = now; cb.sum = cb.n = cb.mx = 0; } while (0)
+    switch (cb.ph) {
+    case W_START:
+        if (now > 8000u && usb.config) {
+            cb_say("CHIPBENCH start (second run)");
+            CB_NEXT(IDLE);
+        }
+        break;
+    case IDLE:
+        if (el > 2000u) {
+            cb_load(line, "idle, delay and reverb on:");
+            cb_say(line);
+            diag_nofx = 1;
+            CB_NEXT(IDLE_NOFX);
+        }
+        break;
+    case IDLE_NOFX:
+        if (el > 2000u) {
+            cb_load(line, "idle, delay and reverb skipped:");
+            cb_say(line);
+            diag_nofx = 0;
+            cb.s = 0;
+            CB_NEXT(SETUP);
+        }
+        break;
+    case SETUP:
+        for (l = 0; l < NLAYER; l++) {
+            ev_post(EV_STOP, l, 0, 0);
+            ui.engine[l] = C[cb.s].mixed ? CB_ENG[l % 6u] : ENG_FM;
+            ev_post(EV_ENGINE, l, 0, ui.engine[l]);
+        }
+        diag_nofx = C[cb.s].nofx;
+        CB_NEXT(PLAY);
+        break;
+    case PLAY:
+        if (el > 1500u) {
+            for (l = 0; l < NLAYER; l++) {
+                chord_press(l, scale_note((int32_t)(2u * l), 0), 0, 1);
+                if (C[cb.s].notes > 1u)
+                    chord_press(l, scale_note((int32_t)(2u * l) + 4, 0), 0, 1);
+            }
+            CB_NEXT(MEAS);
+        }
+        break;
+    case MEAS:
+        if (el < 700u)
+            cb.sum = cb.n = cb.mx = 0;
+        else if (el > 3200u) {
+            cb_load(line, C[cb.s].what);
+            cb_say(line);
+            for (l = 0; l < NLAYER; l++) {
+                chord_press(l, scale_note((int32_t)(2u * l), 0), 0, 0);
+                chord_press(l, scale_note((int32_t)(2u * l) + 4, 0), 0, 0);
+            }
+            if (++cb.s >= 6u) {
+                diag_nofx = 0;
+                for (l = 0; l < NLAYER; l++)
+                    ev_post(EV_STOP, l, 0, 0);
+                cb_say("CHIPBENCH done");
+                CB_NEXT(DONE);
+                break;
+            }
+            CB_NEXT(SETUP);
+        }
+        break;
+    default:
+        break;
+    }
+#undef CB_NEXT
+}
+#endif
+
 static void fm1_main(void)
 {
     int32_t knob = 512 * 16, batt_acc = 0;
@@ -447,6 +574,7 @@ static void fm1_main(void)
         ui_leds();
         ui_draw();
 #if TELEMETRY
+        cb_tick();
         {
             static uint32_t sent_at;
             if ((uint32_t)(fm1_ms - sent_at) >= 200u && usb.config) {

@@ -242,7 +242,8 @@ static const uint8_t CFG_DESC[] = {
     9, 4, UAC_AS_IF, 1, 1, 1, 2, 0, 0,                  /* alt 1: the stream */
     7, 0x24, 1, 2, 1, 0x01, 0x00,                       /* AS general: terminal 2, delay 1, PCM */
 #if FELUCCA_UAC_48K
-    14, 0x24, 2, 1, 2, 2, 16, 2, 0x44, 0xAC, 0x00, 0x80, 0xBB, 0x00,   /* type I: 2 ch, 16 bit, 44100 / 48000 */
+    14, 0x24, 2, 1, 2, 2, 16, 2, 0x80, 0xBB, 0x00, 0x44, 0xAC, 0x00,   /* type I: 2 ch, 16 bit, 48000 / 44100 (TONITOR
+                                                                        * 0.56: 48 first, the rate hosts expect) */
 #else
     11, 0x24, 2, 1, 2, 2, 16, 1, UAC_RATE & 0xFF, (UAC_RATE >> 8) & 0xFF, UAC_RATE >> 16,
                                                         /* type I: 2 ch, 16 bit, one rate */
@@ -403,8 +404,13 @@ static void uac_stream(uint32_t alt)                    /* SET_INTERFACE, config
 #endif
 
 #if FELUCCA_UAC
+#if FELUCCA_UAC_48K
+#define UAC_START_RATE 48000u            /* (TONITOR 0.56: 48 kHz until the host asks for another) */
+#else
+#define UAC_START_RATE UAC_RATE
+#endif
 /* SET_CUR sampling frequency (any time: before or after SET_INTERFACE; a bus reset or a new configuration go
- * back to 44.1). 48 kHz when built with it and asked for (the nearer of the two), else 44.1. A change restarts
+ * back to UAC_START_RATE). 48 kHz when built with it and asked for (the nearer of the two), else 44.1. A change restarts
  * the stream: silence packets until the next render primes the ring at the new rate. */
 static void uac_rate_set(uint32_t hz)
 {
@@ -583,7 +589,7 @@ static void ep0_service(void)
 #if FELUCCA_UAC
         if (usb.config != 1u)
             uac_stream(0);
-        uac_rate_set(UAC_RATE);                         /* a new configuration starts at 44.1 */
+        uac_rate_set(UAC_START_RATE);                   /* a new configuration starts at 48 (0.56; 44.1 before) */
 #endif
         goto ack;
     case 0x8008:
@@ -1247,7 +1253,7 @@ static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
 #if FELUCCA_UAC
         uac.e0_rx = 0;
         uac_stream(0);
-        uac_rate_set(UAC_RATE);
+        uac_rate_set(UAC_START_RATE);
 #endif
         fm1_usb_ep0_buf(ep0buf);
         sie_wr(S_INTRUSBE, 0x07);

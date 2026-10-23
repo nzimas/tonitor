@@ -313,9 +313,10 @@ static void ba_control(ba_voice_t *v, const ba_design_t *d)
         v->primed = 2;
     }
 }
+static __typeof__(&ba_control) volatile ba_control_fp = ba_control;   /* (the RAM code's way into the flash) */
 
 /* n samples (a block) into out, Q15 */
-static int ba_render(ba_voice_t *v, const ba_design_t *d, int32_t *out, uint32_t n)
+static FAST int ba_render(ba_voice_t *v, const ba_design_t *d, int32_t *out, uint32_t n)
 {
     static const int32_t BW[5] = {179736481, 359472962, 179736481, 87442742, 94632269};   /* 12 kHz, Q29 */
     uint32_t i;
@@ -327,7 +328,7 @@ static int ba_render(ba_voice_t *v, const ba_design_t *d, int32_t *out, uint32_t
     n = n > CTL ? CTL : n;
     {
         int32_t was_c = v->cl0, was_a = v->al0, was_g = v->gl0;
-        ba_control(v, d);
+        ba_control_fp(v, d);
         g0 = d->asr ? was_g : was_a;
         g1 = d->asr ? v->gl0 : v->al0;
         (void)was_c;
@@ -419,6 +420,7 @@ static int ba_render(ba_voice_t *v, const ba_design_t *d, int32_t *out, uint32_t
         v->live = 0;                                                 /* (its envelope over, the bank rung out) */
     return 1;
 }
+static __typeof__(&ba_render) volatile ba_render_fp = ba_render;   /* (the flash's way into the RAM code) */
 
 /* ----------------------------------------------------------- the design --- */
 static void ba_design(ba_design_t *d, int32_t kind, uint32_t seed, uint32_t path, uint32_t gen)
@@ -502,7 +504,7 @@ static void ba_measure_on(ba_design_t *d, ba_voice_t *probe)
         uint32_t i;
         if (b == 1378u)
             ba_note_off(probe, d);
-        if (!ba_render(probe, d, out, CTL))
+        if (!ba_render_fp(probe, d, out, CTL))
             memset(out, 0, sizeof out);
         for (i = 0; i < CTL; i++) {
             acc += ((int64_t)out[i] * out[i]) >> 6;

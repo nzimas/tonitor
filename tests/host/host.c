@@ -1621,7 +1621,7 @@ static int cmd_caligula(const char *dir)
             rv.mix = 0;
             press_btn(B_FX);
             while (ui.engine[0] != ENG_CAL) {
-                host_enc[PANEL_ENC[EN_PRESET]] = 1;
+                host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[0] < ENG_CAL ? 1 : -1;
                 ui_input();
             }
             run_blocks(40, 0);
@@ -1703,7 +1703,7 @@ static int cmd_caligula(const char *dir)
         for (l = 0; l < NLAYER; l++) {
             press_btn(LAYER_BTN[l]);
             while (ui.engine[l] != ENG_CAL) {
-                host_enc[PANEL_ENC[EN_PRESET]] = 1;
+                host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[l] < ENG_CAL ? 1 : -1;
                 ui_input();
             }
         }
@@ -1728,7 +1728,7 @@ static int cmd_caligula(const char *dir)
         ses_scan(1);
         press_btn(B_LFO);
         while (ui.engine[3] != ENG_CAL) {
-            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[3] < ENG_CAL ? 1 : -1;
             ui_input();
         }
         run_blocks(40, 0);
@@ -1764,12 +1764,12 @@ static int cmd_caligula(const char *dir)
         grain_reset();
         press_btn(B_FX);
         while (ui.engine[0] != ENG_CAL) {
-            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[0] < ENG_CAL ? 1 : -1;
             ui_input();
         }
         press_btn(B_SEL);
         while (ui.engine[1] != ENG_ANIMA) {
-            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[1] < ENG_ANIMA ? 1 : -1;
             ui_input();
         }
         run_blocks(40, 0);
@@ -2276,7 +2276,7 @@ static int cmd_presets(const char *dir)
     /* CALIGULA's own presets: layer 2, P5; loaded into layer 4 */
     press_btn(B_SEL);
     while (ui.engine[1] != ENG_CAL) {
-        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[1] < ENG_CAL ? 1 : -1;
         ui_input();
     }
     run_blocks(40, 0);
@@ -2295,7 +2295,7 @@ static int cmd_presets(const char *dir)
         printf("FAIL presets: they do not outlive a restart\n"), fail++;
     press_btn(B_LFO);
     while (ui.engine[3] != ENG_CAL) {
-        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[3] < ENG_CAL ? 1 : -1;
         ui_input();
     }
     run_blocks(40, 0);
@@ -2591,7 +2591,7 @@ static int cmd_macros(const char *dir)
     snprintf(path, sizeof path, "%s/screen-32-macro.ppm", dir);
     ppm(path);
     while (ui.engine[0] != ENG_CAL) {                 /* another engine: its own macros, none yet */
-        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[0] < ENG_CAL ? 1 : -1;
         ui_input();
     }
     run_blocks(40, 0);
@@ -3294,7 +3294,7 @@ static int cmd_clip(const char *dir)
     ses_scan(1);
     press_btn(B_FX);                                  /* track 1: ANIMA, macros, settings, three loops, one out */
     while (ui.engine[0] != ENG_ANIMA) {
-        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[0] < ENG_ANIMA ? 1 : -1;
         ui_input();
     }
     ui.mac[0][ENG_ANIMA][1] = 30;
@@ -6443,7 +6443,7 @@ static int cmd_russolo(const char *dir)
         ses_scan(1);
         press_btn(B_LFO);
         while (ui.engine[3] != ENG_RUS) {
-            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[3] < ENG_RUS ? 1 : -1;
             ui_input();
         }
         run_blocks(40, 0);

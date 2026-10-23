@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 {
     uint32_t gen = argc > 1 ? (uint32_t)atoi(argv[1]) : 0u;
     /* each generation's kinds, and the bytes of its designs (later fields go after them) */
-    int32_t nf = gen >= 3u ? FF_N : gen ? 17 : 9, na = gen >= 3u ? AK_N : gen ? 14 : 8, nc = gen ? 10 : 6;
+    int32_t nf = gen >= 6u ? FF_N : gen >= 3u ? FF_N5 : gen ? 17 : 9, na = gen >= 3u ? AK_N : gen ? 14 : 8, nc = gen ? 10 : 6;
     uint32_t anb = gen ? 384u : GEN0_AN_BYTES, calb = gen ? 212u : GEN0_CAL_BYTES;
     static fm_patch_t fp;
     static an_design_t ad;

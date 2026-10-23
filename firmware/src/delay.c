@@ -1,15 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * TONITOR: the master delay. Mono, before the reverb: the tracks' delay sends (SHIFT + KNOB 4) summed, its echoes
  * to both sides of the master and half of them into the reverb. Its line: 2 s at FS / 2 (22.05 kHz), 8-bit mu-law
- * as the granulator's -- 44 100 bytes, part in the pool, part in the RAM beside the code (app.ld: .dly), so an
- * index reads one of the two. Each echo through a one-pole low-pass (DAMP) and the feedback (at most 0.95).
+ * as the granulator's -- 44 100 bytes in the pool (the RAM beside the code is the engines' now: app.ld .fast_text). Each echo through a one-pole low-pass (DAMP) and the feedback (at most 0.95).
  * TIME 20 ms .. 2 s on a log scale; a change of it glides (~0.1 s), so the echoes bend in pitch, as a tape's would,
  * rather than click. Parameters 0 .. 100 from the main loop (DELAY page: SHIFT + SEQ) */
 
 #define DL_N 44100u                     /* 2 s at FS / 2 */
-#define DL_NA 27200u                    /* the part in the pool */
-static uint8_t dl_a[DL_NA] POOL;
-static uint8_t dl_b[DL_N - DL_NA] DLYMEM;
+static uint8_t dl_a[DL_N] POOL;
 static struct {
     uint32_t w;                         /* where the next sample is written */
     int32_t t;                          /* the delay now, Q8 samples at FS / 2 (it glides to dl_t_want) */
@@ -18,14 +15,10 @@ static struct {
 } dl;
 static volatile int32_t dl_t_want = 400 * 22 * 256, dl_fb, dl_damp = Q15, dl_mix;
 
-static inline int32_t dl_get(uint32_t i) { return gr_dec(i < DL_NA ? dl_a[i] : dl_b[i - DL_NA]); }
-static inline void dl_put(uint32_t i, int32_t x)
+AINL int32_t dl_get(uint32_t i) { return gr_dec(dl_a[i]); }
+AINL void dl_put(uint32_t i, int32_t x)
 {
-    uint8_t c = x > -4 && x < 4 ? 0u : gr_enc(x);   /* (silence as silence: the code's first step is 6, not 0) */
-    if (i < DL_NA)
-        dl_a[i] = c;
-    else
-        dl_b[i - DL_NA] = c;
+    dl_a[i] = x > -4 && x < 4 ? 0u : gr_enc(x);   /* (silence as silence: the code's first step is 6, not 0) */
 }
 
 /* TIME as ms: 20 x 100^(v / 100) */
@@ -43,13 +36,12 @@ static void dl_param(int32_t time, int32_t fb, int32_t damp, int32_t mix)   /* e
 static void dl_init(void)
 {
     memset(dl_a, 0x80, sizeof dl_a);    /* (mu-law's zero is not 0x00: 0x80 is -0, silence either way) */
-    memset(dl_b, 0x80, sizeof dl_b);
     memset(&dl, 0, sizeof dl);
     dl.t = dl_t_want;
 }
 
 /* a block: in (mono, CTL) into the line; the echoes added to l and r, half of them to rvin */
-static void dl_block(const int32_t *in, int32_t *l, int32_t *r, int32_t *rvin)
+static FAST void dl_block(const int32_t *in, int32_t *l, int32_t *r, int32_t *rvin)
 {
     uint32_t i;
     int32_t fb = dl_fb, damp = dl_damp, mix = dl_mix, tw = dl_t_want;

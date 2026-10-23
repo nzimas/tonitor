@@ -1296,8 +1296,10 @@ static int ses_load(uint32_t i)
         ev_post(EV_ENGINE, l, 0, ui.engine[l]);
         mac_apply(l);
         for (k = 0; k < NKEY; k++)                      /* the latched notes, sounding again (with the new sound) */
-            if ((ui.latch[l] >> k) & 1u)
+            if ((ui.latch[l] >> k) & 1u) {
                 ev_post(EV_ON, l, ui.latch_note[l][k], 0);
+                ev_post(EV_LATCH, l, ui.latch_note[l][k], 1);   /* (kept from the overload guard) */
+            }
         /* the loops: into the emptied looper (the ISR leaves an empty one alone), then set going */
         {
             uint32_t nt, play, first = 0, n = h.format >= 5u ? y.loop_n & 0xFFFFu : y.loop_n;   /* (format 5: the sound's generation and path above) */
@@ -1374,6 +1376,7 @@ static int ses_load(uint32_t i)
                                                                           * already -- the chord instead) */
                     note_release(l, ui.latch_note[l][k]);
                     chord_press(l, ui.latch_note[l][k], ui.latch_form[l][k], 1);
+                    latch_mark(l, ui.latch_note[l][k], ui.latch_form[l][k]);
                 }
             }
         }

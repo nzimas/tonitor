@@ -599,8 +599,9 @@ Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 
 Connected to a computer (or a phone or tablet that takes USB audio), the FM-1 is also a **USB audio input**:
 choose "FM-1 Tonitor" as the input in the recording program. It carries the master output, stereo, 16-bit, at
-**44.1 kHz** (the rate the FM-1 renders at; there is no 48 kHz). It is meant to work on macOS 12 and later (and on Windows
-and Linux, as a class-compliant device). The stream is taken before the **MASTER** knob,
+**48 kHz** by default (resampled from the 44.1 kHz the FM-1 renders at) or **44.1 kHz** (as rendered, a little
+less CPU), as the recording program or the computer's audio settings choose. It is a class-compliant device
+(macOS, Windows, Linux, and phones and tablets that take USB audio). The stream is taken before the **MASTER** knob,
 so the knob sets the headphones' level and not the recording's. No driver is needed; MIDI goes on over the same
 cable.
 
@@ -609,7 +610,7 @@ cable.
 ### FM — six operators, DX7 style
 
 The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
-fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-two families of
+fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-five families of
 sound objects (since 0.22 with their operators on the ratios they were designed with — before, a slip in the
 generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds
 saved then come back as they were):
@@ -621,7 +622,7 @@ saved then come back as they were):
 | **BRUIT** | noises: feedback and high ratios scattered by a sample-and-hold LFO |
 | **IMPACT** | struck bodies of several kinds: thuds, wooden knocks, metal hits, drum skins (membrane-like partials), debris (heavy feedback, fixed-frequency modulators); the modulators dying before the carriers; the octave sometimes moved; the pitch falling to the note on about one sound in ten |
 | **ITERATIF** | iterative objects: a sound pulsed by its own LFO, square or random |
-| **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly |
+| **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly (from 0.56 drawn as part of WARP) |
 | **SPECTRE** | a spectral arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
 | **ABYSS** | sub-bass rumble folded by feedback, breathing slowly |
 | **FRICTION** | creaking: sub-audio fixed-frequency modulators and random pitch |
@@ -635,9 +636,19 @@ saved then come back as they were):
 | **WIND** | breath and gusts over a soft drone |
 | **PLUCK** | plucked strings, bright or dark: the modulators die at once (the attack's brightness), the carriers die away, higher strings quicker |
 | **MALLET** | struck bars — marimba, vibraphone, kalimba: a high modulator's knock, gone at once, the bar ringing on |
-| **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope |
+| **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope; from 0.56 now and then GLISSE's long glide (sometimes with a siren) or RUBBER's bounce, or both, and RUBBER's plain ratios |
 | **GLITCH** | broken, mechanical sounds of several kinds: the level chopped by a square or random LFO, a crunch of heavy feedback with fixed-frequency modulators, the pitch thrown between steps by its envelope, a slow uneven wobble, and now and then a gentle sample-and-hold on the pitch |
-| **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it |
+| **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it (from 0.56 drawn as part of WARP) |
+| **SHAPER** | a carrier nailed to 1–19 Hz under modulators that follow the key: it works as a wave shaper, the tone rolling between odd and even harmonics a few times a second, at the same pace up and down the keyboard |
+| **LADDER** | four to six carriers on a ladder of ratios (near unison, an octave stack, uneven steps), their envelopes staggered: the partials enter, or die, one by one |
+| **REVERSE** | a sound that swells for as long as the key is held and stops when it is let go: tape run backwards |
+| **CREEP** | a held note leaving its pitch slowly, over seconds to tens of seconds |
+| **CLANG** | bells as the DX7's programmers made them: carriers turned by modulators on ratios off their harmonics, the index dying with the note |
+
+From 0.56 (generation 6) GLISSE and RUBBER are no longer drawn as families of their own: WARP has their glides
+and bounces (SHIFT + PRESETS steps over them). SHAPER, LADDER, REVERSE, CREEP and CLANG were learned from a
+collection of 9,606 DX7 voices (the idioms their programmers used that the other families do not make; each
+patch is a new one of that kind, never one of the collection's voices), after the SMK-37 port of Tonitor.
 
 Each patch is then shaped with care: modulators on high ratios turned down (their sidebands alias and
 scream), the brightness scaled down the keyboard so high notes are not shrill nor low ones muddy, rate

@@ -38,7 +38,7 @@ CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-fu
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
 PRODUCT = "FM-1_700"                # package identity; release builds are FM-1_7XY
-VERSION = "0.55"
+VERSION = "0.56"
 
 
 def toolchain():
@@ -141,6 +141,8 @@ def build_loader():
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen",
              f'-DTONITOR_ID="{PRODUCT}"', f'-DTONITOR_VERSION="{VERSION}"']
+    if os.environ.get("TONITOR_TELEMETRY") == "1":      # a diagnostic build: timing over USB, the chip's own benchmark
+        flags.append("-DTELEMETRY=1")
     tc_all(("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),
            ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),
            ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),

@@ -297,6 +297,18 @@ static void chord_press(uint32_t l, uint32_t root, uint32_t f1, int on)
         else
             note_release(l, n[i]);
 }
+/* a note (or chord) latched on track l: told to the voices, so the overload guard never lets it go */
+static void latch_mark(uint32_t l, uint32_t root, uint32_t f1)
+{
+    uint32_t n[3], i;
+    if (!f1) {
+        ev_post(EV_LATCH, l, root, 1);
+        return;
+    }
+    chord_notes(root, f1 - 1u, n);
+    for (i = 0; i < 3u; i++)
+        ev_post(EV_LATCH, l, n[i], 1);
+}
 /* a note (or chord) of BALLSY's or BRICKLAYER's: played as a key's, but not for the looper (it records the keys) */
 static void seq_press(uint32_t l, uint32_t root, uint32_t f1, int on)
 {
@@ -317,6 +329,7 @@ static void latch_move(uint32_t l, int32_t d)
             uint32_t was = ui.latch_note[l][k], now = lx_map(was, d, m), k2;
             chord_press(l, was, ui.latch_form[l][k], 0);
             chord_press(l, now, ui.latch_form[l][k], 1);
+            latch_mark(l, now, ui.latch_form[l][k]);
             /* the key lit moves as the hand would: d white keys along, unless that is off the keyboard or taken */
             for (k2 = 0; k2 < NKEY && white_ix(k2) != white_ix((uint32_t)k) + d; k2++)
                 ;
@@ -1131,7 +1144,10 @@ static void ui_input(void)
             uint32_t e = ui.engine[ui.sel];
             int32_t n = e == ENG_FM ? FF_N : e == ENG_ANIMA ? AK_N : e == ENG_CAL ? CS_N : e == ENG_RUS ? RK_N
                         : e == ENG_DRUID ? DK_N : e == ENG_BAY ? BK_N : HK_N;
-            new_sound_of(clampi(cur_kind(ui.sel) + s, 0, n - 1), 0);   /* (at the first or last: that one again) */
+            int32_t k = clampi(cur_kind(ui.sel) + s, 0, n - 1), d = s > 0 ? 1 : -1;
+            while (e == ENG_FM && fm_retired(k) && k + d >= 0 && k + d < n)
+                k += d;                          /* (FM's GLISSE and RUBBER are WARP's now: stepped over) */
+            new_sound_of(k, 0);                  /* (at the first or last: that one again) */
         }
         s = 0;
     } else if (s && ui.pre_page == SP_LIST) {           /* PRESETS: through the presets */
@@ -1286,6 +1302,7 @@ static void ui_input(void)
                 ui.latch[l] |= 1u << k;
                 ui.latch_note[l][k] = ui.key_note[k];
                 ui.latch_form[l][k] = ui.key_form[k];
+                latch_mark(l, ui.key_note[k], ui.key_form[k]);   /* (its voices kept from the overload guard) */
                 ui.key_layer[k] = KEY_NONE;     /* (letting go of the key no longer ends it) */
             }
     }

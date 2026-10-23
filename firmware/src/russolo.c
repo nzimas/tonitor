@@ -391,7 +391,7 @@ static int rus_render(rus_t *c, const rus_design_t *d, int32_t *out)
     if (!c->live)
         return 0;
     c->inc = pitch_inc(c->base) * RUS_SUB;
-    k = e_t > c->env ? cal_ex(d->att) : cal_ex(d->rel);
+    k = e_t > c->env ? cal_ex_fp(d->att) : cal_ex_fp(d->rel);
     e1 = e_t + mulq16(c->env - e_t, k);
     if (absi(e1 - e_t) < 32 << 8)
         e1 = e_t;

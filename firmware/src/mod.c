@@ -172,7 +172,8 @@ static void mod_check(void)                      /* (as read from a session: eac
 
 /* ------------------------------------------------------- HOME's draws --- */
 /* how likely a sound of each family is to come with a modulation (%): the slow and sustained most */
-static const uint8_t MODP_FM[FF_N] = {10, 80, 10, 5, 10, 30, 70, 70, 40, 70, 60, 50, 70, 40, 10, 40, 50, 10, 10, 15, 10, 10};
+static const uint8_t MODP_FM[FF_N] = {10, 80, 10, 5, 10, 30, 70, 70, 40, 70, 60, 50, 70, 40, 10, 40, 50, 10, 10, 15, 10, 10,
+                                     60, 50, 50, 70, 10};
 static const uint8_t MODP_HV[HK_N] = {20, 25, 10, 70, 80, 70, 50, 20, 40, 60, 50, 30};
 static const uint8_t MODP_BA[BK_N] = {5, 10, 20, 30, 70, 80};
 static const uint8_t MODP_DR[DK_N] = {10, 60, 10, 20, 20, 15, 80, 20, 50, 30};

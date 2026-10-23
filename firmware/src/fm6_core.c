@@ -49,19 +49,20 @@ enum {
 
 /* ---------------------------------------------------------------- math --- */
 /* 2^(x / 2^24), Q24 (msfa Exp2::lookup): the Q30 mantissa from FM6_EXP2, shifted by the integer part */
-static inline uint32_t fm6_mant(int32_t x)
+AINL uint32_t fm6_mant(int32_t x)
 {
     uint32_t f = (uint32_t)x & 0xFFFFFFu, k = f >> 14, a = FM6_EXP2[k];
     return (1u << 30) + a + (uint32_t)(((uint64_t)(FM6_EXP2[k + 1u] - a) * (f & 0x3FFFu)) >> 14);
 }
-static inline int32_t fm6_exp2(int32_t x)
+static FAST int32_t fm6_exp2(int32_t x)
 {
     int32_t i = x >> 24;
     uint32_t m = fm6_mant(x);
     return i < -24 ? 0 : (int32_t)(m >> (i > 5 ? 1 : 6 - i));      /* (msfa: up to 2^6; here 2^5 at most) */
 }
+static __typeof__(&fm6_exp2) volatile fm6_exp2_fp = fm6_exp2;   /* (the flash's way into the RAM code) */
 /* phase increment (Q24 cycles per sample) of log2 frequency x (Q24) (msfa Freqlut::lookup) */
-static inline int32_t fm6_freq(int32_t x)
+AINL int32_t fm6_freq(int32_t x)
 {
     int32_t i = x >> 24;
     uint32_t q = (uint32_t)(((uint64_t)fm6_mant(x) * FM6_FREQ_R) >> 25);    /* 2^(i + 21) Hz units */
@@ -70,7 +71,7 @@ static inline int32_t fm6_freq(int32_t x)
     return (int32_t)(q >> (21 - (i > 21 ? 21 : i)));
 }
 /* sine of a Q24 phase (one cycle = 2^24), Q15, linear between SINE's 1024 points (its 1025th = the 1st) */
-static inline int32_t fm6_sin(int32_t ph)
+AINL int32_t fm6_sin(int32_t ph)
 {
     const int16_t *s = &SINE[((uint32_t)ph >> 14) & 1023u];
     return s[0] + (((s[1] - s[0]) * (int32_t)(ph & 0x3FFF)) >> 14);
@@ -85,7 +86,7 @@ typedef struct {                 /* msfa Env: level in Q24 log2 (2^24 = 6 dB), 1
 } fm6_env_t;
 
 static const uint8_t FM6_LEVELLUT[20] = {0, 5, 9, 13, 17, 20, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 42, 43, 45, 46};
-static int32_t fm6_scaleout(int32_t ol) { return ol >= 20 ? 28 + ol : FM6_LEVELLUT[ol < 0 ? 0 : ol]; }
+AINL int32_t fm6_scaleout(int32_t ol) { return ol >= 20 ? 28 + ol : FM6_LEVELLUT[ol < 0 ? 0 : ol]; }
 
 /* samples at 44.1 kHz a stage holds when its level does not move (msfa ACCURATE_ENVELOPE) */
 static const int32_t FM6_STATICS[77] = {
@@ -96,7 +97,7 @@ static const int32_t FM6_STATICS[77] = {
     1984, 1896, 1808, 1411, 1367, 1234, 1146, 926, 837, 837, 705, 573, 573, 529, 441, 441};
 
 /* stage ix (0..3; 4 = done) of an envelope whose rates and levels are op[FP_R1..], op[FP_L1..] */
-static void fm6_env_advance(fm6_env_t *e, const uint8_t *op, uint32_t ix)
+static FAST void fm6_env_advance(fm6_env_t *e, const uint8_t *op, uint32_t ix)
 {
     int32_t lv, actual, qrate;
     e->ix = (uint8_t)ix;
@@ -121,6 +122,7 @@ static void fm6_env_advance(fm6_env_t *e, const uint8_t *op, uint32_t ix)
     }
     e->inc = (4 + (qrate & 3)) << (2 + FM6_LG_N + (qrate >> 2));
 }
+static __typeof__(&fm6_env_advance) volatile fm6_env_advance_fp = fm6_env_advance;   /* (the flash's way into the RAM code) */
 
 static void fm6_env_init(fm6_env_t *e, const uint8_t *op, int32_t outlevel, int32_t rate_scaling)
 {
@@ -129,10 +131,10 @@ static void fm6_env_init(fm6_env_t *e, const uint8_t *op, int32_t outlevel, int3
     e->hold = 0;
     e->level = 0;
     e->down = 1;
-    fm6_env_advance(e, op, 0);
+    fm6_env_advance_fp(e, op, 0);
 }
 
-static int32_t fm6_env_get(fm6_env_t *e, const uint8_t *op)
+static FAST int32_t fm6_env_get(fm6_env_t *e, const uint8_t *op)
 {
     if (e->statc) {
         e->statc -= FM6_N;
@@ -162,12 +164,13 @@ static int32_t fm6_env_get(fm6_env_t *e, const uint8_t *op)
     }
     return e->level;
 }
+static __typeof__(&fm6_env_get) volatile fm6_env_get_fp = fm6_env_get;   /* (the flash's way into the RAM code) */
 
 static void fm6_env_key(fm6_env_t *e, const uint8_t *op, int down)
 {
     if (e->down != (uint8_t)down) {
         e->down = (uint8_t)down;
-        fm6_env_advance(e, op, down ? 0u : 3u);
+        fm6_env_advance_fp(e, op, down ? 0u : 3u);
     }
 }
 
@@ -188,7 +191,7 @@ static const int8_t FM6_PENV_TAB[100] = {
     -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 38, 40, 43, 46, 49, 53, 58, 65, 73, 82, 92, 103, 115, 127};
 
-static void fm6_penv_advance(fm6_penv_t *e, const uint8_t *p, uint32_t ix)
+static FAST void fm6_penv_advance(fm6_penv_t *e, const uint8_t *p, uint32_t ix)
 {
     e->ix = (uint8_t)ix;
     if (ix < 4u) {
@@ -197,13 +200,14 @@ static void fm6_penv_advance(fm6_penv_t *e, const uint8_t *p, uint32_t ix)
         e->inc = FM6_PENV_RATE[p[FP_PR1 + ix] % 100u] * FM6_PENV_UNIT;
     }
 }
+static __typeof__(&fm6_penv_advance) volatile fm6_penv_advance_fp = fm6_penv_advance;   /* (the flash's way into the RAM code) */
 static void fm6_penv_init(fm6_penv_t *e, const uint8_t *p)
 {
     e->level = FM6_PENV_TAB[p[FP_PL1 + 3] % 100u] * (1 << 19);
     e->down = 1;
-    fm6_penv_advance(e, p, 0);
+    fm6_penv_advance_fp(e, p, 0);
 }
-static int32_t fm6_penv_get(fm6_penv_t *e, const uint8_t *p)
+static FAST int32_t fm6_penv_get(fm6_penv_t *e, const uint8_t *p)
 {
     if (e->ix < 3u || (e->ix < 4u && !e->down)) {
         if (e->rising) {
@@ -222,11 +226,12 @@ static int32_t fm6_penv_get(fm6_penv_t *e, const uint8_t *p)
     }
     return e->level;
 }
+static __typeof__(&fm6_penv_get) volatile fm6_penv_get_fp = fm6_penv_get;   /* (the flash's way into the RAM code) */
 static void fm6_penv_key(fm6_penv_t *e, const uint8_t *p, int down)
 {
     if (e->down != (uint8_t)down) {
         e->down = (uint8_t)down;
-        fm6_penv_advance(e, p, down ? 0u : 3u);
+        fm6_penv_advance_fp(e, p, down ? 0u : 3u);
     }
 }
 
@@ -253,7 +258,7 @@ static void fm6_lfo_reset(fm6_lfo_t *l, const uint8_t *p)   /* the patch's LFO (
     l->sync = p[FP_LKS] != 0;
 }
 
-static int32_t fm6_lfo_sample(fm6_lfo_t *l)   /* 0..1, Q24; once a block */
+static FAST int32_t fm6_lfo_sample(fm6_lfo_t *l)   /* 0..1, Q24; once a block */
 {
     int32_t x;
     l->phase += l->delta;
@@ -277,8 +282,9 @@ static int32_t fm6_lfo_sample(fm6_lfo_t *l)   /* 0..1, Q24; once a block */
     }
     return 1 << 23;
 }
+static __typeof__(&fm6_lfo_sample) volatile fm6_lfo_sample_fp = fm6_lfo_sample;   /* (the flash's way into the RAM code) */
 
-static int32_t fm6_lfo_delay(fm6_lfo_t *l)   /* the delay ramp, 0..1 Q24; once a block */
+static FAST int32_t fm6_lfo_delay(fm6_lfo_t *l)   /* the delay ramp, 0..1 Q24; once a block */
 {
     uint32_t d = l->dstate < (1u << 31) ? l->dinc : l->dinc2, s = l->dstate + d;
     if (s < l->dstate)                            /* past 2^32: delayed in full */
@@ -286,6 +292,7 @@ static int32_t fm6_lfo_delay(fm6_lfo_t *l)   /* the delay ramp, 0..1 Q24; once a
     l->dstate = s;
     return s < (1u << 31) ? 0 : (int32_t)((s >> 7) & ((1u << 24) - 1u));
 }
+static __typeof__(&fm6_lfo_delay) volatile fm6_lfo_delay_fp = fm6_lfo_delay;   /* (the flash's way into the RAM code) */
 
 static void fm6_lfo_key(fm6_lfo_t *l)
 {
@@ -311,7 +318,7 @@ static const uint8_t FM6_ALG[32][6] = {      /* per operator (the sixth first): 
 
 /* bit k: operator k (the sixth first) is a carrier of algorithm a (0..31): it writes the output bus (msfa's
  * isCarrier also counts the modulators that add into bus 1 or 2) */
-static uint32_t fm6_carriers(uint32_t a)
+AINL uint32_t fm6_carriers(uint32_t a)
 {
     uint32_t k, c = 0;
     for (k = 0; k < 6u; k++)
@@ -337,7 +344,7 @@ typedef struct {                 /* msfa FmOpParams */
         out[i] STORE (int32_t)(((int64_t)fm6_sin(PH) * g) >> 15);               \
         phase = (int32_t)((uint32_t)phase + (uint32_t)freq);                    \
     }
-static __attribute__((noinline)) void fm6_op_run(int32_t *out, const int32_t *in, int32_t phase, int32_t freq,
+static FAST void fm6_op_run(int32_t *out, const int32_t *in, int32_t phase, int32_t freq,
                                                  int32_t g1, int32_t g2, int add)
 {
     int32_t dg = (g2 - g1 + (FM6_N >> 1)) >> FM6_LG_N, g = g1;
@@ -351,9 +358,10 @@ static __attribute__((noinline)) void fm6_op_run(int32_t *out, const int32_t *in
     else
         FM6_OP_LOOP(phase, =)
 }
+static __typeof__(&fm6_op_run) volatile fm6_op_run_fp = fm6_op_run;   /* (the flash's way into the RAM code) */
 
 /* the operator with feedback (fb: its last two outputs) */
-static __attribute__((noinline)) void fm6_op_fb(int32_t *out, int32_t phase, int32_t freq, int32_t g1, int32_t g2,
+static FAST void fm6_op_fb(int32_t *out, int32_t phase, int32_t freq, int32_t g1, int32_t g2,
                                                 int32_t *fb, int32_t shift, int add)
 {
     int32_t dg = (g2 - g1 + (FM6_N >> 1)) >> FM6_LG_N, g = g1, y0 = fb[0], y = fb[1];
@@ -369,10 +377,11 @@ static __attribute__((noinline)) void fm6_op_fb(int32_t *out, int32_t phase, int
     fb[0] = y0;
     fb[1] = y;
 }
+static __typeof__(&fm6_op_fb) volatile fm6_op_fb_fp = fm6_op_fb;   /* (the flash's way into the RAM code) */
 
 /* msfa FmCore::render: the six operators of algorithm alg into out (Q24). Unlike msfa, out starts empty:
  * the first carrier sounding writes it, the next ones add. Returns 0 when none sounded (out untouched) */
-static int fm6_core_render(int32_t *out, fm6_op_t *op, uint32_t alg, int32_t *fb, int32_t fb_shift)
+static FAST int fm6_core_render(int32_t *out, fm6_op_t *op, uint32_t alg, int32_t *fb, int32_t fb_shift)
 {
     int32_t fm6_bus[2][FM6_N];
     const uint8_t *a = FM6_ALG[alg & 31u];
@@ -403,6 +412,7 @@ static int fm6_core_render(int32_t *out, fm6_op_t *op, uint32_t alg, int32_t *fb
     }
     return has[0];
 }
+static __typeof__(&fm6_core_render) volatile fm6_core_render_fp = fm6_core_render;   /* (the flash's way into the RAM code) */
 
 /* ------------------------------------------------------------ the note --- */
 typedef struct {                 /* a sounding note (msfa's note): 244 bytes */
@@ -505,16 +515,17 @@ static void fm6_note_key(fm6_note_t *n, const uint8_t *p, int down)
 
 /* the log2 frequency (Q24) of a pitch in 1/16 semitone plus a fine factor (1 + fine / 4096: Felucca's
  * unison detune, tune and bend below 1/16 semitone): log2(1 + x) ~ x / ln 2 for these small factors */
-static int32_t fm6_note_logfreq(int32_t pitch16, int32_t fine)
+static FAST int32_t fm6_note_logfreq(int32_t pitch16, int32_t fine)
 {
     return FM6_LOGF0 + (int32_t)(((int64_t)pitch16 * ((1 << 24) / 12)) >> 4) + fine * 5909;
 }
+static __typeof__(&fm6_note_logfreq) volatile fm6_note_logfreq_fp = fm6_note_logfreq;   /* (the flash's way into the RAM code) */
 
 /* one block (msfa note compute): the LFO's value and delay (Q24), the note's log2 frequency, the patch's
  * algorithm and feedback (already through the macros), dt[k]: a pitch offset per operator (Q24, fixed ones too),
  * lvl[k]: a level offset per operator (Q24 log2), lfoq8: the LFO's depths scaled (Q8). Writes out (Q24); 0 = silent
  * (out untouched) */
-static int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32_t lfo_val, int32_t lfo_delay,
+static FAST int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32_t lfo_val, int32_t lfo_delay,
                              int32_t logfreq, uint32_t alg, int32_t fb, const int32_t *dt, const int32_t *lvl, uint32_t lfoq8)
 {
     uint32_t pmd = ((uint32_t)((p[FP_LPMD] % 100u) * 165u >> 6) * lfoq8 >> 8) * (uint32_t)lfo_delay;   /* Q32 */
@@ -542,10 +553,11 @@ static int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32
     }
     return fm6_core_render(out, n->op, alg, n->fb, fb ? 8 - fb : 16);
 }
+static __typeof__(&fm6_note_compute) volatile fm6_note_compute_fp = fm6_note_compute;   /* (the flash's way into the RAM code) */
 
 /* the note can be dropped: every carrier silent for good (released and done, or held at a silent
  * sustain whose release can only fall) */
-static int fm6_note_done(const fm6_note_t *n, const uint8_t *p, uint32_t alg)
+static FAST int fm6_note_done(const fm6_note_t *n, const uint8_t *p, uint32_t alg)
 {
     uint32_t car = fm6_carriers(alg), k;
     for (k = 0; k < 6u; k++) {
@@ -566,3 +578,4 @@ static int fm6_note_done(const fm6_note_t *n, const uint8_t *p, uint32_t alg)
     }
     return 1;
 }
+static __typeof__(&fm6_note_done) volatile fm6_note_done_fp = fm6_note_done;   /* (the flash's way into the RAM code) */

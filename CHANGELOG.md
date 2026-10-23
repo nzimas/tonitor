@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.56
+
+Added
+- FM: five families learned from a collection of DX7 voices, as on the SMK-37 port: SHAPER (a carrier at 1-19 Hz
+  shaping its modulators), LADDER (carriers on a ladder of ratios, entering or dying one by one), REVERSE (a swell
+  while the key is held), CREEP (the pitch leaving slowly), CLANG (bells as the DX7's programmers made them).
+  Generation 6 of the generators.
+
+Changed
+- FM: GLISSE and RUBBER are no longer drawn as families of their own; WARP has their glides and bounces, now and
+  then (generation 5). Sounds saved on earlier generations come back as they were (checked by the golden tests).
+- USB audio offers 48 kHz first, and starts at 48 kHz, the rate most current computers and programs expect;
+  44.1 kHz stays available. The FM-1 renders at 44.1 kHz: at 48 kHz it resamples (SLOOP's polyphase filter,
+  uac_fir.h), which costs some CPU while a program records.
+- The audio's hot code runs from RAM (after the SMK-37 port's build 31): the engines' per-sample code (FM, ANIMA,
+  CALIGULA, BAYAREA, HIVE), their helpers, the delay, the reverb and the sine table. From the flash, through its
+  small cache, several engines at once kept evicting each other's code. Measured on the FM-1 (a diagnostic build
+  that plays notes by itself and reports the audio's load):
+
+  | | 0.55 | 0.56 |
+  |---|---|---|
+  | idle | 33 % | 11 % |
+  | six tracks, FM, one note each | 59 % | 54 % |
+  | six tracks, six engines, one note each | 133 % (peak 162 %) | 82 % (peak 92 %) |
+  | six engines, two notes each | 170 % (peak 200 %) | 118 % (peak 132 %) |
+
+  (Over 100 % the audio misses its deadline: the overload guard lets voices go.)
+- The reverb runs at 22.05 kHz, with its times and decay kept (Dattorro designed the plate at 29.8 kHz): a
+  slightly darker top, half the work and half the memory. The delay's line moved out of the code RAM into the
+  pool.
+- The delay and reverb are skipped when nothing is sent to them and their tails have died away.
+- A voice let go to make room (the budget guard, a steal) is the quietest tail, not the oldest, faded over 6 ms
+  (2 ms before): fewer clicks.
+- HIVE skips silent oscillators; with three HIVE voices or more sounding, also those 12 dB under the loudest.
+
+Fixed
+- Every sound ends once let go: a voice is faded out (0.19 s) when it has been 66 dB under its own peak for 0.2 s,
+  when it has not fallen 1.5 dB in 2 s (DRUID's resonators could ring on, very faintly, for ever, and keep costing
+  CPU), or 30 s after release.
+- Latched notes are never let go by the overload guard or taken by a new note.
+
 ## 0.55
 
 Fixed

@@ -13,13 +13,13 @@ headers; changes are noted in each file.
 
 | What | Licence | Where |
 | --- | --- | --- |
-| Tonitor's own code: `firmware/src/{tonitor,anima,fm,gran,reverb,layers,ui,balls,bricks,delay,sessions,backup,gfx,main}.c`, `dsp.h`, `tools/{build,gen_tables,gen_font,sdk_from_package}.py`, `tests/`, the scripts | GPL-3.0-only | |
+| Tonitor's own code: `firmware/src/{tonitor,anima,fm,fm_dx7,gran,reverb,layers,ui,balls,bricks,delay,sessions,backup,gfx,main}.c`, `dsp.h`, `tools/{build,gen_tables,gen_font,sdk_from_package}.py`, `tests/`, the scripts | GPL-3.0-only | |
 | From **Melodee** 1.4.5 (Copyright (C) 2026 Kerem Kilic (Ellic Studio), keremimo/melodee), as adapted in BIGORNA (Nuno Zimas): the dual-core start, hold and fault handling, its job mailbox and the stock supply setup -- `firmware/hal/{fm1_multicore,fm1_core1_stop,fm1_core1_bar,fm1_power}.h`, `firmware/src/audio_worker.h`, the CPU1 parts of `firmware/hal/{fm1_irq,fm1_sys}.h`, `fm1_vec.S` and `crt0.S` | GPL-3.0-only | <https://github.com/keremimo/melodee> |
 | The browser installer, a port of `tools/fm1_install.py` (Felucca / SLOOP) to JavaScript | GPL-3.0-only | `docs/js/fm1ota.js` |
 | The backup page's scripts | GPL-3.0-only | `docs/js/backup.js`, `docs/js/fm1backup.js` |
 | The firmware package the installer writes, built from this tree (with the JieLi SDK files below) | GPL-3.0-only | `docs/firmware/tonitor.fwsc` |
 | The website, the logo, the documentation's text | MIT | `docs/` (except the rows above), `site/`, `README.md`, `CHANGELOG.md`, `LICENSES/MIT.txt` |
-| From Felucca / SLOOP: `firmware/hal/`, `firmware/loader/`, `firmware/crt0.S`, `firmware/app.ld`, `firmware/src/{usb,ota,recovery,lcd,libc}.c`, `bootguard.h`, `tools/{fm1pkg_make,lz4blk,fm1_install}.py`, `tools/get_toolchain.sh`, parts of `tools/build.py` and `tools/gen_tables.py` | GPL-3.0-only | |
+| From Felucca / SLOOP: `firmware/hal/`, `firmware/loader/`, `firmware/crt0.S`, `firmware/app.ld`, `firmware/src/{usb,ota,recovery,lcd,libc}.c`, `firmware/src/uac_fir.h`, `bootguard.h`, `tools/{fm1pkg_make,lz4blk,fm1_install,gen_uac_fir}.py`, `tools/get_toolchain.sh`, parts of `tools/build.py` and `tools/gen_tables.py` | GPL-3.0-only | |
 | msfa (Google Inc., Pascal Gauthier), from Dexed, ported to integer C by Leo Kuroshita for Felucca; for TONITOR the modulation buses moved to the stack | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | The ANIMA engine: a fixed-point port of the anima opcode (`AnimaCore.h`, `AnimaDesign.h`) of Vascular, Copyright (C) Nuno Zimas, contributed by its author to this firmware | GPL-3.0-only (in this firmware) | `firmware/src/anima.c`, `tools/gen_tables.py` |
 | The BAYAREA engine: a fixed-point port of the bayarea opcode of Vascular, Copyright (C) Nuno Zimas, contributed by its author to this firmware | GPL-3.0-only (in this firmware) | `firmware/src/bayarea.c` |
