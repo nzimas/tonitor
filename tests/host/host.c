@@ -874,6 +874,8 @@ static int same_machine(const char *what, const uint8_t *eng, const int8_t *lv, 
 {
     uint32_t l, bad = 0;
     for (l = 0; l < NLAYER; l++) {
+        snd_ready(l, ENG_FM);                    /* (the sounds as they will play: measured, should they not be yet) */
+        snd_ready(l, ENG_ANIMA);
         bad += ui.engine[l] != eng[l] || ui.level[l] != lv[l] || ui.pan[l] != pn[l] || ui.send[l] != sd[l] ||
                ui.oct[l] != oc[l];
         bad += memcmp(&fm_buf[l][fm_pub[l]], &fp[l], sizeof(fm_patch_t)) != 0;
@@ -981,6 +983,8 @@ static int cmd_sessions(const char *dir)
         pn[l] = ui.pan[l];
         sd[l] = ui.send[l];
         oc[l] = ui.oct[l];
+        snd_ready(l, ENG_FM);                /* (as it will play: saved unmeasured, it is measured when played) */
+        snd_ready(l, ENG_ANIMA);
         fp[l] = fm_buf[l][fm_pub[l]];
         ad[l] = an_buf[l][an_pub[l]];
         lp[l] = loop[l];
@@ -3615,6 +3619,7 @@ static uint32_t lm_period(uint32_t l)                  /* blocks between two goi
     }
     return 0;
 }
+static int key_glows(uint32_t k);
 static int cmd_loopmodes(void)
 {
     uint32_t fail = 0, c3 = scale_note(0, 0), e3 = scale_note(2, 0), g3 = scale_note(4, 0), b, len, per, bad, hang;
@@ -3622,6 +3627,13 @@ static int cmd_loopmodes(void)
     memset(host_flash, 0xFF, sizeof host_flash);
     ses_scan(1);
     press_btn(B_FX);
+    ui.msg[0] = 0;                                    /* no loops: the keys do nothing, say nothing, stay dark */
+    lm_key(KEY_REV);
+    lm_key(KEY_HALF);
+    ui_leds();
+    if (loop[0].dmode != LD_FWD || loop[0].rate != LS_NORMAL || ui.msg[0] || host_led[14u + KEY_REV] ||
+        key_glows(KEY_REV) == 1)
+        printf("FAIL loopmodes: with no loops the direction and speed keys still answer (%s)\n", ui.msg), fail++;
     press_btn(B_REC);                                 /* C3 0 .. 100, E3 150 .. 250, closed at 300 */
     press_key(0, 1);
     run_blocks(100, 0);

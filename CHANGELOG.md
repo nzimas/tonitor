@@ -1,5 +1,16 @@
 # Changelog
 
+## Build 58
+
+Fixed
+- An empty session took seconds to start (issue #5), and so did the FM-1 itself: every track drew and measured a
+  sound for each of the seven engines, 42 in all, each measured by rendering seconds of it. Now only the sound each
+  track plays is measured; another engine's is measured the first time the track is moved to it (a moment, then).
+
+Changed
+- The loop keys (black keys 4–8: direction and speed) work only while the chosen track's loops play. With no
+  loops, or the loops stopped, they are dark and do nothing, and show nothing on the screen.
+
 ## Build 57
 
 Added

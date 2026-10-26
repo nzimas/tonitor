@@ -371,58 +371,58 @@ static void ses_emit(void)
             ln[27] = (uint8_t)ui.lxt[l];               /* (format 11: the track's own transposition, in the spare byte) */
             ses_out(ln, sizeof ln);
         }
-        /* the sounds: the engine in use in full; the other two as the seed that made them, their level and
+        /* the sounds: the engine in use in full; the others as the seed that made them, their level and
          * (top byte, format 4) their path (drawn again from them: the same sound, at once) -- so a session
-         * stays in one sector */
+         * stays in one sector. Level 0: not measured yet (snd_raw; a measured level is never under 40) */
         {
             uint32_t c2[2];
             if (y.engine == ENG_FM)
                 ses_out(&fm_buf[l][fm_pub[l]], sizeof(fm_patch_t));
             else {
                 c2[0] = fm_buf[l][fm_pub[l]].seed;
-                c2[1] = ses_c2_word(fm_buf[l][fm_pub[l]].gain, fm_buf[l][fm_pub[l]].gen, fm_buf[l][fm_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_FM & 1u ? 0 : fm_buf[l][fm_pub[l]].gain, fm_buf[l][fm_pub[l]].gen, fm_buf[l][fm_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_ANIMA)
                 ses_out(&an_buf[l][an_pub[l]], sizeof(an_design_t));
             else {
                 c2[0] = an_buf[l][an_pub[l]].seed;
-                c2[1] = ses_c2_word(an_buf[l][an_pub[l]].out, an_buf[l][an_pub[l]].gen, an_buf[l][an_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_ANIMA & 1u ? 0 : an_buf[l][an_pub[l]].out, an_buf[l][an_pub[l]].gen, an_buf[l][an_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_CAL)
                 ses_out(&cal_buf[l][cal_pub[l]], sizeof(cal_design_t));
             else {
                 c2[0] = cal_buf[l][cal_pub[l]].seed;
-                c2[1] = ses_c2_word(cal_buf[l][cal_pub[l]].out, cal_buf[l][cal_pub[l]].gen, cal_buf[l][cal_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_CAL & 1u ? 0 : cal_buf[l][cal_pub[l]].out, cal_buf[l][cal_pub[l]].gen, cal_buf[l][cal_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_RUS)                    /* (format 9) */
                 ses_out(&rus_buf[l][rus_pub[l]], sizeof(rus_design_t));
             else {
                 c2[0] = rus_buf[l][rus_pub[l]].seed;
-                c2[1] = ses_c2_word(rus_buf[l][rus_pub[l]].out, rus_buf[l][rus_pub[l]].gen, rus_buf[l][rus_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_RUS & 1u ? 0 : rus_buf[l][rus_pub[l]].out, rus_buf[l][rus_pub[l]].gen, rus_buf[l][rus_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_DRUID)                  /* (format 17) */
                 ses_out(&dr_buf[l][dr_pub[l]], sizeof(dr_design_t));
             else {
                 c2[0] = dr_buf[l][dr_pub[l]].seed;
-                c2[1] = ses_c2_word(dr_buf[l][dr_pub[l]].out, dr_buf[l][dr_pub[l]].gen, dr_buf[l][dr_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_DRUID & 1u ? 0 : dr_buf[l][dr_pub[l]].out, dr_buf[l][dr_pub[l]].gen, dr_buf[l][dr_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_BAY)                    /* (format 19) */
                 ses_out(&ba_buf[l][ba_pub[l]], sizeof(ba_design_t));
             else {
                 c2[0] = ba_buf[l][ba_pub[l]].seed;
-                c2[1] = ses_c2_word(ba_buf[l][ba_pub[l]].out, ba_buf[l][ba_pub[l]].gen, ba_buf[l][ba_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_BAY & 1u ? 0 : ba_buf[l][ba_pub[l]].out, ba_buf[l][ba_pub[l]].gen, ba_buf[l][ba_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_HIVE)                   /* (format 22: in full -- a new size of it needs a new format) */
                 ses_out(&hv_buf[l][hv_pub[l]], sizeof(hv_design_t));
             else {
                 c2[0] = hv_buf[l][hv_pub[l]].seed;
-                c2[1] = ses_c2_word(hv_buf[l][hv_pub[l]].out, hv_buf[l][hv_pub[l]].gen, hv_buf[l][hv_pub[l]].path);
+                c2[1] = ses_c2_word(snd_raw[l] >> ENG_HIVE & 1u ? 0 : hv_buf[l][hv_pub[l]].out, hv_buf[l][hv_pub[l]].gen, hv_buf[l][hv_pub[l]].path);
                 ses_out(c2, sizeof c2);
             }
         }
@@ -773,7 +773,8 @@ static void ses_choose(uint32_t num)
         ses.current = (uint16_t)num;
 }
 /* an empty slot chosen: the machine as it starts -- silence, no loops, no latches; every layer on its first
- * engine with new sounds, its settings at their defaults; the scale, the reverb, the transposition too -- and the
+ * engine with new sounds (measured only the one it plays: issue #5, ten seconds for all 42), its settings at their
+ * defaults; the scale, the reverb, the transposition too -- and the
  * slot is where the next save goes */
 static void ses_events_drain(void);
 static void ses_fresh(uint32_t num)
@@ -809,7 +810,7 @@ static void ses_fresh(uint32_t num)
     bb_release(NLAYER);
     bl_release(NLAYER);
     for (l = 0; l < NLAYER; l++) {
-        uint32_t s = next_seed(), fk, ak, ck, rk, dk, bk, hk;
+        uint32_t s = next_seed(), fk, ak, ck, rk, dk, bk, hk, e;
         bb_defaults(l);
         bl_defaults(l);
         loop[l].mute = 0;
@@ -837,21 +838,18 @@ static void ses_fresh(uint32_t num)
         sound_slot_free(&ba_pub[l], &ba_use[l]);
         bk = ba_use[l] ^ 1u;
         dr_design(&dr_buf[l][dk], -1, s * 19u + 11u, PATH_OPEN, GEN_NOW);
-        dr_measure(&dr_buf[l][dk]);
         ba_design(&ba_buf[l][bk], -1, s * 23u + 13u, PATH_OPEN, GEN_NOW);
-        ba_measure(&ba_buf[l][bk]);
         sound_slot_free(&hv_pub[l], &hv_use[l]);
         hk = hv_use[l] ^ 1u;
         hv_design(&hv_buf[l][hk], -1, s * 29u + 17u, PATH_OPEN, GEN_NOW);
-        hv_measure(&hv_buf[l][hk]);
         fm_generate(&fm_buf[l][fk], -1, s, PATH_OPEN, GEN_NOW);    /* (as sounds_init draws them) */
-        fm_measure(&fm_buf[l][fk]);
         an_design(&an_buf[l][ak], -1, s * 7u + 3u, PATH_OPEN, GEN_NOW);
-        an_measure(&an_buf[l][ak]);
         cal_design(&cal_buf[l][ck], -1, s * 13u + 5u, PATH_OPEN, GEN_NOW);
-        cal_measure(&cal_buf[l][ck]);
         rus_design(&rus_buf[l][rk], -1, s * 17u + 9u, PATH_OPEN, GEN_NOW);
-        rus_measure(&rus_buf[l][rk]);
+        snd_raw[l] = (uint8_t)((1u << NENG) - 1u);    /* drawn; measured only the one it plays (the others when it */
+        e = ui.engine[l];                              /* comes to them) */
+        snd_measure(l, e, e == ENG_FM ? fk : e == ENG_ANIMA ? ak : e == ENG_CAL ? ck : e == ENG_RUS ? rk
+                          : e == ENG_DRUID ? dk : e == ENG_BAY ? bk : hk);
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)ck;
         rus_pub[l] = (uint8_t)rk;
@@ -884,6 +882,7 @@ static struct {
     int8_t env[NENG][4];
     uint8_t env_on[NENG];
     uint32_t gseed;
+    uint8_t raw;                 /* (its sounds not measured yet: snd_raw) */
     int8_t mac[NENG][NMAC];
     fm_patch_t fm;
     an_design_t an;
@@ -939,6 +938,7 @@ static void clip_copy(uint32_t l)
     memcpy(clip.mac, ui.mac[l], sizeof clip.mac);
     memcpy(clip.env, ui.env[l], sizeof clip.env);
     memcpy(clip.env_on, ui.env_on[l], sizeof clip.env_on);
+    clip.raw = snd_raw[l];
     clip.fm = fm_buf[l][fm_pub[l]];
     clip.an = an_buf[l][an_pub[l]];
     clip.cal = cal_buf[l][cal_pub[l]];
@@ -1023,6 +1023,7 @@ static void clip_paste(uint32_t l)
     dr_buf[l][dk] = clip.dr;
     ba_buf[l][bk] = clip.ba;
     hv_buf[l][hk] = clip.hv;
+    snd_raw[l] = clip.raw;
     lay_mod[l] = clip.mod;
     RING_PUBLISH();
     cal_pub[l] = (uint8_t)ck;
@@ -1284,6 +1285,9 @@ static int ses_load(uint32_t i)
                 hv_buf[l][hk].out = ses_c2_level(&h, c2[1]);
             }
         }
+        snd_raw[l] = (uint8_t)(!fm_buf[l][fk].gain << ENG_FM | !an_buf[l][ak].out << ENG_ANIMA |   /* (saved unmeasured: */
+                               !cal_buf[l][ck].out << ENG_CAL | !rus_buf[l][rk].out << ENG_RUS |   /* level 0) */
+                               !dr_buf[l][dk].out << ENG_DRUID | !ba_buf[l][bk].out << ENG_BAY | !hv_buf[l][hk].out << ENG_HIVE);
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)ck;
         rus_pub[l] = (uint8_t)rk;

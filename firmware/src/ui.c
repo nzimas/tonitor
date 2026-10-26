@@ -1167,6 +1167,7 @@ static void ui_input(void)
         int32_t e = clampi((int32_t)ui.engine[ui.sel] + (s > 0 ? 1 : -1), 0, NENG - 1);
         if (e != ui.engine[ui.sel]) {
             ui.engine[ui.sel] = (uint8_t)e;
+            snd_ready(ui.sel, (uint32_t)e);      /* (its sound measured, the first time: a moment) */
             ev_post(EV_ENGINE, ui.sel, 0, (uint32_t)e);
             mac_apply(ui.sel);
         }
@@ -1185,7 +1186,9 @@ static void ui_input(void)
             bl.spd[l] = (uint8_t)(bl.spd[l] == want ? LS_NORMAL : want);
             say(bl.spd[l] == LS_HALF ? "HALF SPEED" : bl.spd[l] == LS_DOUBLE ? "DOUBLE SPEED" : "NORMAL SPEED", 1200);
         }
-    } else {   /* the chosen track's loops: backwards or PENDULUM (or forwards again); half or double speed (or normal) */
+    } else if (loop[ui.sel].play && loop[ui.sel].ntrk) {   /* the chosen track's loops, while they play (stopped or
+                                                            * none: the keys do nothing, and say nothing): backwards
+                                                            * or PENDULUM (or forwards again); half or double speed */
         const looper_t *p = &loop[ui.sel];
         if ((ch & keys) >> KEY_REV & 1u || (ch & keys) >> KEY_PEND & 1u || (ch & keys) >> KEY_RAND & 1u) {
             uint32_t want = (ch & keys) >> KEY_REV & 1u ? LD_REV : (ch & keys) >> KEY_PEND & 1u ? LD_PEND : LD_RAND;
@@ -1407,7 +1410,7 @@ static void ui_leds(void)
     fm1_led_key(14u + KEY_EXP, ui.path[ui.sel] == PATH_EXP);
     fm1_led_key(14u + KEY_EDIT, bb.on[ui.sel] ? (fm1_ms / 250u) & 1u : ui.edit);   /* (the balls: it blinks) */
     {   /* the loops' direction and speed: shown only while the chosen track's loops play (PLAY lit) -- lit when
-         * on, a glow when off; stopped, dark (they still answer) */
+         * on, a glow when off; stopped or none, dark (and they do nothing) */
         const looper_t *lp = &loop[ui.sel];
         int blp = ui.bl_page && bl.on[ui.sel];   /* (BRICKLAYER's page: its own, while it runs) */
         int on = blp || (lp->play && lp->ntrk);
@@ -2344,28 +2347,24 @@ static void ui_init(void)
     ui.force = 1;
 }
 
-/* the sounds every layer starts with: one of each engine */
+/* the sounds every layer starts with: one of each engine -- measured only the one it plays (the others when it
+ * comes to them: snd_ready) */
 static void sounds_init(void)
 {
     uint32_t l;
     for (l = 0; l < NLAYER; l++) {
         uint32_t s = next_seed();
         fm_generate(&fm_buf[l][0], -1, s, PATH_OPEN, GEN_NOW);
-        fm_measure(&fm_buf[l][0]);
         an_design(&an_buf[l][0], -1, s * 7u + 3u, PATH_OPEN, GEN_NOW);
-        an_measure(&an_buf[l][0]);
         cal_design(&cal_buf[l][0], -1, s * 13u + 5u, PATH_OPEN, GEN_NOW);
-        cal_measure(&cal_buf[l][0]);
         rus_design(&rus_buf[l][0], -1, s * 17u + 9u, PATH_OPEN, GEN_NOW);
-        rus_measure(&rus_buf[l][0]);
         dr_design(&dr_buf[l][0], -1, s * 19u + 11u, PATH_OPEN, GEN_NOW);
-        dr_measure(&dr_buf[l][0]);
         ba_design(&ba_buf[l][0], -1, s * 23u + 13u, PATH_OPEN, GEN_NOW);
-        ba_measure(&ba_buf[l][0]);
         hv_design(&hv_buf[l][0], -1, s * 29u + 17u, PATH_OPEN, GEN_NOW);
-        hv_measure(&hv_buf[l][0]);
         fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
         cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = dr_pub[l] = dr_use[l] = ba_pub[l] = ba_use[l] = hv_pub[l] = hv_use[l] = 0;
+        snd_raw[l] = (uint8_t)((1u << NENG) - 1u);   /* (none measured yet:) */
+        snd_measure(l, ui.engine[l], 0);         /* the one it plays (before the audio starts) */
         gran_profile(l, next_seed());            /* the granulator's character, drawn */
     }
 }

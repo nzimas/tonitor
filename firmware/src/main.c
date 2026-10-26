@@ -506,7 +506,7 @@ static void fm1_main(void)
     fm1_adc_init();
     layers_init();
     ui_init();
-    sounds_init();                                   /* a sound of each engine for every layer (~0.2 s) */
+    sounds_init();                                   /* a sound of each engine for every layer (measured: the one it plays) */
     /* CPU1: after a supply setup that held, on a boot after no failed one, and not barred since power-on. It starts
      * through the mask ROM before it reaches our RAM loop: the PC limit only after (Melodee) */
     if (fm1_core1_boot_allowed(fm1_power_ready, bootguard.failed))

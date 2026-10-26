@@ -105,8 +105,8 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the rightmost black key | **SHIFT**. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it ([Latched keys](#latched-keys)). |
 | black keys 1 and 2 | the chosen track's generative path: **AMBIENT**, **EXPERIMENTAL**; the lit one again: **OPEN** ([Generative paths](#generative-paths)). |
 | black key 3 | chord mode: **held** (0.6 s), on or off; **pressed**, the next chord form ([Chords](#chords)). |
-| black keys 4, 5, 6 | the chosen track's loops **REVERSE**, **PENDULUM**, **RANDOM**; pressed again, forwards ([Direction and speed](#direction-and-speed)). |
-| black keys 7, 8 | the loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. |
+| black keys 4, 5, 6 | the chosen track's loops **REVERSE**, **PENDULUM**, **RANDOM**; pressed again, forwards ([Direction and speed](#direction-and-speed)). Only while its loops play. |
+| black keys 7, 8 | the loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Only while the loops play. |
 | black key 9 (3rd from the right) | the **ENVELOPE** page ([Envelope](#envelope)). **SHIFT +**: BRICKLAYER on or off; **held** (0.6 s) while it is on: its page ([BRICKLAYER](#bricklayer)). |
 | black key 10 (left of SHIFT) | **EDIT**: KNOB 1–4 become four macros ([Macros](#macros)). **SHIFT +**: BALLSY on or off; **held** (0.6 s) while it is on: its page ([BALLSY](#ballsy)). |
 | **ARP** | the SCALE page: **SELECT** sets the root, **ALGORITHM** the scale ([Scales](#scales)). |
@@ -248,7 +248,9 @@ One chord sounds at a time on a track. Chords latch, loop and are saved like sin
 
 ### Direction and speed
 
-Black keys 4–8 set how the chosen track's loops play:
+Black keys 4–8 set how the chosen track's loops play. They work only while that track has loops and they are playing
+(PLAY lit): then they glow dimly, and the setting in use is lit. With no loops, or the loops stopped, they are dark
+and do nothing. They have no effect on the sound itself:
 
 | Key | Setting |
 | --- | --- |
