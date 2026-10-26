@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.56
+## Build 57
+
+Added
+- The keyboard shows where the scale's root is: the white keys that play the root (the one chosen on the SCALE
+  page, in every octave) glow dimly, and move with the loops' transposition (SHIFT + OCT). PLAY held shows the
+  loops instead.
+
+Changed
+- Versions are numbered as builds: this one is build 57, after 0.56. The changelog names the earlier versions
+  the same way (0.56 is build 56).
+
+## Build 56
 
 Added
 - FM: five families learned from a collection of DX7 voices, as on the SMK-37 port: SHAPER (a carrier at 1-19 Hz
@@ -19,12 +30,12 @@ Changed
   small cache, several engines at once kept evicting each other's code. Measured on the FM-1 (a diagnostic build
   that plays notes by itself and reports the audio's load):
 
-  | | 0.55 | 0.56 |
-  |---|---|---|
-  | idle | 33 % | 11 % |
-  | six tracks, FM, one note each | 59 % | 54 % |
-  | six tracks, six engines, one note each | 133 % (peak 162 %) | 82 % (peak 92 %) |
-  | six engines, two notes each | 170 % (peak 200 %) | 118 % (peak 132 %) |
+| | build 55 | build 56 |
+|---|---|---|
+| idle | 33 % | 11 % |
+| six tracks, FM, one note each | 59 % | 54 % |
+| six tracks, six engines, one note each | 133 % (peak 162 %) | 82 % (peak 92 %) |
+| six engines, two notes each | 170 % (peak 200 %) | 118 % (peak 132 %) |
 
   (Over 100 % the audio misses its deadline: the overload guard lets voices go.)
 - The reverb runs at 22.05 kHz, with its times and decay kept (Dattorro designed the plate at 29.8 kHz): a
@@ -41,7 +52,7 @@ Fixed
   CPU), or 30 s after release.
 - Latched notes are never let go by the overload guard or taken by a new note.
 
-## 0.55
+## Build 55
 
 Fixed
 - USB audio on macOS 12 to 15: the FM-1 now lists its audio streaming interface before its MIDI one in the audio
@@ -51,10 +62,10 @@ Fixed
   reads the description again.
 
 Changed
-- USB audio is 44.1 kHz only again (0.54's 48 kHz did not help; 44.1 kHz is the rate the FM-1 renders at, with no
+- USB audio is 44.1 kHz only again (build 54's 48 kHz did not help; 44.1 kHz is the rate the FM-1 renders at, with no
   resampling).
 
-## 0.54
+## Build 54
 
 Fixed
 - USB audio was not offered on macOS 12 (Monterey): the FM-1 did not appear as an input there, while other FM-1
@@ -62,7 +73,7 @@ Fixed
   filter, uac_fir.h), which costs some CPU only while a program records at 48 kHz. 44.1 kHz is still the rate
   the FM-1 renders at, and the better one to record at.
 
-## 0.53
+## Build 53
 
 Fixed
 - Presets are saved where their page is opened: on the PRESETS page (SHIFT + ARP), ARP held saves the track's sound
@@ -83,7 +94,7 @@ Changed
   longer opens the delay: it throws the chosen track's modulation anew (MOD RANDOM) -- both LFOs, and two to four
   slots from any source to any destination, by amounts that may go far.
 
-## 0.52
+## Build 52
 
 Added
 - USB audio (as BIGORNA's build 49): the FM-1 is a class-compliant USB audio input, "FM-1 Tonitor", carrying its
@@ -92,7 +103,7 @@ Added
   buffer renders. The stream is the master before the MASTER knob: the knob sets the headphone jack's level only.
   MIDI goes on as before over the same cable. The update loader is unchanged.
 
-## 0.51
+## Build 51
 
 Added
 - GLOBAL SETUP on SHIFT + SAVE (after BIGORNA): the FM-1's own settings, kept apart from the sessions. One section,
@@ -118,7 +129,7 @@ Changed
 - The screen's type is stored in runs (about 116 KB of flash freed, for this and what comes); the screen is the same,
   pixel for pixel.
 
-## 0.50
+## Build 50
 
 Changed
 - The FM-1's second core (CPU1) now renders about half the work of each audio block: the sounding voices and the
@@ -136,7 +147,7 @@ Changed
 - ANIMA keeps 13 wavetables in RAM (15 before), to make room for CPU1's stacks and the two cores' buffers; a
   table missed is copied in after both cores have finished the block.
 
-## 0.49
+## Build 49
 
 Changed
 - BALLSY and BRICKLAYER wait for PLAY when turned on. On their page PLAY starts and stops them (PLAY or STOP on
@@ -147,7 +158,7 @@ Changed
 - SHIFT + PLAY starts or stops every loop and every sequencer that is on, together (ALL PLAYING, ALL STOPPED).
 - Session format 23: whether each sequencer plays. Older sessions load with their sequencers playing.
 
-## 0.48
+## Build 48
 
 Added
 - HIVE, a seventh engine, ported from the SWARMER machine of DigiRust and extended: per voice, seven
@@ -166,7 +177,7 @@ Added
 Changed
 - Session format 22 (a seventh sound per track). Older sessions load; their tracks get a new HIVE sound.
 
-## 0.47
+## Build 47
 
 Changed
 - Generator generation 4 for new sounds. FM IMPACT: six kinds (thud, wooden knock, metal hit, drum skin, debris,
@@ -186,7 +197,7 @@ Added
 Compatibility
 - Sounds stored as seeds (sessions, presets) regenerate identically for generations 0–3 (checked by a test).
 
-## 0.46
+## Build 46
 
 Changed
 - One sequencer per track: BALLSY and BRICKLAYER are mutually exclusive. Starting one while the other runs on
@@ -198,7 +209,7 @@ Fixed
   name stored for the same USB IDs (1209:0001). Tonitor now uses its own USB product ID (1209:0003), so it shows
   up as "FM-1 Tonitor". The update loader is unchanged (1209:0002).
 
-## 0.45
+## Build 45
 
 Added
 - BRICKLAYER, a step sequencer per track on SHIFT + the envelope key (the key blinks while it runs; holding the
@@ -216,14 +227,14 @@ Added
 Removed
 - SHIFT + the envelope key no longer resets the track's envelope to AS DRAWN; HOME and loading a preset still do.
 
-## 0.44
+## Build 44
 
 Fixed
 - VARY switched on while a loop's notes were sounding (long notes, especially ones held over the loop's end) left
   those notes sounding indefinitely: under VARY the recorded note-offs were ignored. A note struck as recorded
   before VARY came on is now released at its recorded end; notes struck by VARY keep their own random lengths.
 
-## 0.43
+## Build 43
 
 Added
 - VARY also modulates the loops' pace: a slow sine undulation (0.07–0.35 Hz, depth ±15–40 %, redrawn every few
@@ -231,7 +242,7 @@ Added
   0.2–0.8 s), grind (slowing to a stop over 0.4–1.5 s, held up to 0.4 s, then back at once) or swoop (rising to
   2–2.5× over 0.8–2 s, then 0.4× for 0.3 s). Note lengths stay in real time. Not applied while REC records.
 
-## 0.42
+## Build 42
 
 Added
 - A sixth engine, BAYAREA: a West Coast voice, ported to fixed point from the bayarea opcode of Vascular. Per
@@ -256,7 +267,7 @@ Changed
   with a new BAYAREA sound drawn for each track.
 - Presets: BAYAREA's 64 slots are kept in a second preset record; the first is unchanged.
 
-## 0.41
+## Build 41
 
 Added
 - BALLSY, a physics sequencer per track: SHIFT + EDIT turns it on (its page shown) or off; EDIT blinks while it
@@ -280,7 +291,7 @@ Added
 - Note level: EV_ON events carry a level; pool voices (FM, ANIMA, DRUID) are scaled by it. Keys and loops play
   at full level.
 
-## 0.40
+## Build 40
 
 Added
 - A fifth engine, DRUID, after the resonators of Mutable Instruments Rings (Émilie Gillet, MIT licence),
@@ -300,7 +311,7 @@ Changed
 - Presets: format 4 (12 bytes a slot, 64 slots for each of five engines in one 4 KB sector). Presets saved
   before still load.
 
-## 0.39
+## Build 39
 
 Changed
 - Track 1 starts with its pan in the middle (was half left), at power-on and in an empty session. The other
@@ -311,7 +322,7 @@ Fixed
   own function: the crush or the reverb send changed by one step and its dial showed briefly. While SHIFT is
   held, KNOB 3 and 4 now go only to the distortion and the delay send.
 
-## 0.38
+## Build 38
 
 Added
 - Per-track distortion on SHIFT + KNOB 3 (0–100, 0 off), after the track's limiter and before its level, pan
@@ -322,7 +333,7 @@ Added
   the amount increases. The output is matched to the dry signal's RMS level (about 0.2 s), so the loudness
   does not change with the amount. Stored in sessions (format 16) and copied with the track.
 
-## 0.37
+## Build 37
 
 Added
 - ENVELOPE page on the 3rd black key from the right (lit while up): the chosen track's amplitude envelope as
@@ -339,13 +350,13 @@ Added
 Changed
 - The XS font has a space character.
 
-## 0.36
+## Build 36
 
 Added
 - SHIFT + HOME generates a new sound of the same family (FM), kind (ANIMA, RUSSOLO) or species (CALIGULA) as
   the selected track's current sound, on its engine and path. HOME alone still changes the family.
 
-## 0.35
+## Build 35
 
 Added
 - Chord mode per track on the 3rd black key: held 0.6 s toggles it (CHO at the top left of the screen, key lit),
@@ -360,20 +371,20 @@ Changed
 - The chord form is shown under CHO as a three-letter abbreviation (TRI, IN1, IN2, SU2, SU4, OPN, 4TH) in a new
   smaller font (XS, 19 px).
 
-## 0.34
+## Build 34
 
 Changed
 - The loop direction and speed keys (REVERSE, PENDULUM, RANDOM, HALF SPEED, DOUBLE SPEED) are lit only while the
   selected track's loops play (PLAY lit): dimly when off, fully when on. With the loops stopped they are unlit;
   their settings are kept and the keys still respond.
 
-## 0.33
+## Build 33
 
 Changed
 - The black keys with a function (AMBIENT, EXPERIMENTAL, REVERSE, PENDULUM, RANDOM, HALF SPEED, DOUBLE SPEED,
   EDIT) are dimly lit while off and fully lit while on. SHIFT and the black keys without a function stay unlit.
 
-## 0.32
+## Build 32
 
 Added
 - Master delay, mono, before the reverb. Per-track send on SHIFT + KNOB 4 (default 0). DELAY page on
@@ -386,7 +397,7 @@ Changed
 - The screen is drawn in bands of at most 56 rows (was 112), freeing 27 KB of buffer memory; the display is
   unchanged.
 
-## 0.31
+## Build 31
 
 Added
 - Loop direction and speed per track, on the 4th–8th black keys (lit while on): REVERSE, PENDULUM (forwards
@@ -399,7 +410,7 @@ Added
   recorded in reverse are stored mirrored and play back as played. Stored in sessions (format 12), copied with
   the track, reset when the track's loops are cleared.
 
-## 0.30
+## Build 30
 
 Added
 - Per-track loop transposition: hold SHIFT and a track button, then press OCT+ or OCT− to move that track's
@@ -420,7 +431,7 @@ Changed
   PULSE → GATE RATE; RUSSOLO CHAOS → RANDOMNESS. Names too wide for the dial title use the smaller font.
 - SHIFT no longer displays the audio load.
 
-## 0.29
+## Build 29
 
 Added
 - Generator generation 3. ANIMA: eight kinds (PLUCK, REED, FOG, ORGAN, BITS, DRIFT, MURMUR, HOWL). FM: five
@@ -446,7 +457,7 @@ Compatibility
 - Sounds stored as seeds (sessions, presets) regenerate identically for generations 0–2. ANIMA sounds play at
   the new sample rate.
 
-## 0.28
+## Build 28
 
 Added
 - Track copy/paste: holding a track button for 0.8 s copies the track (screen: COPIED; the button blinks while
@@ -458,7 +469,7 @@ Added
 Changed
 - Documentation uses "track" instead of "layer".
 
-## 0.27
+## Build 27
 
 Added
 - Global loop transposition: SHIFT + OCT+/OCT− moves all loops by one step of the current scale, up to two
@@ -476,7 +487,7 @@ Fixed
   measured per block, and before new voices start the oldest release tails are faded out (2 ms) until the
   predicted cost is under 82 % of the block. Held notes are only dropped if a buffer is actually late.
 
-## 0.26
+## Build 26
 
 Added
 - RUSSOLO engine, based on the techniques of Noisferatu by Robert Heel: 17 kinds of noise, logic-gate
@@ -485,13 +496,13 @@ Added
   CHAOS. 64 presets.
 - Sessions also store each track's granulator character and latched notes (format 8).
 
-## 0.25
+## Build 25
 
 Changed
 - Voice allocation: a pool of 12 voices shared by all tracks replaces two fixed voices per track. Stealing
   order: oldest release tail, then the oldest held note of the same track, then the oldest held note.
 
-## 0.24
+## Build 24
 
 Changed
 - Sessions are read and written one 4 KB flash sector at a time; about 54 KB of RAM freed. Session format
@@ -500,13 +511,13 @@ Changed
 Fixed
 - The name on the start-up screen fits.
 
-## 0.23
+## Build 23
 
 Added
 - Overdub muting: holding PLAY shows the selected track's loops on the white keys; pressing a key mutes or
   unmutes that loop. Mute states are stored in sessions (format 7).
 
-## 0.22
+## Build 22
 
 Added
 - EDIT key (the black key left of SHIFT): KNOB 1–4 control four macros of the selected track's sound, defined
@@ -517,7 +528,7 @@ Fixed
   two octaves above the played note. Corrected for new sounds (generation 2); generations 0 and 1 are kept
   unchanged so stored sounds regenerate identically.
 
-## 0.21
+## Build 21
 
 Added
 - Presets: SHIFT + SAVE opens 64 preset slots per engine.
@@ -530,7 +541,7 @@ Added
 Compatibility
 - Generation 0 is kept; sounds stored as seeds regenerate identically (checked by a test).
 
-## 0.20
+## Build 20
 
 Changed
 - Firmware renamed Tonitor (previously ACOUSMA). USB device name "FM-1 Tonitor". Existing sessions load.
@@ -539,18 +550,18 @@ Added
 - Browser installer using Web MIDI (Chrome, Edge, Opera).
 - Website and online manual.
 
-## 0.19
+## Build 19
 
 Added
 - SHIFT + PLAY with no loop playing starts all loops from their beginnings.
 
-## 0.18
+## Build 18
 
 Added
 - Sessions page: holding SAVE saves to the displayed slot, with an OVERWRITE? confirmation for occupied slots.
   Occupied slots shown in red, empty slots in grey.
 
-## 0.17
+## Build 17
 
 Changed
 - ANIMA EXPERIMENTAL path: sample-rate reduction, wavefolding, band-pass noise, scattered grains, fast
@@ -563,7 +574,7 @@ Added
 Fixed
 - Long messages fit the screen.
 
-## 0.16
+## Build 16
 
 Added
 - Generative paths AMBIENT and EXPERIMENTAL on the two leftmost black keys, per track.
@@ -572,27 +583,27 @@ Fixed
 - CALIGULA slow attacks and long releases.
 - Overload handling no longer drops the most recently played note.
 
-## 0.15
+## Build 15
 
 Changed
 - Latching: hold keys, then press SHIFT. SCALE page: SELECT sets the root, ALGORITHM the scale.
 
-## 0.14
+## Build 14
 
 Added
 - SHIFT key and latched notes.
 
-## 0.13
+## Build 13
 
 Changed
 - CALIGULA played from the keyboard.
 
-## 0.12
+## Build 12
 
 Added
 - CALIGULA engine.
 
-## 0.1 – 0.11
+## Builds 1 – 11
 
 - FM and ANIMA engines; six tracks with two voices each; one looper per track with up to ten overdubs; track
   level, pan and reverb send; master reverb; 64 session slots; scales on the white keys; per-track filter,

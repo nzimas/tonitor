@@ -34,7 +34,7 @@ async function loadFirmware() {
     const hex = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
     if (hex !== meta.sha256) throw new InstallError("badpkg", "The firmware did not download intact. Reload the page.");
     pkg = { ...loadPackage(raw), version: meta.version };
-    ui.fw.textContent = `Tonitor ${meta.version} (${pkg.product})`;
+    ui.fw.textContent = `Tonitor build ${meta.version} (${pkg.product})`;
     ui.facts.hidden = false;
     if (!navigator.requestMIDIAccess) {
       say("This browser cannot reach the FM-1",

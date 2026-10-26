@@ -1393,7 +1393,9 @@ static void ui_leds(void)
     fm1_led_key(PANEL_BTN[B_OCTDN], ui.oct[ui.sel] < 0);
     fm1_led_key(PANEL_BTN[B_OCTUP], ui.oct[ui.sel] > 0);
     for (k = 0; k < NKEY; k++) {
-        int32_t w = white_ix(k);
+        int32_t w = white_ix(k), n = SCALE_N[ui.scale], d = w + ui.lx + ui.lxt[ui.sel];
+        led_dim_key(14u + k, !ui.ovd && w >= 0 && (d % n + n) % n == 0);   /* the scale's root glows (as the loops'
+                                                                         * transposition moves it) */
         if (ui.ovd)                              /* PLAY held: the loops that play, lit */
             fm1_led_key(14u + k, w >= 0 && (uint32_t)w < loop[ui.sel].ntrk && !((loop[ui.sel].mute >> w) & 1u));
         else

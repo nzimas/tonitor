@@ -101,7 +101,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3, shown at the top right of the screen (+1, −2; nothing at 0). OCT− is lit below the middle, OCT+ above. |
 | **SHIFT + OCT− / OCT+** | **every loop** of every track down or up **one step of the scale** (see [the loopers](#the-loopers)). |
 | **SHIFT + a track's button held + OCT− / OCT+** | **that track's loops** only, down or up one step of the scale (TRANSP T3 +2). |
-| the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. |
+| the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. **The keys that play the root glow dimly** (in every octave, and moved with the loops' transposition, SHIFT + OCT), so you can see where the scale starts. |
 | the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
 | the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
 | the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up; it acts when let go): KNOB 1–4 set the chosen track's attack, decay, sustain and release. See [Envelope](#envelope). With SHIFT: the chosen track's step sequencer, **BRICKLAYER**, on and off (the key blinks while it is on; PLAY starts it); **held** (0.6 s) while it is on, its page up or down. See [BRICKLAYER](#bricklayer). |
@@ -110,7 +110,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
 | the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
 | all black keys | play no notes. They glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT is lit only while held. |
-| **SHIFT + ARP** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)): there **ARP held** saves the track's sound into the slot chosen, **ARP** pressed loads it. SHIFT + ARP again, or a track button, goes back. (SHIFT + SAVE before 0.51.) |
+| **SHIFT + ARP** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)): there **ARP held** saves the track's sound into the slot chosen, **ARP** pressed loads it. SHIFT + ARP again, or a track button, goes back. (SHIFT + SAVE before build 51.) |
 | **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
 | **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
 | **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen, under the octave and the battery, while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one, and now and then, at odds of its own, it is changed or joined: dropped this time round (5 %), late by 5–40 ms (25 %), an octave up or down (8 %), replaced or joined by a note that was not recorded — a step or two of the scale away, or a fifth (8 %), preceded by a grace note a step away (4 %), struck 2–4 times quickly (4 %), joined by a third or fifth above (10 %), echoed 1–4 times 120–400 ms apart, each quieter, sometimes climbing or falling a step each time (15 %); the notes of a chord are sometimes strummed 20–60 ms apart (12 %). Every note stays in the scale. The loops' **pace** is no longer steady either: it rises and falls slowly, and every few seconds on average it halts for a moment and resumes at once, bursts to 2–3× for a moment, grinds to a stop and snaps back, or climbs to 2–2.5× and drops suddenly (not while REC records). Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
@@ -530,7 +530,7 @@ uses blank flash when there is some, and the FM-1 blanks free flash by itself wh
 
 
 **Backing up.** The [backup page](https://nzimas.github.io/tonitor/backup.html) (desktop Chrome, Edge or Opera,
-over USB MIDI; Tonitor 0.47 or later) copies every session and both preset tables from the FM-1 to a file on the
+over USB MIDI; Tonitor build 47 or later) copies every session and both preset tables from the FM-1 to a file on the
 computer, and writes them back from that file — before trying another firmware, which may erase or overwrite
 them, and after reinstalling Tonitor. Each record is copied whole and checked (its head and body CRCs) before it
 replaces the one with the same number; the others on the FM-1 are kept. The FM-1 shows RESTORED and the number as
@@ -611,7 +611,7 @@ cable.
 
 The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
 fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-five families of
-sound objects (since 0.22 with their operators on the ratios they were designed with — before, a slip in the
+sound objects (since build 22 with their operators on the ratios they were designed with — before, a slip in the
 generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds
 saved then come back as they were):
 
@@ -622,7 +622,7 @@ saved then come back as they were):
 | **BRUIT** | noises: feedback and high ratios scattered by a sample-and-hold LFO |
 | **IMPACT** | struck bodies of several kinds: thuds, wooden knocks, metal hits, drum skins (membrane-like partials), debris (heavy feedback, fixed-frequency modulators); the modulators dying before the carriers; the octave sometimes moved; the pitch falling to the note on about one sound in ten |
 | **ITERATIF** | iterative objects: a sound pulsed by its own LFO, square or random |
-| **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly (from 0.56 drawn as part of WARP) |
+| **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly (from build 56 drawn as part of WARP) |
 | **SPECTRE** | a spectral arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
 | **ABYSS** | sub-bass rumble folded by feedback, breathing slowly |
 | **FRICTION** | creaking: sub-audio fixed-frequency modulators and random pitch |
@@ -636,16 +636,16 @@ saved then come back as they were):
 | **WIND** | breath and gusts over a soft drone |
 | **PLUCK** | plucked strings, bright or dark: the modulators die at once (the attack's brightness), the carriers die away, higher strings quicker |
 | **MALLET** | struck bars — marimba, vibraphone, kalimba: a high modulator's knock, gone at once, the bar ringing on |
-| **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope; from 0.56 now and then GLISSE's long glide (sometimes with a siren) or RUBBER's bounce, or both, and RUBBER's plain ratios |
+| **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope; from build 56 now and then GLISSE's long glide (sometimes with a siren) or RUBBER's bounce, or both, and RUBBER's plain ratios |
 | **GLITCH** | broken, mechanical sounds of several kinds: the level chopped by a square or random LFO, a crunch of heavy feedback with fixed-frequency modulators, the pitch thrown between steps by its envelope, a slow uneven wobble, and now and then a gentle sample-and-hold on the pitch |
-| **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it (from 0.56 drawn as part of WARP) |
+| **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it (from build 56 drawn as part of WARP) |
 | **SHAPER** | a carrier nailed to 1–19 Hz under modulators that follow the key: it works as a wave shaper, the tone rolling between odd and even harmonics a few times a second, at the same pace up and down the keyboard |
 | **LADDER** | four to six carriers on a ladder of ratios (near unison, an octave stack, uneven steps), their envelopes staggered: the partials enter, or die, one by one |
 | **REVERSE** | a sound that swells for as long as the key is held and stops when it is let go: tape run backwards |
 | **CREEP** | a held note leaving its pitch slowly, over seconds to tens of seconds |
 | **CLANG** | bells as the DX7's programmers made them: carriers turned by modulators on ratios off their harmonics, the index dying with the note |
 
-From 0.56 (generation 6) GLISSE and RUBBER are no longer drawn as families of their own: WARP has their glides
+From build 56 (generation 6) GLISSE and RUBBER are no longer drawn as families of their own: WARP has their glides
 and bounces (SHIFT + PRESETS steps over them). SHAPER, LADDER, REVERSE, CREEP and CLANG were learned from a
 collection of 9,606 DX7 voices (the idioms their programmers used that the other families do not make; each
 patch is a new one of that kind, never one of the collection's voices), after the SMK-37 port of Tonitor.
@@ -684,7 +684,7 @@ eight sliders, drawn — often far from their middle. Twenty-two kinds: **HAZE**
 **BELLS**, **GOLDEN** (Anima's own) and **BREATH**, **GRIT**, **SWARM**, **TIDE** (waves of noise over a low
 drone), **CHOIR** (vowels, a formant the hand moves), **SHARDS** (glass grains scattered and crushed),
 **BOWL** (a beating inharmonic hum in a ringing comb), **DUST** (sparse crackle over a dark drone),
-**MACHINE** (a pulsing, folded mechanism), and since 0.29 **PLUCK** (a plucked string: a burst through the
+**MACHINE** (a pulsing, folded mechanism), and since build 29 **PLUCK** (a plucked string: a burst through the
 comb tuned to the note, dying away), **REED** (nasal, through a formant the hand moves, a breath in it),
 **FOG** (a stack under fog, a slow phaser drifting through it), **ORGAN** (drawbars, a rotary tremolo, a
 little drive), **BITS** (pulses in few bits: the rate crushed and dragged about, folded), **DRIFT** (two saws
