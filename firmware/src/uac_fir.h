@@ -6,7 +6,10 @@
 #define UAC_FIR_M 147u
 #define UAC_FIR_N 12u
 #define UAC_FIR_Q 15
-static const int16_t UAC_FIR[80][12] = {
+#ifndef UAC_FIR_PLACE
+#define UAC_FIR_PLACE            /* (TONITOR: in the RAM beside the hot code, TABLE_FAST) */
+#endif
+static const int16_t UAC_FIR[80][12] UAC_FIR_PLACE = {
     {98, -410, 1042, -1899, 2633, 29711, 2815, -1962, 1064, -417, 99, -6},
     {97, -404, 1020, -1836, 2453, 29708, 2998, -2025, 1086, -423, 101, -7},
     {95, -397, 997, -1773, 2275, 29702, 3183, -2088, 1108, -429, 102, -7},

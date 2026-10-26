@@ -123,8 +123,8 @@ static void audio_init(void)
 
 /* --------------------------------------- TIMER5: the panel, time, USB --- */
 /* 10 kHz, above the audio (it may nest in the render: the scan keeps its pace, the LEDs do not shimmer);
- * USB is polled at 2 kHz, never nested -- but for its audio endpoint, served nested too (a packet each 1 ms frame:
- * the host must not find it empty while a half renders, 5.8 ms; usb.c uac_service) */
+ * USB is polled at 2 kHz, never nested -- but for its audio endpoint, served every tick, nested too (a packet each
+ * 1 ms frame: the host must not find it empty while a half renders, 5.8 ms; usb.c uac_service) */
 void fm1_timer5_irq(void)
 {
     static uint32_t sub, owed, last, acc;
@@ -143,14 +143,17 @@ void fm1_timer5_irq(void)
         uart_midi_poll();                        /* (the TRS jack, 2 kHz, nested in the audio too) */
     if (++sub == 10u)
         sub = 0;
-    if (dbg.in_audio) {
 #if FELUCCA_UAC
-        if (owed & 1u)
-            uac_service();                       /* (USB audio's packet each 1 ms frame, also while a half renders;
-                                                  * owed stays: usb_poll runs after the render, as before) */
+    uac_service();                               /* USB audio's packet each 1 ms frame, looked to every tick (10 kHz), also
+                                                  * while a half renders: 8 channels take ~0.55 ms on the wire, and a
+                                                  * look each 0.5 ms (2 kHz, as stereo had) now and then queued the next
+                                                  * too late for the next frame -- a frame with no packet, and macOS reset
+                                                  * its clock (TimeStampOutOfLine), dropping audio, every 1.25 s, as our
+                                                  * clock and the host's drift (build 62) */
 #endif
+    if (dbg.in_audio) {
         t5_nested_ticks += fm1_ticks() - t0;
-        return;
+        return;                                  /* (owed stays: usb_poll runs after the render, as before) */
     }
     if (owed & 1u)
         usb_poll();

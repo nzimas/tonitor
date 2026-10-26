@@ -247,29 +247,27 @@ static volatile uint32_t tele_trims;     /* tails the budget let go */
 #else
 #define TELE(b) ((void)0)
 #endif
-/* a note tied over the loop's end: held from its first block to its last (held when the recording ended: ended
- * with the last block, REC's; a key let go is never later than the one before it). Going round, it is neither let
- * go at the end nor struck again at the start: a drone stays one note */
+/* a note tied over the loop's end: one note held from its first block to its last (held when the recording ended:
+ * ended with the last block, REC's). Going round, it is neither let go at the end nor struck again at the start: a
+ * drone stays one note. The same note struck at the start, let go, and struck again to be held at the end is two
+ * notes, not one: the first is struck at every round (its own end comes first), the last let go at the end, its
+ * release ringing on into the next round */
 static int trk_tied(const looper_t *p, const loop_trk_t *t, uint32_t e)
 {
-    uint32_t i;
+    uint32_t i, n = LE_NOTE(e);
     if (LE_ON(e) ? LE_T(e) != 0u : LE_T(e) != t->len - 1u)
         return 0;
-    if (LE_ON(e))
-        for (i = t->n; i-- > 0u;) {               /* (its end: among the last events) */
+    if (LE_ON(e)) {
+        for (i = 0; i < t->n; i++) {              /* (its own end: the note's first end) */
             uint32_t f = p->ev[t->first + i];
-            if (LE_T(f) != t->len - 1u)
-                return 0;
-            if (!LE_ON(f) && LE_NOTE(f) == LE_NOTE(e))
-                return 1;
+            if (!LE_ON(f) && LE_NOTE(f) == n)
+                return LE_T(f) == t->len - 1u;
         }
-    else
-        for (i = 0; i < t->n; i++) {              /* (its start: among the first) */
+    } else
+        for (i = t->n; i-- > 0u;) {               /* (its own start: the note's last start) */
             uint32_t f = p->ev[t->first + i];
-            if (LE_T(f) != 0u)
-                return 0;
-            if (LE_ON(f) && LE_NOTE(f) == LE_NOTE(e))
-                return 1;
+            if (LE_ON(f) && LE_NOTE(f) == n)
+                return LE_T(f) == 0u;
         }
     return 0;
 }
@@ -1138,6 +1136,22 @@ static void lv_tick(uint32_t l)
             note_off(l, vo[l][i].note, SRC_LOOP);
     }
 }
+/* a note tied over the loop's end, going round: still sounding (a drone, a pad: it goes on, one note), or died
+ * away -- more than 18 dB under its loudest (a pluck, a bell, held to the end: it is struck again, as the loop's
+ * first note). An organism's (CALIGULA, RUSSOLO) goes on */
+static int tied_alive(uint32_t l, uint32_t note)
+{
+    uint32_t k;
+    if (eng_organism(lay[l].engine))
+        return 1;
+    for (k = 0; k < NVOICE; k++) {
+        const voice_t *v = &vox[k];
+        if (v->gate && v->sounding && !v->fade && !v->pend && vox_owner(v) == l && v->src == SRC_LOOP &&
+            v->note == note && v->lvl * 8u >= v->pk)
+            return 1;
+    }
+    return 0;
+}
 /* an event of loop t played: as recorded, or (backwards) turned round -- its start an end, its end a start. A note
  * tied over the loop's end is never let go there, nor struck again just after (forwards: its start is the loop's
  * first block, its end the last; backwards the other way round) */
@@ -1146,8 +1160,12 @@ static void trk_play(uint32_t l, loop_trk_t *t, looper_t *p, uint32_t e, int as_
     uint32_t raw = LE_NOTE(e), nt = lx_map(raw, lx_steps + lx_tr[l] - t->xb, lx_mask);
     int tied = trk_tied(p, t, e);
     if (as_on) {
-        if (t->wrap && tied && !p->vary)
-            return;                               /* (still sounding from the round before) */
+        if (t->wrap && tied && !p->vary) {
+            if (tied_alive(l, nt))
+                return;                           /* (still sounding from the round before: one note) */
+            note_off(l, nt, SRC_LOOP);            /* (died away -- a pluck, a bell: let go, its tail fading on, and
+                                                   * struck anew) */
+        }
         (void)nt;
         loop_strike(l, p, t, raw);
         TELE(20);
@@ -1769,6 +1787,9 @@ static void blk_render(void)
     an_cache_fill();                             /* (a wavetable missed this block, copied in now: no core rendering) */
 }
 
+#if defined(FELUCCA_UAC) && FELUCCA_UAC && UAC_NBLK > 2u
+static int32_t usb_trk[NLAYER][CTL];             /* (USB audio: each track's block, mono, after its level) */
+#endif
 static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin, int32_t *dlin)
 {
     layer_t *y = &lay[l];
@@ -1975,6 +1996,9 @@ static void layer_block(uint32_t l, int32_t *mixl, int32_t *mixr, int32_t *rvin,
             a = absi(x);
             if (a > pk)
                 pk = a;
+#if defined(FELUCCA_UAC) && FELUCCA_UAC && UAC_NBLK > 2u
+            usb_trk[l][i] = x;                    /* (USB audio: the track alone, mono) */
+#endif
             mixl[i] += mulq15(x, pl);
             mixr[i] += mulq15(x, pr);
             rvin[i] += mulq15(x, sd);
@@ -2073,8 +2097,10 @@ static void budget_guard(void)
 }
 
 #if defined(FELUCCA_UAC) && FELUCCA_UAC
-static int32_t usb_blk[2 * CTL];                 /* (the block for USB audio: the master before the MASTER knob, at
-                                                  * unity -- a recording does not follow the headphones' level) */
+static int32_t usb_blk[UAC_NBLK * CTL];           /* (the block for USB audio: the master before the MASTER knob, at
+                                                  * unity -- a recording does not follow the headphones' level; then
+                                                  * each track, mono: after its level, before its pan and the master
+                                                  * delay and reverb) */
 #endif
 /* one block: the events, the loops, the work (two cores), the layers, the effects' returns, the master (Q15 stereo,
  * interleaved) */
@@ -2095,14 +2121,21 @@ static void mix_block(int32_t *out)
     blk_render();
     for (i = 0; i < CTL; i++)
         l_[i] = r_[i] = rvin[i] = dlin[i] = 0;
+#if defined(FELUCCA_UAC) && FELUCCA_UAC && UAC_NBLK > 2u
+    memset(usb_trk, 0, sizeof usb_trk);           /* (a silent track: silence) */
+#endif
     for (l = 0; l < NLAYER; l++)
         layer_block(l, l_, r_, rvin, dlin);
     for (i = 0; i < CTL; i++) {
         l_[i] += fx_l[i];                         /* the delay's and the reverb's returns (on the last block's sends) */
         r_[i] += fx_r[i];
 #if defined(FELUCCA_UAC) && FELUCCA_UAC
-        usb_blk[2u * i] = ceiling(l_[i]);
-        usb_blk[2u * i + 1u] = ceiling(r_[i]);
+        usb_blk[UAC_NBLK * i] = ceiling(l_[i]);
+        usb_blk[UAC_NBLK * i + 1u] = ceiling(r_[i]);
+#if UAC_NBLK > 2u
+        for (l = 0; l < NLAYER && l + 2u < UAC_NBLK; l++)
+            usb_blk[UAC_NBLK * i + 2u + l] = ceiling(usb_trk[l][i]);
+#endif
 #endif
         out[2u * i] = ceiling(mulq12(l_[i], master_q12));
         out[2u * i + 1u] = ceiling(mulq12(r_[i], master_q12));
@@ -2115,6 +2148,9 @@ static void mix_block(int32_t *out)
 }
 
 /* ------------------------------------------------ the sounds (main loop) --- */
+/* the tracks' engines at the start (and in an empty session): FM, ANIMA, CALIGULA, HIVE, DRUID, BAYAREA (as on the
+ * SMK-37 port, its build 29) */
+static const uint8_t ENG_START[NLAYER] = {ENG_FM, ENG_ANIMA, ENG_CAL, ENG_HIVE, ENG_DRUID, ENG_BAY};
 static void layers_init(void)
 {
     uint32_t l, k;
@@ -2141,7 +2177,7 @@ static void layers_init(void)
     }
     for (l = 0; l < NLAYER; l++) {
         lay[l].lim_g = Q15;
-        lay[l].engine = lay[l].want_engine = (uint8_t)(l & 1u ? ENG_ANIMA : ENG_FM);
+        lay[l].engine = lay[l].want_engine = ENG_START[l];
         cal_init(&cal_rt[l], 0xC0u + l * 131u);
         rus_init(&rus_rt[l], 0x7A5u + l * 131u);
     }

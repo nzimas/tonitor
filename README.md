@@ -96,7 +96,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | Control | What it does |
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1–6** (lit: chosen; glowing: sounding). From any page, back to playing. **Held** (0.8 s): copy the track, or paste the copy onto it ([Copying a track](#copying-a-track)). |
-| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA**, **HIVE**. Each track keeps one sound per engine. |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA**, **HIVE**. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA. |
 | **SHIFT + PRESETS** | a new sound of the previous or next family. |
 | **HOME** | a new sound for the chosen track. |
 | **SHIFT + HOME** | a new sound of the same family. |
@@ -274,8 +274,10 @@ settings and loops, except its own level and pan; its latched notes are released
 ### The loopers
 
 Each track has a looper of up to **ten loops**, and they run **free**: no tempo, no grid. Each overdub is as long
-as you played it, so the loops drift against each other. A note still held when REC ends the loop is tied over
-its end, so a drone stays one unbroken note. Loops share the twelve voices with the keys and the other tracks.
+as you played it, so the loops drift against each other. A note held from the loop's first moment to its last
+(still down when REC ends it) is tied over its end: while it still sounds (a drone, a pad) it goes on, one unbroken
+note; once it has died away (a pluck, a bell) it is struck again at the start of each round. Other notes still
+held when REC ends the loop are let go at its end, their release ringing on into the next round. Loops share the twelve voices with the keys and the other tracks.
 
 **Bringing loops in and out.** Hold **PLAY**: the chosen track's loops appear on the white keys, the first loop on
 the leftmost, lit while they play. Press a key to take its loop out, or to bring it back in from its start. With
@@ -331,9 +333,16 @@ MIDI notes are not quantised to the scale.
 
 ### Global setup and MIDI
 
-**SHIFT + SAVE** opens **GLOBAL SETUP**, the FM-1's own settings (MIDI), kept apart from the sessions. **PRESETS**
-moves through the entries; **SAVE** opens one, or selects a value and sets it; **SHIFT + SAVE** cancels or goes
-back a level. A track button leaves; changes are kept.
+**SHIFT + SAVE** opens **GLOBAL SETUP**, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions.
+**PRESETS** moves through the entries; **SAVE** opens one, or selects a value and sets it; **SHIFT + SAVE** cancels
+or goes back a level. A track button leaves; changes are kept.
+
+**AUDIO** has one setting, **USB**: what the FM-1 sends to a computer as USB audio ([USB audio](#usb-audio)).
+**STEREO** (at the start): the master, as the headphones hear it. **TRACKS**: the six tracks, each on its own mono
+channel. Changed, the FM-1 leaves the USB for a moment and comes back as the new device; the sound on the
+headphones goes on.
+
+MIDI's parts:
 
 | Part | Settings | At the start |
 | --- | --- | --- |
@@ -473,8 +482,8 @@ into the reverb. The repeats are slightly dark and grainy. **SEQ** once opens it
 
 | Parameter | |
 | --- | --- |
-| **TIME** | 20 ms to 2 s; turning it bends the repeats' pitch |
-| **FEEDBACK** | from one repeat to nearly endless |
+| **TIME** | 0.02 to 2.0 seconds (shown without the unit); turning it bends the repeats' pitch |
+| **REPEATS** | the feedback: from one repeat to nearly endless |
 | **DAMP** | each repeat darker than the one before |
 | **MIX** | the level of the echoes |
 
@@ -492,8 +501,17 @@ A plate reverb (after Jon Dattorro), fed by each track's reverb send (**KNOB 4**
 ### USB audio
 
 Connected to a computer, phone or tablet, the FM-1 is also a class-compliant **USB audio input** ("FM-1
-Tonitor"): the master output, stereo, 16-bit, at 48 or 44.1 kHz. It is taken before **MASTER**, which sets only
-the headphones' level. No driver is needed, and MIDI works over the same cable.
+Tonitor"), 16-bit, at 48 or 44.1 kHz (44.1 kHz is the FM-1's own rate: nothing is converted). **GLOBAL SETUP >
+AUDIO > USB** chooses what it sends:
+
+| USB | Channels |
+| --- | --- |
+| **STEREO** | 2: the master output, with the delay and reverb (what the headphones hear) |
+| **TRACKS** | 6: tracks 1–6, each mono, after its filter, granulator, crush, distortion and level; before its pan and the master delay and reverb |
+
+Both are taken before **MASTER**, which sets only the headphones' level. No driver is needed, and MIDI works over
+the same cable. To hear the FM-1 while a computer records it, use its headphone output: a program's own monitoring
+(Audacity's software playthrough) adds a delay and may break up.
 
 ## The engines
 

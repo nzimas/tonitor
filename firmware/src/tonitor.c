@@ -10,7 +10,7 @@
 #define TONITOR_ID "FM-1_700"    /* the package identity (tools/build.py sets it) */
 #endif
 #ifndef TONITOR_VERSION
-#define TONITOR_VERSION "60"
+#define TONITOR_VERSION "62"
 #endif
 #define FELUCCA_ID TONITOR_ID
 #ifndef TELEMETRY
@@ -21,6 +21,8 @@
 #define FELUCCA_CDC 0
 #define FELUCCA_UAC 1            /* USB audio out to the host: the master, stereo, 16-bit, 44.1 kHz (0.52, as BIGORNA's build
                                   * 49; usb.c) */
+#define UAC_NBLK 8u              /* (USB audio's block: the mix L R, then tracks 1 .. 6 mono -- layers.c usb_trk) */
+#define UAC_NMAX 6u              /* (.. sent: the mix, or the six tracks -- GLOBAL SETUP's USB AUDIO; usb.c) */
 #define FELUCCA_UAC_48K 1        /* (0.56: 48 kHz offered first, and the rate at the start; 44.1 kHz too. 44.1 is what is
                                   * rendered: at 48 SLOOP's polyphase filter resamples it, usb.c, uac_fir.h) */
 #define HALF_FRAMES 256u         /* an I2S half buffer: 5.8 ms (main.c renders it; usb.c's audio ring is sized on it) */

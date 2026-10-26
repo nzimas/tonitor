@@ -11,8 +11,11 @@ typedef struct {
     uint8_t out_ch[NLAYER];      /* each track's channel out, 0 off */
     uint8_t rcv_note, rcv_cc, send_note, send_cc;   /* 0 / 1 */
     uint8_t usb_in, trs_in;      /* the ports listened to */
+    uint8_t usb_aud;             /* (GLOBAL SETUP's AUDIO, kept with these) USB audio: 0 STEREO (the mix), 1 TRACKS (six) */
 } midi_cfg_t;
-#define MIDI_CFG0 {{1, 2, 3, 4, 5, 6}, 16, {1, 2, 3, 4, 5, 6}, 1, 1, 0, 0, 1, 1}
+#define MIDI_CFG_OLD 19u         /* (the size before USB AUDIO, build 62: such a record still loads) */
+#define MIDI_CFG0 {{1, 2, 3, 4, 5, 6}, 16, {1, 2, 3, 4, 5, 6}, 1, 1, 0, 0, 1, 1, 0}
+_Static_assert(sizeof(midi_cfg_t) == MIDI_CFG_OLD + 1u, "USB AUDIO after the older settings");
 static midi_cfg_t mcfg = MIDI_CFG0;
 
 static uint16_t midi_held[NLAYER][8];            /* (each track's notes sent on, a bit each: one off each) */

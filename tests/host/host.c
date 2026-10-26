@@ -582,9 +582,12 @@ static int cmd_flows(void)
     fm_measure(&fm_buf[3][fm_use[3] ^ 1u]);
     fm_pub[3] = fm_use[3] ^ 1u;
     press_btn(B_LFO);
-    if (ui.engine[3] != ENG_FM) {
-        host_enc[PANEL_ENC[EN_PRESET]] = -1;
-        ui_input();
+    {
+        uint32_t g = 0;
+        while (ui.engine[3] != ENG_FM && g++ < NENG) {   /* (back to FM, from whichever it starts on) */
+            host_enc[PANEL_ENC[EN_PRESET]] = -1;
+            ui_input();
+        }
     }
     run_blocks(100, 0);
     press_key(3, 1);
@@ -1062,7 +1065,7 @@ static int cmd_sessions(const char *dir)
         if (ses.current != 9u || ses_has(9))
             printf("FAIL sessions: the empty slot 9 was not chosen (current %u)\n", ses.current), fail++;
         for (l = 0; l < NLAYER; l++)
-            bad += loop[l].ntrk || loop[l].play || ui.latch[l] || ui.engine[l] != (l & 1u ? ENG_ANIMA : ENG_FM)
+            bad += loop[l].ntrk || loop[l].play || ui.latch[l] || ui.engine[l] != ENG_START[l]
                    || lay[l].engine != ui.engine[l] || ui.level[l] != LEVEL_UNITY || ui.pan[l] != PAN_DEF[l]
                    || ui.send[l] != SEND_DEF || ui.oct[l] || ui.flt[l] || ui.gr[l] || ui.cr[l] || ui.path[l] != PATH_OPEN
                    || layer_sounding(l);
@@ -3056,6 +3059,18 @@ static int cmd_ties(void)
         while (ui.engine[0] != e && guard++ < 20u) {
             host_enc[PANEL_ENC[EN_PRESET]] = 1;
             ui_input();
+        }
+        if (e == ENG_FM) {                   /* (sustained sounds: FM's DRONE, ANIMA's ORGAN -- a pluck or a bell
+                                              * held so is struck again once died away: looptie) */
+            sound_slot_free(&fm_pub[0], &fm_use[0]);
+            fm_generate(&fm_buf[0][fm_use[0] ^ 1u], FF_DRONE, 4242u, PATH_OPEN, GEN_NOW);
+            fm_measure(&fm_buf[0][fm_use[0] ^ 1u]);
+            fm_pub[0] = fm_use[0] ^ 1u;
+        } else if (e == ENG_ANIMA) {
+            sound_slot_free(&an_pub[0], &an_use[0]);
+            an_design(&an_buf[0][an_use[0] ^ 1u], 17, 4242u, PATH_OPEN, GEN_NOW);
+            an_measure(&an_buf[0][an_use[0] ^ 1u]);
+            an_pub[0] = an_use[0] ^ 1u;
         }
         run_blocks(40, 0);
         press_btn(B_REC);
@@ -5448,6 +5463,56 @@ static int cmd_setup(void)
     setup_load();
     if (!mcfg.send_note)
         printf("FAIL setup: the setting is not kept\n"), fail++;
+    /* AUDIO: one part, opened on its row; USB: STEREO -> TRACKS, kept; a record from before it loads, STEREO */
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_SAVE);
+    press_phys(KEY_SHIFT, 0);
+    setup_poll();
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;               /* MIDI -> AUDIO */
+    ui_input();
+    press_btn(B_SAVE);                                /* AUDIO: its rows, USB chosen */
+    if (set.lvl != 2u || strcmp(SET_PART[set.part].rows[set.row - 1u].name, "USB"))
+        printf("FAIL setup: AUDIO does not open on its USB row (level %u)\n", set.lvl), fail++;
+    press_btn(B_SAVE);
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;               /* .. TRACKS */
+    ui_input();
+    ui_draw();
+    ppm("build/screens/screen-44-setup-usb.ppm");
+    press_btn(B_SAVE);
+    if (mcfg.usb_aud != 1u)
+        printf("FAIL setup: AUDIO > USB was not set to TRACKS\n"), fail++;
+    press_phys(KEY_SHIFT, 1);                         /* back to the sections (one level: no parts' list) */
+    press_btn(B_SAVE);
+    press_phys(KEY_SHIFT, 0);
+    if (!ui.set_page || set.lvl != 0u)
+        printf("FAIL setup: back from AUDIO's rows is not the sections (level %u)\n", set.lvl), fail++;
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_SAVE);
+    press_phys(KEY_SHIFT, 0);
+    setup_poll();
+    mcfg.usb_aud = 0;
+    ses_scan(1);
+    setup_load();
+    if (mcfg.usb_aud != 1u || !mcfg.send_note)
+        printf("FAIL setup: USB AUDIO is not kept (%u)\n", mcfg.usb_aud), fail++;
+    {   /* a record written before USB AUDIO (19 bytes): it loads, USB AUDIO at STEREO */
+        ses_head_t *h = (ses_head_t *)ses_chunk;
+        memset(ses_chunk, 0, 32u + MIDI_CFG_OLD);
+        memcpy(ses_chunk + 32u, &mcfg, MIDI_CFG_OLD);
+        h->magic = SES_MAGIC;
+        h->num = (uint16_t)SET_NUM;
+        h->format = SET_FORMAT;
+        h->len = 32u + MIDI_CFG_OLD;
+        h->seq = ++ses.seq;
+        h->body_crc = ses_crc(ses_chunk + 32u, MIDI_CFG_OLD, 0);
+        h->head_crc = ses_crc(ses_chunk, 30u, 0);
+        ses_write_chunk(SET_NUM, 32u + MIDI_CFG_OLD);
+        mcfg.send_note = 0;
+        ses_scan(1);
+        setup_load();
+        if (!mcfg.send_note || mcfg.usb_aud)
+            printf("FAIL setup: an older settings record does not load (notes %u, usb %u)\n", mcfg.send_note, mcfg.usb_aud), fail++;
+    }
     /* the MIDI in: channel 3 to track 3, channel 16 to the chosen track, CC 7 to a track's level, the TRS port off */
     press_btn(LAYER_BTN[1]);
     host_midi(0x09u | 0x92u << 8 | 60u << 16 | 100u << 24);
@@ -5459,6 +5524,8 @@ static int cmd_setup(void)
         found |= (vox[k].gate && vox[k].layer == 2u && vox[k].note == 60u) ? 1u : 0u;
         found |= (vox[k].gate && vox[k].layer == 1u && vox[k].note == 64u) ? 2u : 0u;
     }
+    for (k = 0; k < cal_rt[2].nheld; k++)             /* (track 3 starts on CALIGULA: its organism holds the note) */
+        found |= cal_rt[2].note[k] == 60u ? 1u : 0u;
     if (found != 3u)
         printf("FAIL setup: the MIDI notes do not reach their tracks by channel (%u)\n", found), fail++;
     if (ui.level[0] != 0)
@@ -6623,6 +6690,133 @@ static int cmd_playalong(void)
     return fail ? 1 : 0;
 }
 
+/* notes held over the loop's end (as REC ends it). (1) The same note at the start and, again, held at the end: two
+ * notes -- the first struck at every round, the last let go at the end. (2) A pluck (DRUID) held from the first
+ * block to the last, a second note over it (as session 2 of a report): died away at the end, it is struck again
+ * at every round. (3) A drone (FM's DRONE) held so: still sounding, it goes on, one note, never struck again */
+static uint32_t lt_gated(uint32_t note)
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NVOICE; k++)
+        n += vox[k].gate && vox_owner(&vox[k]) == 0u && vox[k].src == SRC_LOOP && vox[k].note == note;
+    return n;
+}
+static void lt_empty(void)
+{
+    host_press |= 1u << PANEL_BTN[B_REC];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_REC];
+    ui_input();
+    fm1_ms += 1500u;
+    ui_input();
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+    ui_input();
+    run_blocks(44100u * 10u / CTL, 0);
+}
+static int lt_engine(uint32_t e)
+{
+    uint32_t g = 0;
+    while (ui.engine[0] != e && g++ < NENG) {
+        host_enc[PANEL_ENC[EN_PRESET]] = ui.engine[0] < e ? 1 : -1;
+        ui_input();
+    }
+    run_blocks(100, 0);
+    return ui.engine[0] == e;
+}
+static int cmd_looptie(void)
+{
+    uint32_t fail = 0, a = scale_note(0, 0), c = scale_note(4, 0), r, len, sec = 44100u / CTL;
+    layers_init();
+    ui_init();
+    sounds_init();
+    press_btn(B_FX);
+    lt_engine(ENG_FM);
+    /* (1) A 0 .. 100, C 150 .. 250, A again from 300, held as REC ends it */
+    press_btn(B_REC);
+    press_key(0, 1);
+    run_blocks(100, 0);
+    press_key(0, 0);
+    run_blocks(50, 0);
+    press_key(4, 1);
+    run_blocks(100, 0);
+    press_key(4, 0);
+    run_blocks(50, 0);
+    press_key(0, 1);
+    run_blocks(100, 0);
+    press_btn(B_REC);
+    run_blocks(20, 0);
+    press_key(0, 0);
+    len = loop[0].trk[0].len;
+    for (r = 0; r < 3u; r++) {
+        loop_to(0, len - 1u);
+        run_blocks(1, 0);
+        if (lt_gated(a) && loop[0].trk[0].pos)
+            printf("FAIL looptie: round %u: the last A is held over the end, as one note with the first\n", r + 1u), fail++;
+        loop_to(0, 3u);
+        if (lt_gated(a) != 1u)
+            printf("FAIL looptie: round %u: the first A is not struck (%u)\n", r + 2u, lt_gated(a)), fail++;
+    }
+    lt_empty();
+    /* (2) a DRUID pluck held all through, a second note over it */
+    if (!lt_engine(ENG_DRUID))
+        printf("FAIL looptie: no DRUID\n"), fail++;
+    sound_slot_free(&dr_pub[0], &dr_use[0]);
+    dr_design(&dr_buf[0][dr_use[0] ^ 1u], 0, 4242u, PATH_OPEN, GEN_NOW);   /* (PLUCK) */
+    dr_measure(&dr_buf[0][dr_use[0] ^ 1u]);
+    dr_pub[0] = dr_use[0] ^ 1u;
+    run_blocks(10, 0);
+    press_btn(B_REC);
+    press_key(0, 1);
+    run_blocks(4u * sec, 0);
+    press_key(4, 1);
+    run_blocks(4u * sec, 0);
+    press_btn(B_REC);
+    run_blocks(sec, 0);
+    press_key(0, 0);
+    press_key(4, 0);
+    len = loop[0].trk[0].len;
+    for (r = 0; r < 3u; r++) {
+        uint32_t k, fresh = 0;
+        loop_to(0, 40u);
+        for (k = 0; k < NVOICE; k++)              /* (struck anew: loud again, not the faded string) */
+            fresh += vox[k].gate && vox_owner(&vox[k]) == 0u && vox[k].note == a && vox[k].lvl * 4u >= vox[k].pk &&
+                     blk_clock - vox[k].born < 60u;
+        if (fresh != 1u)
+            printf("FAIL looptie: round %u: the pluck held all through is not struck again (%u)\n", r + 2u, fresh), fail++;
+        loop_to(0, len / 2u);
+    }
+    lt_empty();
+    /* (3) FM's DRONE held all through, a second note over it: one note, never let go */
+    lt_engine(ENG_FM);
+    sound_slot_free(&fm_pub[0], &fm_use[0]);
+    fm_generate(&fm_buf[0][fm_use[0] ^ 1u], FF_DRONE, 4242u, PATH_OPEN, GEN_NOW);
+    fm_measure(&fm_buf[0][fm_use[0] ^ 1u]);
+    fm_pub[0] = fm_use[0] ^ 1u;
+    run_blocks(10, 0);
+    press_btn(B_REC);
+    press_key(0, 1);
+    run_blocks(2u * sec, 0);
+    press_key(4, 1);
+    run_blocks(sec, 0);
+    press_key(4, 0);
+    run_blocks(sec, 0);
+    press_btn(B_REC);
+    run_blocks(20, 0);
+    press_key(0, 0);
+    len = loop[0].trk[0].len;
+    for (r = 0; r < 3u; r++) {
+        uint32_t g = 0, blk;
+        for (blk = 0; blk < len + 10u; blk++) {
+            g += !lt_gated(a);
+            run_blocks(1, 0);
+        }
+        if (g)
+            printf("FAIL looptie: round %u: the drone is let go going round (%u blocks)\n", r + 1u, g), fail++;
+    }
+    (void)c;
+    printf("looptie: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -6701,6 +6895,8 @@ int main(int argc, char **argv)
         return cmd_delay(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "playalong"))
         return cmd_playalong();
+    if (argc >= 2 && !strcmp(argv[1], "looptie"))
+        return cmd_looptie();
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))
         return cmd_loopmodes();
     if (argc >= 2 && !strcmp(argv[1], "tracktransp"))

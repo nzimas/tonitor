@@ -58,7 +58,10 @@ def main():
         f"#define UAC_FIR_M {M}u",
         f"#define UAC_FIR_N {N}u",
         f"#define UAC_FIR_Q {QB}",
-        f"static const int16_t UAC_FIR[{L // 2}][{N}] = {{",
+        "#ifndef UAC_FIR_PLACE",
+        "#define UAC_FIR_PLACE            /* (TONITOR: in the RAM beside the hot code, TABLE_FAST) */",
+        "#endif",
+        f"static const int16_t UAC_FIR[{L // 2}][{N}] UAC_FIR_PLACE = {{",
     ]
     for p in range(L // 2):
         lines.append("    {" + ", ".join(str(int(v)) for v in tab[p]) + "},")

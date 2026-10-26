@@ -815,7 +815,7 @@ static void ses_fresh(uint32_t num)
         loop[l].mute = 0;
         memset(ui.mac[l], 0, sizeof ui.mac[l]);
         memset(ui.latch_note[l], 0, sizeof ui.latch_note[l]);
-        ui.engine[l] = (uint8_t)(l & 1u ? ENG_ANIMA : ENG_FM);   /* (as layers_init starts them) */
+        ui.engine[l] = ENG_START[l];              /* (as layers_init starts them) */
         ui.oct[l] = 0;
         ui.level[l] = LEVEL_UNITY;
         ui.pan[l] = PAN_DEF[l];

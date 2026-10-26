@@ -153,7 +153,7 @@ static struct {
     uint32_t dial_until, dial_drawn_at;   /* it shows until then; when it was last drawn */
     int16_t shown_dial;          /* (the value last drawn, + the kind x 256) */
     int8_t rvp[4];               /* the reverb: SIZE DECAY DAMP MIX, 0 .. 100 */
-    int8_t dlp[4];               /* the delay: TIME FEEDBACK DAMP MIX, 0 .. 100 */
+    int8_t dlp[4];               /* the delay: TIME REPEATS (the feedback) DAMP MIX, 0 .. 100 */
     int8_t dsend[NLAYER];        /* each track's send to the delay, 0 .. 100 (SHIFT + KNOB 4) */
     int8_t dist[NLAYER];         /* each track's distortion, 0 .. 100, 0 off (SHIFT + KNOB 3) */
     uint8_t rv_page;             /* the REVERB page is up -- or the DELAY page, fx 1 (SEQ; SHIFT + SEQ) */
@@ -381,7 +381,7 @@ static int seq_page(void) { return (ui.bl_page && bl.on[ui.sel]) || (ui.bb_page 
 static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not overdone */
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
 static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
-static const char *const DL_NAME[4] = {"TIME", "FEEDBACK", "DAMP", "MIX"};
+static const char *const DL_NAME[4] = {"TIME", "REPEATS", "DAMP", "MIX"};   /* (REPEATS: the feedback) */
 
 /* the layer's level and pan, to the ISR */
 static void level_pan_apply(uint32_t l)
@@ -1852,17 +1852,26 @@ static void draw_rv_row(uint32_t j, int touched)
     cv_begin(240, 47, bg);
     {
         const char *name = ui.fx ? DL_NAME[j] : RV_NAME[j];
-        const font_t *f = &FONT_M;
-        int32_t y = 1;
-        if (ui.fx && j == 0u) {                  /* (the delay's TIME in ms) */
-            fmt_int(v, dl_ms(pv[0]));
-            str_cpy(v + str_len(v), " MS", 4);
+        const font_t *f = &FONT_S;               /* (one size for every row of both pages: REPEATS 100 fits it) */
+        int32_t y = (37 - (int32_t)FONT_S.h) / 2;
+        if (ui.fx && j == 0u) {                  /* the delay's TIME in seconds, no unit (the font has no
+                                                  * lower case): 0.02 .. 0.99, 1.0 .. 2.0 */
+            int32_t cs = (dl_ms(pv[0]) + 5) / 10, n;
+            if (cs >= 100) {
+                cs = (cs + 5) / 10;
+                fmt_int(v, cs / 10);
+                n = str_len(v);
+                v[n] = '.';
+                v[n + 1] = (char)('0' + cs % 10);
+                v[n + 2] = 0;
+            } else {
+                str_cpy(v, "0.", 3);
+                v[2] = (char)('0' + cs / 10);
+                v[3] = (char)('0' + cs % 10);
+                v[4] = 0;
+            }
         } else
             fmt_int(v, pv[j]);
-        if (text_w(f, name) + text_w(f, v) > 220) {   /* (FEEDBACK 60, TIME 400 MS: a size smaller) */
-            f = &FONT_S;
-            y = 1 + (FONT_M.h - FONT_S.h) / 2;
-        }
         cv_text(6, y, f, name, fg);
         cv_text(234 - text_w(f, v), y, f, v, fg);
     }
