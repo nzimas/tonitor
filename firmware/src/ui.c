@@ -123,6 +123,7 @@ static struct {
     uint8_t ses_over;            /* .. and it holds a session: the question is OVERWRITE */
     uint8_t set_page;            /* GLOBAL SETUP up (setup.c) */
     uint8_t mod_page, mod_ix;    /* the MOD page up (SEQ's third); its entry: LFO 1, LFO 2, MOD A .. D */
+    uint8_t rx_page;             /* the PLAY ALONG page up (SEQ's fourth: REACT, SHADOW, ARPEGGIO; react.c) */
     int8_t mod_touched;          /* (the row just turned, until mod_touch_until) */
     uint32_t mod_touch_until, mod_drawn_at;
     int32_t shown_top;           /* (the track view's top corners as drawn: the octave, the battery, VAR) */
@@ -178,8 +179,19 @@ static struct {
 /* ------------------------------------------------------------ notes --- */
 static uint8_t press_vel;                /* the level of the notes pressed now, 1 .. 126 (0: full) -- the balls set it */
 static uint8_t press_seq;                /* the notes pressed now are a sequencer's: the looper does not record them */
-static void note_press(uint32_t l, uint32_t note) { ev_post(EV_ON, l, note, press_vel | (press_seq ? EV_UNHEARD : 0u)); }
-static void note_release(uint32_t l, uint32_t note) { ev_post(EV_OFF, l, note, press_seq ? EV_UNHEARD : 0u); }
+static void rx_hear(uint32_t note, uint32_t vel, int on);   /* (REACT listens to the guide: react.c) */
+static void note_press(uint32_t l, uint32_t note)
+{
+    if (l == rx_ear)
+        rx_hear(note, press_vel, 1);
+    ev_post(EV_ON, l, note, press_vel | (press_seq ? EV_UNHEARD : 0u));
+}
+static void note_release(uint32_t l, uint32_t note)
+{
+    if (l == rx_ear)
+        rx_hear(note, 0, 0);
+    ev_post(EV_OFF, l, note, press_seq ? EV_UNHEARD : 0u);
+}
 
 static void ui_draw(void);
 static void say(const char *s, uint32_t ms)
@@ -316,6 +328,14 @@ static void seq_press(uint32_t l, uint32_t root, uint32_t f1, int on)
     chord_press(l, root, f1, on);
     press_seq = 0;
 }
+#include "react.c"                       /* (REACT, SHADOW, ARPEGGIO: the PLAY ALONG page, SEQ's fourth) */
+/* the PLAY ALONG page is what the screen shows (no other page over it) */
+static int rx_page_up(void)
+{
+    return ui.rx_page && !ui.rv_page && !ui.ses_page && !ui.sc_page && !ui.pre_page && !ui.set_page && !ui.env_page &&
+           !ui.bb_page && !ui.bl_page && !ui.mod_page;
+}
+static uint8_t rx_focus;                         /* (the page: the knob turned last) */
 /* track l's latched notes (and chords) moved by d steps of the scale, as its loops are */
 static void latch_move(uint32_t l, int32_t d)
 {
@@ -552,6 +572,13 @@ static void save_short(void)
     ui.force = 1;
 }
 
+static uint32_t next_seed(void);
+/* a scale and a root drawn at random: the machine at start, and an empty session */
+static void scale_draw(void)
+{
+    ui.scale = (uint8_t)((next_seed() >> 8) % NSCALE);
+    ui.root = (uint8_t)((next_seed() >> 8) % 12u);
+}
 static uint32_t next_seed(void)
 {
 #if TELEMETRY
@@ -716,11 +743,14 @@ static void ui_input(void)
     }
     bb_tick();                                   /* (the balls: their time, their notes) */
     bl_tick();                                   /* (BRICKLAYER's steps) */
+    rx_tick();                                   /* (REACT, SHADOW, ARPEGGIO: listening, and the tracks' notes) */
     if (ui.vary_shown && loop[ui.sel].vary == ui.vary_shown - 1u)
         ui.vary_shown = 0;                       /* (VARY taken by the ISR: shown from the looper again) */
     (void)rel;
     for (l = 0; l < NLAYER; l++)
-        if (btn_bit(press, LAYER_BTN[l])) {
+        if (btn_bit(press, LAYER_BTN[l]) && rx_page_up())
+            rx_pad_hit(l);                       /* (the PLAY ALONG page: the track in or out; the guide stays) */
+        else if (btn_bit(press, LAYER_BTN[l])) {
             ui.trk_down = (uint8_t)(l + 1u);
             ui.trk_t0 = fm1_ms;
             ui.trk_done = 0;
@@ -734,7 +764,7 @@ static void ui_input(void)
                 ui.env_page = ui.bb_page = ui.bl_page = 0;
                 ui.ses_page = 0;
                 ui.sc_page = 0;
-                ui.pre_page = ui.set_page = ui.mod_page = 0;
+                ui.pre_page = ui.set_page = ui.mod_page = ui.rx_page = 0;
                 ui.force = 1;
             }
         }
@@ -766,10 +796,15 @@ static void ui_input(void)
         say("MOD RANDOM", 900);
         ui.mod_touched = -1;
         ui.force = 1;
-    } else if (btn_bit(press, B_SEQ)) {          /* SEQ, again and again: DELAY, REVERB, MOD, back to playing */
-        if (ui.mod_page)
+    } else if (btn_bit(press, B_SEQ)) {          /* SEQ, again and again: DELAY, REVERB, MOD, PLAY ALONG, back to
+                                                  * playing */
+        if (ui.rx_page)
+            ui.rx_page = 0;
+        else if (ui.mod_page) {
             ui.mod_page = 0;
-        else if (ui.rv_page && ui.fx)
+            ui.rx_page = 1;
+            rx_defaults();
+        } else if (ui.rv_page && ui.fx)
             ui.fx = 0;
         else if (ui.rv_page) {
             ui.rv_page = 0;
@@ -793,7 +828,7 @@ static void ui_input(void)
             ui.pre_eng = ui.engine[ui.sel];
             if (!ui.pre_ix)
                 ui.pre_ix = 1;
-            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.set_page = ui.mod_page = 0;
+            ui.rv_page = ui.ses_page = ui.sc_page = ui.env_page = ui.bb_page = ui.bl_page = ui.set_page = ui.mod_page = ui.rx_page = 0;
         }
         ui.force = 1;
     } else if (btn_bit(press, B_ARP) && ui.pre_page) {   /* the PRESETS page (where SHIFT + ARP opens it): ARP held saves
@@ -806,7 +841,7 @@ static void ui_input(void)
         ui.rv_page = 0;
         ui.env_page = ui.bb_page = ui.bl_page = 0;
         ui.ses_page = 0;
-        ui.pre_page = ui.set_page = ui.mod_page = 0;
+        ui.pre_page = ui.set_page = ui.mod_page = ui.rx_page = 0;
         ui.force = 1;
     }
     if (btn_bit(press, B_SAVE) && (fm1_in.notes >> KEY_SHIFT) & 1u) {   /* SHIFT and SAVE: GLOBAL SETUP; in it, back */
@@ -855,7 +890,16 @@ static void ui_input(void)
         ui.dial = DIAL_DIST;
         ui.dial_until = fm1_ms + 1000u;
     }
-    if (ui.env_page) {                           /* KNOB 1 .. 4: the track's own envelope, A D S R; the first turn
+    if (rx_page_up()) {                          /* the PLAY ALONG page: KNOB 1 .. 4 the mode's (ARPEGGIO: SELECT and
+                                                  * ALGORITHM its fifth and sixth, below) */
+        static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t j;
+        for (j = 0; j < 4u; j++)
+            if ((s = knob_take(K[j], sh)) != 0) {
+                rx_knob(j, s);
+                rx_focus = (uint8_t)j;
+            }
+    } else if (ui.env_page) {                    /* KNOB 1 .. 4: the track's own envelope, A D S R; the first turn
                                                   * takes it from the sound's own (as drawn) */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j, l = ui.sel, e = ui.engine[l];
@@ -1024,6 +1068,10 @@ static void ui_input(void)
                 }
             }
             say(playing ? "ALL STOPPED" : kept ? "ALL PLAYING" : "NOTHING", 1200);
+        } else if (rx_page_up()) {               /* PLAY on the PLAY ALONG page: the mode on or off */
+            rx_set(!rx.on);
+            say(rx.on ? RXM_NAME[rx.mode] : RXM_OFF[rx.mode], 1200);
+            ui.force = 1;
         } else if (seq_page()) {                 /* PLAY on a sequencer's page: it starts or stops */
             int run = !(bl.run[ui.sel] || bb.run[ui.sel]);
             bl_set_run(ui.sel, run);
@@ -1046,6 +1094,16 @@ static void ui_input(void)
         } else if (!ui.ovd && (uint32_t)(fm1_ms - ui.play_t0) >= 450u) {
             ui.ovd = 1;                          /* held: the chosen layer's loops on the white keys */
             ui.force = 1;
+        }
+    }
+    if (rx_page_up() && rx_nk() == 6u) {         /* ARPEGGIO's page: SELECT and ALGORITHM its RANGE and CHANCE */
+        if ((s = enc_take(EN_SELECT)) != 0) {
+            rx_knob(4, s);
+            rx_focus = 4;
+        }
+        if ((s = enc_take(EN_ALGO)) != 0) {
+            rx_knob(5, s);
+            rx_focus = 5;
         }
     }
     if (ui.sc_page) {                            /* the SCALE page: SELECT the root, ALGORITHM the scale */
@@ -1129,7 +1187,13 @@ static void ui_input(void)
         say(m, 1200);
     }
     s = enc_take(EN_PRESET);
-    if (s && ui.set_page) {                      /* PRESETS: through GLOBAL SETUP */
+    if (s && rx_page_up()) {                     /* PRESETS on the PLAY ALONG page: REACT, SHADOW, ARPEGGIO */
+        rx_mode_set((uint32_t)clampi((int32_t)rx.mode + (s > 0 ? 1 : -1), 0, RXM_N - 1));
+        if (rx_focus >= rx_nk())
+            rx_focus = 0;
+        ui.force = 1;
+        s = 0;
+    } else if (s && ui.set_page) {               /* PRESETS: through GLOBAL SETUP */
         setup_preset(s);
         s = 0;
     } else if (s && ui.mod_page) {               /* PRESETS: through MOD's entries */
@@ -1139,7 +1203,7 @@ static void ui_input(void)
         s = 0;
     } else if (s && sh) {                        /* SHIFT + PRESETS: the family before or after, a new sound of it (the
                                                   * track's view only) */
-        if (!ui.rv_page && !ui.mod_page && !ui.sc_page && !ui.env_page && !(ui.bb_page && bb.on[ui.sel]) && !(ui.bl_page && bl.on[ui.sel]) &&
+        if (!ui.rv_page && !ui.mod_page && !ui.rx_page && !ui.sc_page && !ui.env_page && !(ui.bb_page && bb.on[ui.sel]) && !(ui.bl_page && bl.on[ui.sel]) &&
             !ui.pre_page && !ui.ses_page && !ui.ovd) {
             uint32_t e = ui.engine[ui.sel];
             int32_t n = e == ENG_FM ? FF_N : e == ENG_ANIMA ? AK_N : e == ENG_CAL ? CS_N : e == ENG_RUS ? RK_N
@@ -1378,7 +1442,9 @@ static void ui_leds(void)
     for (l = 0; l < NLAYER; l++) {
         fm1_led_key(PANEL_BTN[LAYER_BTN[l]], clip_from() == (int)l ? (fm1_ms / 250u) & 1u : l == ui.sel);   /* (on the
                                                                                                          * clipboard: it blinks) */
-        led_dim_key(PANEL_BTN[LAYER_BTN[l]], layer_sounding(l));   /* the others glow while they sound */
+        led_dim_key(PANEL_BTN[LAYER_BTN[l]], rx_page_up() ? l != ui.sel && (rx.mask >> l & 1u) : layer_sounding(l));   /* the others glow
+                                                                                     * while they sound; on the PLAY ALONG
+                                                                                     * page, while they follow the guide */
     }
     {
         const looper_t *p = &loop[ui.sel];
@@ -1390,7 +1456,8 @@ static void ui_leds(void)
                                                   : p->play && p->ntrk);                               /* as its key) */
     }
     fm1_led_key(PANEL_BTN[B_HOME], (int32_t)(ui.home_until - fm1_ms) > 0);
-    fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page || ui.mod_page);
+    fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page || ui.mod_page || rx_page_up() || (rx.on && (fm1_ms / 600u) & 1u));   /* (PLAY
+                                                                                      * ALONG on, off its page: a slow blink) */
     fm1_led_key(PANEL_BTN[B_SAVE], ui.set_page);   /* (GLOBAL SETUP up) */
     fm1_led_key(PANEL_BTN[B_ARP], ui.sc_page);
     fm1_led_key(PANEL_BTN[B_OCTDN], ui.oct[ui.sel] < 0);
@@ -1690,6 +1757,87 @@ static void draw_mod_page(void)
     }
 }
 
+#define C_REACT RGB(0, 255, 170)        /* (REACT: a sea green) */
+#define C_SHADOW RGB(150, 200, 255)     /* (SHADOW: a pale blue) */
+#define C_ARPEG RGB(200, 255, 80)       /* (ARPEGGIO: a lime) */
+static const uint16_t RXM_COL[RXM_N] = {C_REACT, C_SHADOW, C_ARPEG};
+/* the PLAY ALONG page: the mode's name (in its colour while on, grey while off); the name of the knob turned last
+ * (as large as fits whole) and its value, large; then a bar for each knob -- KNOB 1 .. 4 in a row; ARPEGGIO's six
+ * in two rows of three (SELECT and ALGORITHM the last two) -- the one turned last black on white */
+static int8_t rx_shown[9];
+static char rx_shown_msg[16];
+static void draw_rx_page(void)
+{
+    const char *m = (int32_t)(ui.msg_until - fm1_ms) > 0 ? ui.msg : "";   /* (a message a moment: 2 IN, GUIDE TRACK) */
+    static const char *const KL[6] = {"K1", "K2", "K3", "K4", "SEL", "ALG"};
+    char v[8];
+    uint32_t j;
+    const font_t *f;
+    const int8_t *kv = rx_kv();
+    const char *const *kn = rx_kn();
+    uint16_t col = RXM_COL[rx.mode];
+    uint32_t nk = rx_nk();
+    if (!ui.force && ui.shown_page == 13 && rx_shown[6] == (int8_t)rx_focus && !memcmp(rx_shown, kv, nk) &&
+        rx_shown[7] == (int8_t)rx.mode && rx_shown[8] == (int8_t)rx.on && str_eq(rx_shown_msg, m))
+        return;
+    cv_begin(240, 52, C_BLACK);
+    f = text_w(&FONT_L, RXM_NAME[rx.mode]) <= 236 ? &FONT_L : &FONT_M;
+    cv_text_c((52 - f->h) / 2, f, RXM_NAME[rx.mode], rx.on ? col : C_GREY);
+    cv_blit(0, 0);
+    if (m[0]) {                                   /* the message, black on white, over the name */
+        cv_begin(240, 48, C_WHITE);
+        f = text_w(&FONT_M, m) <= 232 ? &FONT_M : &FONT_S;
+        cv_text_c((48 - f->h) / 2, f, m, C_BLACK);
+    } else {                                      /* the name: medium if it fits whole, else a size smaller */
+        cv_begin(240, 48, C_BLACK);
+        f = text_w(&FONT_M, kn[rx_focus]) <= 232 ? &FONT_M : &FONT_S;
+        cv_text_c((48 - f->h) / 2, f, kn[rx_focus], C_WHITE);
+    }
+    cv_blit(0, 52);
+    cv_begin(240, 56, C_BLACK);                   /* its value */
+    fmt_int(v, kv[rx_focus]);
+    cv_text_c(5, &FONT_L, v, col);
+    cv_blit(0, 100);
+    for (j = 0; j < 2u && nk == 6u; j++) {       /* ARPEGGIO's six: two rows of three, each its knob, a bar under */
+        uint32_t k;
+        cv_begin(240, 42, C_BLACK);
+        for (k = 0; k < 3u; k++) {
+            uint32_t i = j * 3u + k;
+            int on = i == rx_focus;
+            int32_t x = (int32_t)k * 80;
+            if (on)
+                cv_rect(x + 2, 1, 76, 40, C_WHITE);
+            cv_text(x + (80 - text_w(&FONT_S, KL[i])) / 2, 1, &FONT_S, KL[i], on ? C_BLACK : C_WHITE);
+            cv_rect(x + 8, 33, 64, 6, on ? C_GREY : RGB(60, 60, 60));   /* (its bar under it, across) */
+            cv_rect(x + 8, 33, kv[i] * 64 / 100, 6, on ? C_BLACK : col);
+        }
+        cv_blit(0, 156 + 42 * j);
+    }
+    for (j = 0; j < 2u && nk == 4u; j++) {        /* the four: KNOB 1 .. 4, and a bar each */
+        uint32_t k;
+        cv_begin(240, 42, C_BLACK);
+        for (k = 0; k < 4u; k++) {
+            int on = k == rx_focus;
+            int32_t x = (int32_t)k * 60;
+            if (on)
+                cv_rect(x + 2, 0, 56, 42, C_WHITE);
+            if (!j)
+                cv_text(x + (60 - text_w(&FONT_S, KL[k])) / 2, (42 - FONT_S.h) / 2, &FONT_S, KL[k], on ? C_BLACK : C_WHITE);
+            else {
+                cv_rect(x + 10, 6, 40, 30, on ? C_GREY : RGB(60, 60, 60));
+                cv_rect(x + 10, 6 + 30 - kv[k] * 30 / 100, 40, kv[k] * 30 / 100, on ? C_BLACK : col);
+            }
+        }
+        cv_blit(0, 156 + 42 * j);
+    }
+    memcpy(rx_shown, kv, nk);
+    rx_shown[6] = (int8_t)rx_focus;
+    rx_shown[7] = (int8_t)rx.mode;
+    rx_shown[8] = (int8_t)rx.on;
+    str_cpy(rx_shown_msg, m, sizeof rx_shown_msg);
+    ui.shown_page = 13;
+    ui.force = 0;
+}
 static void draw_rv_title(void)
 {
     cv_begin(240, 52, C_BLACK);
@@ -2199,6 +2347,12 @@ static void ui_draw(void)
         setup_draw();
         ui.shown_page = 10;
         ui.force = 0;
+        return;
+    }
+    if (rx_page_up()) {                          /* PLAY ALONG (SEQ's fourth page) */
+        if (ui.shown_page != 13)
+            ui.force = 1;
+        draw_rx_page();
         return;
     }
     if (ui.mod_page) {                           /* MOD (SEQ's third page) */

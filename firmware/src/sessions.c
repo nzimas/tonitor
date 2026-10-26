@@ -773,7 +773,7 @@ static void ses_choose(uint32_t num)
         ses.current = (uint16_t)num;
 }
 /* an empty slot chosen: the machine as it starts -- silence, no loops, no latches; every layer on its first
- * engine with new sounds (measured only the one it plays: issue #5, ten seconds for all 42), its settings at their
+ * engine with new sounds, a scale and root drawn at random (measured only the one it plays: issue #5, ten seconds for all 42), its settings at their
  * defaults; the scale, the reverb, the transposition too -- and the
  * slot is where the next save goes */
 static void ses_events_drain(void);
@@ -789,8 +789,7 @@ static void ses_fresh(uint32_t num)
     memset(lay_mod, 0, sizeof lay_mod);
     ui.sel = 0;
     ui.edit = 0;
-    ui.scale = 0;
-    ui.root = 0;
+    scale_draw();                                       /* (a scale and root at random, as at start) */
     ui.lx = 0;
     memset(ui.lxt, 0, sizeof ui.lxt);
     lx_post();

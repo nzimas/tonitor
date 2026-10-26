@@ -56,6 +56,8 @@ track in its own colour.
     slow LFOs and noise, through a 4-pole filter with its own envelope and a drive; melodic kinds and textural ones.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
+- **Play along**: other tracks improvise with the one you play (REACT), shadow it (SHADOW) or arpeggiate its
+  chords (ARPEGGIO).
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
 - **Envelope**: attack, decay, sustain and release per track, on the ENVELOPE page, drawn on the screen.
 - **Latching**: hold notes, press SHIFT, and they sustain as drones while you play on top.
@@ -127,7 +129,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there ([Sessions](#sessions)). |
 | **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting. |
 | **SHIFT + SAVE** | GLOBAL SETUP: the MIDI settings ([Global setup and MIDI](#global-setup-and-midi)). |
-| **SEQ** | the DELAY, REVERB and MOD pages in turn, then back ([The delay](#the-delay), [The reverb](#the-reverb), [Modulation](#modulation)). |
+| **SEQ** | the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back ([The delay](#the-delay), [The reverb](#the-reverb), [Modulation](#modulation), [Play along](#play-along)). |
 | **SHIFT + SEQ** | a new random modulation for the chosen track. |
 | **MASTER** | the output level. |
 | MIDI in (USB and TRS) | notes and CCs for each track ([Global setup and MIDI](#global-setup-and-midi)). |
@@ -295,7 +297,8 @@ Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 
 ### Scales
 
-One scale and root for all the tracks, saved with the session; C major at the start. The root is the first white
+One scale and root for all the tracks, saved with the session. At start, and in an empty session, both are drawn at
+random (ARP shows which). The root is the first white
 key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.
 
 | Scale | Steps |
@@ -364,6 +367,68 @@ chooses the entry, **KNOB 1–4** set its rows.
 
 **SHIFT + SEQ** draws a random modulation for the chosen track; press again for another. HOME also draws one with
 some sounds, mostly slow FM, HIVE, BAYAREA and DRUID sounds. Sessions keep each track's modulation.
+
+### Play along
+
+Other tracks play along with the one you play. The chosen track is the **guide**. The tracks you take in listen to
+everything the guide sounds (its keys, latches, chords, MIDI in, loops, BALLSY and BRICKLAYER) and play their own
+sounds in answer, in the scale. Three modes: **REACT**, **SHADOW** and **ARPEGGIO**. After the SMK-37 Pro port of
+Tonitor.
+
+Press **SEQ** four times for the **PLAY ALONG page**:
+
+- **PRESETS** chooses the mode. Changing it lets go of the notes the tracks are playing.
+- **PLAY** turns the mode on or off (REACT, REACT OFF ...). The mode's name is in its colour while on, grey while
+  off. Off the page, SEQ blinks slowly while it is on.
+- **The track buttons** take tracks in or out (2 IN, 2 OUT). The guide's button stays lit; a track taken in glows
+  dimly; a track out is dark. The guide's own button says GUIDE TRACK (a track cannot follow itself). At first no
+  track is in.
+- **KNOB 1–4** set the mode's values, 0–100; ARPEGGIO has two more, on **SELECT** and **ALGORITHM**. In REACT and
+  SHADOW, SELECT and ALGORITHM stay the guide's level and pan. The page shows the knob turned last, its value large,
+  and a bar for each.
+- **SEQ** goes back to playing; the mode goes on running. Choosing another track there makes it the guide.
+
+The tracks taken in play their notes as a sequencer's: the looper does not record them, and they never play on the
+guide. When the guide stops, they stop. The mode, the tracks taken in and the values are not kept in sessions.
+
+**REACT** improvises from a memory of everything the guide plays: its last 128 events (notes or chords), with their
+levels, lengths and the gaps before them. Each track taken in goes on as the guide once went on, or jumps to
+another place where the guide played the same intervals, so its lines are the guide's own, recombined, in the
+guide's rhythm. Its notes fit the harmony the guide holds. At each of the guide's phrases the tracks regroup, each
+taking a way to play: **FOLLOWS** (with the guide), **CONTRASTS** (slow under a busy guide, moving under long
+chords), **ECHOES** (the guide's line a few events behind, a third, sixth or octave away), **ANSWERS** (in the
+guide's rests), or **RESTS**. After François Pachet's Continuator, IRCAM's OMax and Somax, and George Lewis's
+Voyager.
+
+| Knob | | |
+| --- | --- | --- |
+| **KNOB 1** | **DENSITY** | how much they play, how long they wait, how many sit out |
+| **KNOB 2** | **COMPLEXITY** | low: single notes in plain rhythms; high: harmonised notes, steps split, notes off the beat |
+| **KNOB 3** | **CONTINUITY** | low: they jump about the guide's memory; high: they keep to its phrases as played |
+| **KNOB 4** | **SPREAD** | how far from the guide's register: low, around its hands; high, from deep bass to high air |
+
+**SHADOW**: each track taken in shadows what the guide sounds, from its own distance behind, at its own pace; now
+and then backwards or to and fro, resting and coming in again, moved along the scale.
+
+| Knob | | |
+| --- | --- | --- |
+| **KNOB 1** | **DELAY** | how far behind: from right behind to 15 s |
+| **KNOB 2** | **DRIFT** | how far each one's pace strays from the guide's: a little loose, to half or twice |
+| **KNOB 3** | **VARIATION** | how often each changes its way: backwards, to and fro, resting, notes late or left out |
+| **KNOB 4** | **TRANSPOSE** | how far it is moved: as played, or a third, fourth, fifth or sixth away |
+
+**ARPEGGIO**: the tracks taken in break the guide's chord (what it holds; a single note over its octaves) into
+arpeggios, each at its own pace, its own way and in its own octaves, and follow the chord as it changes, at their
+next step.
+
+| Knob | | |
+| --- | --- | --- |
+| **KNOB 1** | **RATE** | a step every 2 s (0) to every 62 ms (100) |
+| **KNOB 2** | **RELATION** | how the tracks' paces relate: all one, or twice, half, three in two ... |
+| **KNOB 3** | **MOTION** | which way: all up, or each its own (down, up and down, as played, at random ...) |
+| **KNOB 4** | **MUTATE** | how much a pattern changes as it repeats |
+| **SELECT** | **RANGE** | how many octaves each spans, 1 to 4 |
+| **ALGORITHM** | **CHANCE** | steps left out and struck twice |
 
 ### Presets
 

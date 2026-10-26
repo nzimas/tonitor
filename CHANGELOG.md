@@ -1,5 +1,19 @@
 # Changelog
 
+## Build 60
+
+Added
+- PLAY ALONG, SEQ's fourth page (after the SMK-37 Pro port): other tracks play along with the chosen one, the guide.
+  REACT improvises from the guide's phrases, SHADOW follows it from behind at its own pace, ARPEGGIO breaks its
+  chords into arpeggios. PRESETS chooses the mode, PLAY turns it on or off, the track buttons take tracks in or out
+  (the guide lit, the tracks in a glow), KNOB 1-4 (ARPEGGIO: SELECT and ALGORITHM too) set its values.
+
+## Build 59
+
+Changed
+- At start, and in an empty session, the scale and root are drawn at random (until now C major). The SCALE page
+  (ARP) shows which.
+
 ## Build 58
 
 Fixed

@@ -680,6 +680,19 @@ static int cal_note(uint32_t l, uint32_t note, int on, uint32_t src)
     return 1;
 }
 
+/* REACT (react.c) listens to the guide track: its loops' notes, as they sound, to the main loop (vel 0: let go) */
+static volatile uint8_t rx_ear = 0xFFu;          /* (the guide; 0xFF: REACT off) */
+static volatile uint8_t rx_lq[16][2];
+static volatile uint32_t rx_lw, rx_lr;
+static void rx_lq_put(uint32_t l, uint32_t note, uint32_t vel)
+{
+    if (l != rx_ear || rx_lw - rx_lr >= 16u)
+        return;
+    rx_lq[rx_lw % 16u][0] = (uint8_t)note;
+    rx_lq[rx_lw % 16u][1] = (uint8_t)vel;
+    RING_PUBLISH();
+    rx_lw++;
+}
 /* a note on: a silent voice if there is one, else the one ringing longest (released before held) */
 static uint8_t note_vel = 127;           /* the level of the note note_on makes (EV_ON's value; else full) */
 static void note_on(uint32_t l, uint32_t note, uint32_t src)
@@ -687,6 +700,8 @@ static void note_on(uint32_t l, uint32_t note, uint32_t src)
     layer_t *y = &lay[l];
     uint32_t best;
     mod_note(l, note, note_vel);                  /* (the modulation's sources: this note) */
+    if (src == SRC_LOOP)
+        rx_lq_put(l, note, note_vel ? note_vel : 1u);
     midi_note_out(l, note, note_vel, 1);          /* (SEND NOTES: on the track's OUT channel) */
     if (cal_note(l, note, 1, src))
         return;
@@ -719,6 +734,8 @@ static void note_off(uint32_t l, uint32_t note, uint32_t src)
     layer_t *y = &lay[l];
     uint32_t k;
     midi_note_out(l, note, 0, 0);
+    if (src == SRC_LOOP)
+        rx_lq_put(l, note, 0);
     if (cal_note(l, note, 0, src))
         return;
     for (k = 0; k < NVOICE; k++) {

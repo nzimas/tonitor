@@ -477,7 +477,8 @@ static void cmd_screens(const char *dir)
     ui_draw();
     snprintf(path, sizeof path, "%s/screen-12-reverb.ppm", dir);
     ppm(path);
-    press_btn(B_SEQ);                        /* and back (by MOD) */
+    press_btn(B_SEQ);                        /* and back (by MOD, PLAY ALONG) */
+    press_btn(B_SEQ);
     press_btn(B_SEQ);
     fm1_ms += 2000;
     ui_draw();
@@ -927,7 +928,8 @@ static int cmd_sessions(const char *dir)
     press_btn(B_SEQ);
     host_enc[PANEL_ENC[EN_K1]] = 8;
     ui_input();
-    press_btn(B_SEQ);                        /* (MOD, then back) */
+    press_btn(B_SEQ);                        /* (MOD, PLAY ALONG, then back) */
+    press_btn(B_SEQ);
     press_btn(B_SEQ);
     press_btn(B_ENV);
     press_btn(B_REC);
@@ -1043,6 +1045,7 @@ static int cmd_sessions(const char *dir)
     /* an empty slot chosen in the list (slot 9): a clean slate, as at start; then SAVE held: saved there, at once */
     ui.latch[1] = 1u;
     ui.scale = 3;
+    ui.root = 5;
     ui.lx = 2;
     ui.rvp[0] = 12;
     ui.edit = 1;
@@ -1063,7 +1066,7 @@ static int cmd_sessions(const char *dir)
                    || lay[l].engine != ui.engine[l] || ui.level[l] != LEVEL_UNITY || ui.pan[l] != PAN_DEF[l]
                    || ui.send[l] != SEND_DEF || ui.oct[l] || ui.flt[l] || ui.gr[l] || ui.cr[l] || ui.path[l] != PATH_OPEN
                    || layer_sounding(l);
-        if (bad || ui.scale || ui.root || ui.lx || ui.rvp[0] != RV_DEF[0] || ui.edit || ui.sel || fm_buf[0][fm_pub[0]].seed == fseed)
+        if (bad || ui.scale >= NSCALE || ui.root >= 12u || (ui.scale == 3u && ui.root == 5u) || ui.lx || ui.rvp[0] != RV_DEF[0] || ui.edit || ui.sel || fm_buf[0][fm_pub[0]].seed == fseed)
             printf("FAIL sessions: an empty slot chosen does not start from a clean slate (%u layers)\n", bad), fail++;
     }
     save_btn(900);
@@ -4019,8 +4022,11 @@ static int cmd_delay(const char *dir)
     if (ui.rv_page || !ui.mod_page)
         printf("FAIL delay: SEQ does not go on to the MOD page\n"), fail++;
     press_btn(B_SEQ);
-    if (ui.rv_page || ui.mod_page)
-        printf("FAIL delay: SEQ after MOD does not go back to playing\n"), fail++;
+    if (ui.rv_page || ui.mod_page || !ui.rx_page)
+        printf("FAIL delay: SEQ after MOD does not go on to the PLAY ALONG page\n"), fail++;
+    press_btn(B_SEQ);
+    if (ui.rv_page || ui.mod_page || ui.rx_page)
+        printf("FAIL delay: SEQ after PLAY ALONG does not go back to playing\n"), fail++;
     press_btn(B_FX);
     {
         int8_t sd = ui.send[0];
@@ -6489,6 +6495,134 @@ static int cmd_russolo(const char *dir)
     return fail ? 1 : 0;
 }
 
+/* PLAY ALONG (react.c, SEQ's fourth page): SEQ four times brings it; the guide's button lit, the tracks taken in a
+ * glow, the others dark; the guide's button says GUIDE TRACK; PLAY on and off; PRESETS the mode; KNOB 1 .. 4 its
+ * values (ARPEGGIO: SELECT and ALGORITHM too, the level kept). In each mode, a guide playing: the tracks taken in
+ * play, in the scale, never on the guide, the others never; off: every note let go */
+static uint32_t pa_seen[NLAYER], pa_bad;
+static uint8_t pa_prev[RX_Q];
+static void pa_run(uint32_t ms)
+{
+    uint32_t t0 = fm1_ms, i, m;
+    while (fm1_ms - t0 < ms) {
+        run_blocks(2, 0);
+        ui_input();
+        m = scale_mask();
+        for (i = 0; i < RX_Q; i++) {
+            if (rx.q[i].on == 2u && pa_prev[i] != 2u) {
+                pa_seen[rx.q[i].layer]++;
+                pa_bad += rx.q[i].layer == ui.sel || !((m >> (rx.q[i].note % 12u)) & 1u);
+            }
+            pa_prev[i] = rx.q[i].on;
+        }
+    }
+}
+static int btn_glows(uint32_t label)
+{
+    uint32_t p, r;
+    for (p = 0; p < FM1_NCOL; p++)
+        for (r = 1; r < 5u; r++)
+            if (FM1_KEYMAP[r][p] == (int8_t)PANEL_BTN[label])
+                return (fm1_led_dim[p] >> r) & 1u;
+    return -1;
+}
+static uint32_t rx_q_busy(void)
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < RX_Q; i++)
+        n += rx.q[i].on != 0u;
+    return n;
+}
+static int cmd_playalong(void)
+{
+    static const uint8_t TUNE[12] = {0, 2, 4, 2, 7, 4, 2, 0, 4, 7, 9, 7};
+    uint32_t fail = 0, m, j, k;
+    int8_t lv;
+    char path[512];
+    layers_init();
+    ui_init();
+    sounds_init();
+    master_q12 = 4096;
+    press_btn(B_FX);
+    for (j = 0; j < 4u; j++)
+        press_btn(B_SEQ);
+    ui_leds();
+    if (!rx_page_up() || !host_led[PANEL_BTN[B_SEQ]])
+        printf("FAIL playalong: SEQ four times does not bring the PLAY ALONG page\n"), fail++;
+    ui_draw();
+    press_btn(B_FX);                                  /* the guide's own button: GUIDE TRACK, not taken */
+    if (rx.mask & 1u || strcmp(ui.msg, "GUIDE TRACK") || ui.sel != 0u)
+        printf("FAIL playalong: the guide's button takes it in, or says nothing (%s)\n", ui.msg), fail++;
+    press_btn(B_ENV);                                 /* tracks 3 and 5 in */
+    press_btn(B_EDIT);
+    ui_leds();
+    if (rx.mask != 0x14u || ui.sel != 0u || strcmp(ui.msg, "5 IN"))
+        printf("FAIL playalong: the track buttons do not take tracks in (mask %x, sel %u, %s)\n", rx.mask, ui.sel, ui.msg), fail++;
+    if (!host_led[PANEL_BTN[B_FX]] || host_led[PANEL_BTN[B_ENV]] || btn_glows(B_ENV) != 1 || btn_glows(B_EDIT) != 1 ||
+        btn_glows(B_SEL) == 1 || btn_glows(B_FX) == 1)
+        printf("FAIL playalong: the guide is not lit, the tracks in do not glow, or the others do\n"), fail++;
+    press_btn(B_EDIT);                                /* out again; then in */
+    if (rx.mask != 0x04u || strcmp(ui.msg, "5 OUT"))
+        printf("FAIL playalong: a track's button again does not take it out (%x)\n", rx.mask), fail++;
+    press_btn(B_EDIT);
+    host_enc[PANEL_ENC[EN_K1]] = 3;                   /* KNOB 1: REACT's DENSITY */
+    ui_input();
+    if (rx.k[0] != 56 || rx_focus != 0u)
+        printf("FAIL playalong: KNOB 1 does not turn DENSITY (%d)\n", rx.k[0]), fail++;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-42-playalong.ppm", "build/screens");
+    ppm(path);
+    press_btn(B_PLAY);
+    if (!rx.on || rx_ear != 0u || strcmp(ui.msg, "REACT"))
+        printf("FAIL playalong: PLAY on the page does not turn REACT on (%s)\n", ui.msg), fail++;
+    for (m = 0; m < RXM_N; m++) {
+        if (m) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;       /* PRESETS: the next mode */
+            ui_input();
+            if (rx.mode != m)
+                printf("FAIL playalong: PRESETS does not choose mode %u\n", m), fail++;
+        }
+        memset(pa_seen, 0, sizeof pa_seen);
+        pa_bad = 0;
+        for (j = 0; j < 3u; j++)                      /* the guide: a tune, and a chord held a while */
+            for (k = 0; k < 12u; k++) {
+                press_key(TUNE[k], 1);
+                pa_run(180u + 60u * (k % 3u));
+                press_key(TUNE[k], 0);
+                pa_run(k == 5u || k == 11u ? 900u : 60u);
+            }
+        press_key(0, 1);
+        press_key(2, 1);
+        press_key(4, 1);
+        pa_run(3000);
+        press_key(0, 0);
+        press_key(2, 0);
+        press_key(4, 0);
+        pa_run(400);
+        if (!pa_seen[2] || !pa_seen[4] || pa_seen[1] || pa_seen[3] || pa_seen[5] || pa_bad)
+            printf("FAIL playalong: %s: the tracks taken in do not play, others do, or off the scale or on the guide "
+                   "(%u %u %u %u %u, bad %u)\n", RXM_NAME[m], pa_seen[1], pa_seen[2], pa_seen[3], pa_seen[4], pa_seen[5], pa_bad), fail++;
+    }
+    lv = ui.level[0];                                 /* ARPEGGIO: SELECT its fifth, the level kept */
+    host_enc[PANEL_ENC[EN_SELECT]] = -5;
+    ui_input();
+    if (rx.ak[4] != 20 || rx_focus != 4u || ui.level[0] != lv)
+        printf("FAIL playalong: SELECT is not ARPEGGIO's RANGE on its page (%d, level %d)\n", rx.ak[4], ui.level[0]), fail++;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-43-arpeggio.ppm", "build/screens");
+    ppm(path);
+    press_btn(B_PLAY);
+    pa_run(100);
+    if (rx.on || rx_q_busy() || strcmp(ui.msg, "ARPEGGIO OFF"))
+        printf("FAIL playalong: PLAY again does not turn it off, its notes let go (%u, %s)\n", rx_q_busy(), ui.msg), fail++;
+    press_btn(B_SEQ);                                 /* back to playing: the buttons as before */
+    ui_leds();
+    if (rx_page_up() || btn_glows(B_ENV) != (int)layer_sounding(2))
+        printf("FAIL playalong: SEQ does not leave the page, or the buttons do not show the tracks sounding again\n"), fail++;
+    printf("playalong: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -6565,6 +6699,8 @@ int main(int argc, char **argv)
         return cmd_glow();
     if (argc >= 3 && !strcmp(argv[1], "delay"))
         return cmd_delay(argv[2]);
+    if (argc >= 2 && !strcmp(argv[1], "playalong"))
+        return cmd_playalong();
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))
         return cmd_loopmodes();
     if (argc >= 2 && !strcmp(argv[1], "tracktransp"))

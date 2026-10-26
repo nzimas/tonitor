@@ -10,7 +10,7 @@
 #define TONITOR_ID "FM-1_700"    /* the package identity (tools/build.py sets it) */
 #endif
 #ifndef TONITOR_VERSION
-#define TONITOR_VERSION "58"
+#define TONITOR_VERSION "60"
 #endif
 #define FELUCCA_ID TONITOR_ID
 #ifndef TELEMETRY
