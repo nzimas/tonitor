@@ -43,6 +43,25 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="build-62">Build 62</h2>
+<p>Added</p>
+<ul>
+<li>GLOBAL SETUP has an AUDIO section: USB, STEREO (the master, as before) or TRACKS (tracks 1-6, each on its own mono channel, after its level, before its pan and the master delay and reverb), to record the tracks apart. Changed, the FM-1 leaves the USB a moment and comes back as the new device. Settings kept by earlier builds load as they were, USB at STEREO.</li>
+</ul>
+<p>Changed</p>
+<ul>
+<li>USB audio: the next packet is queued within 0.1 ms of the last (the endpoint looked to at 10 kHz, 2 kHz before). Six channels take about 0.55 ms on the cable: looked to every 0.5 ms, a frame now and then went without a packet and macOS reset the device's clock, dropping audio every 1.25 s. The ring is kept fuller (3.6 .. 4.7 ms ahead at 44.1 kHz), and the 48 kHz resampler and its taps run from RAM.</li>
+</ul>
+<h2 id="build-61">Build 61</h2>
+<p>Fixed</p>
+<ul>
+<li>A loop's first note could be heard only in the first round. A note held from the loop's first moment to its last (still down when REC ended the loop, under the notes played after it) was tied over the end as a drone: never struck again. A plucked sound (DRUID's PLUCK) died away and stayed silent. Now a tied note that has died away (more than 18 dB under its loudest) is let go at the end and struck again at the start; one still sounding goes on as one note. The same note struck at the start and again, held, at the end is no longer taken for one note.</li>
+</ul>
+<p>Changed</p>
+<ul>
+<li>At start, and in an empty session, the tracks are on six engines: FM, ANIMA, CALIGULA, HIVE, DRUID, BAYAREA (as on the SMK-37 Pro port); until now FM and ANIMA in turn.</li>
+<li>The DELAY and REVERB pages: every row's name and value in one size (it changed from row to row). The delay's TIME in seconds, without the unit (0.02 .. 0.99, then 1.0 .. 2.0), no longer in milliseconds against its name; FEEDBACK is named REPEATS, which fits that size with its value.</li>
+</ul>
 <h2 id="build-60">Build 60</h2>
 <p>Added</p>
 <ul>

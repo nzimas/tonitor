@@ -252,7 +252,7 @@
 <table>
 <tr><th>Control</th><th>What it does</th></tr>
 <tr><td><b>FX SEL ENV LFO EDIT GLO</b> (top row)</td><td>choose track <b>1–6</b> (lit: chosen; glowing: sounding). From any page, back to playing. <b>Held</b> (0.8 s): copy the track, or paste the copy onto it (<a href="#copying-a-track">Copying a track</a>).</td></tr>
-<tr><td><b>PRESETS</b> knob</td><td>the chosen track's engine: <b>FM</b>, <b>ANIMA</b>, <b>CALIGULA</b>, <b>RUSSOLO</b>, <b>DRUID</b>, <b>BAYAREA</b>, <b>HIVE</b>. Each track keeps one sound per engine.</td></tr>
+<tr><td><b>PRESETS</b> knob</td><td>the chosen track's engine: <b>FM</b>, <b>ANIMA</b>, <b>CALIGULA</b>, <b>RUSSOLO</b>, <b>DRUID</b>, <b>BAYAREA</b>, <b>HIVE</b>. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA.</td></tr>
 <tr><td><b>SHIFT + PRESETS</b></td><td>a new sound of the previous or next family.</td></tr>
 <tr><td><b>HOME</b></td><td>a new sound for the chosen track.</td></tr>
 <tr><td><b>SHIFT + HOME</b></td><td>a new sound of the same family.</td></tr>
@@ -380,7 +380,7 @@
 <h3 id="copying-a-track">Copying a track</h3>
 <p>Hold a track's button until the screen shows <b>COPIED / TRACK n</b> (the button blinks). Choose another track and hold its button until <b>PASTED / TRACK n</b>. The track pasted onto gets everything of the copied one, its sounds, settings and loops, except its own level and pan; its latched notes are released.</p>
 <h3 id="the-loopers">The loopers</h3>
-<p>Each track has a looper of up to <b>ten loops</b>, and they run <b>free</b>: no tempo, no grid. Each overdub is as long as you played it, so the loops drift against each other. A note still held when REC ends the loop is tied over its end, so a drone stays one unbroken note. Loops share the twelve voices with the keys and the other tracks.</p>
+<p>Each track has a looper of up to <b>ten loops</b>, and they run <b>free</b>: no tempo, no grid. Each overdub is as long as you played it, so the loops drift against each other. A note held from the loop's first moment to its last (still down when REC ends it) is tied over its end: while it still sounds (a drone, a pad) it goes on, one unbroken note; once it has died away (a pluck, a bell) it is struck again at the start of each round. Other notes still held when REC ends the loop are let go at its end, their release ringing on into the next round. Loops share the twelve voices with the keys and the other tracks.</p>
 <p><b>Bringing loops in and out.</b> Hold <b>PLAY</b>: the chosen track's loops appear on the white keys, the first loop on the leftmost, lit while they play. Press a key to take its loop out, or to bring it back in from its start. With the loops stopped, this chooses which loops the next PLAY starts.</p>
 <p><b>Moving the loops along the scale.</b> <b>SHIFT + OCT+ / OCT−</b> moves every loop of every track one step of the scale (TRANSP +1), up to two octaves either way; the white keys and latched notes move with them, and an overdub recorded meanwhile plays back as you played it. <b>SHIFT + a track's button held + OCT+ / OCT−</b> moves that track's loops only (TRANSP T3 +2). Emptying a track's loops resets its own move.</p>
 <h3 id="the-screen">The screen</h3>
@@ -416,7 +416,9 @@
 </table>
 <p>MIDI notes are not quantised to the scale.</p>
 <h3 id="global-setup-and-midi">Global setup and MIDI</h3>
-<p><b>SHIFT + SAVE</b> opens <b>GLOBAL SETUP</b>, the FM-1's own settings (MIDI), kept apart from the sessions. <b>PRESETS</b> moves through the entries; <b>SAVE</b> opens one, or selects a value and sets it; <b>SHIFT + SAVE</b> cancels or goes back a level. A track button leaves; changes are kept.</p>
+<p><b>SHIFT + SAVE</b> opens <b>GLOBAL SETUP</b>, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions. <b>PRESETS</b> moves through the entries; <b>SAVE</b> opens one, or selects a value and sets it; <b>SHIFT + SAVE</b> cancels or goes back a level. A track button leaves; changes are kept.</p>
+<p><b>AUDIO</b> has one setting, <b>USB</b>: what the FM-1 sends to a computer as USB audio (<a href="#usb-audio">USB audio</a>). <b>STEREO</b> (at the start): the master, as the headphones hear it. <b>TRACKS</b>: the six tracks, each on its own mono channel. Changed, the FM-1 leaves the USB for a moment and comes back as the new device; the sound on the headphones goes on.</p>
+<p>MIDI's parts:</p>
 <table>
 <tr><th>Part</th><th>Settings</th><th>At the start</th></tr>
 <tr><td><b>IN CHAN</b></td><td>TRACK 1 to 6: the channel each track listens to (OFF, 1–16); AUTO: the channel that plays the chosen track</td><td>1 to 6; AUTO 16</td></tr>
@@ -497,8 +499,8 @@
 <p>A master delay, before the reverb, fed by each track's delay send (<b>SHIFT + KNOB 4</b>); half its echoes also go into the reverb. The repeats are slightly dark and grainy. <b>SEQ</b> once opens its page:</p>
 <table>
 <tr><th>Parameter</th><th></th></tr>
-<tr><td><b>TIME</b></td><td>20 ms to 2 s; turning it bends the repeats' pitch</td></tr>
-<tr><td><b>FEEDBACK</b></td><td>from one repeat to nearly endless</td></tr>
+<tr><td><b>TIME</b></td><td>0.02 to 2.0 seconds (shown without the unit); turning it bends the repeats' pitch</td></tr>
+<tr><td><b>REPEATS</b></td><td>the feedback: from one repeat to nearly endless</td></tr>
 <tr><td><b>DAMP</b></td><td>each repeat darker than the one before</td></tr>
 <tr><td><b>MIX</b></td><td>the level of the echoes</td></tr>
 </table>
@@ -512,7 +514,13 @@
 <tr><td><b>MIX</b></td><td>the reverb's level</td><td>50</td></tr>
 </table>
 <h3 id="usb-audio">USB audio</h3>
-<p>Connected to a computer, phone or tablet, the FM-1 is also a class-compliant <b>USB audio input</b> ("FM-1 Tonitor"): the master output, stereo, 16-bit, at 48 or 44.1 kHz. It is taken before <b>MASTER</b>, which sets only the headphones' level. No driver is needed, and MIDI works over the same cable.</p>
+<p>Connected to a computer, phone or tablet, the FM-1 is also a class-compliant <b>USB audio input</b> ("FM-1 Tonitor"), 16-bit, at 48 or 44.1 kHz (44.1 kHz is the FM-1's own rate: nothing is converted). <b>GLOBAL SETUP &gt; AUDIO &gt; USB</b> chooses what it sends:</p>
+<table>
+<tr><th>USB</th><th>Channels</th></tr>
+<tr><td><b>STEREO</b></td><td>2: the master output, with the delay and reverb (what the headphones hear)</td></tr>
+<tr><td><b>TRACKS</b></td><td>6: tracks 1–6, each mono, after its filter, granulator, crush, distortion and level; before its pan and the master delay and reverb</td></tr>
+</table>
+<p>Both are taken before <b>MASTER</b>, which sets only the headphones' level. No driver is needed, and MIDI works over the same cable. To hear the FM-1 while a computer records it, use its headphone output: a program's own monitoring (Audacity's software playthrough) adds a delay and may break up.</p>
 <h2 id="the-engines">The engines</h2>
 <h3 id="fm-six-operators-dx7-style">FM — six operators, DX7 style</h3>
 <p>Six-operator FM after the DX7 (msfa, the core of Dexed). HOME draws a patch from one of these families and levels it to one loudness:</p>
