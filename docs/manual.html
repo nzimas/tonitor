@@ -73,6 +73,7 @@
 <a href="#scales" class="sub">Scales</a>
 <a href="#global-setup-and-midi" class="sub">Global setup and MIDI</a>
 <a href="#modulation" class="sub">Modulation</a>
+<a href="#play-along" class="sub">Play along</a>
 <a href="#presets" class="sub">Presets</a>
 <a href="#sessions" class="sub">Sessions</a>
 <a href="#the-granulator" class="sub">The granulator</a>
@@ -284,7 +285,7 @@
 <tr><td><b>SAVE</b></td><td>the SESSIONS page: <b>PRESETS</b> chooses a slot, <b>SAVE</b> loads it; on an empty slot, SAVE starts a new, blank session there (<a href="#sessions">Sessions</a>).</td></tr>
 <tr><td><b>SAVE held</b> (0.8 s)</td><td>save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting.</td></tr>
 <tr><td><b>SHIFT + SAVE</b></td><td>GLOBAL SETUP: the MIDI settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
-<tr><td><b>SEQ</b></td><td>the DELAY, REVERB and MOD pages in turn, then back (<a href="#the-delay">The delay</a>, <a href="#the-reverb">The reverb</a>, <a href="#modulation">Modulation</a>).</td></tr>
+<tr><td><b>SEQ</b></td><td>the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back (<a href="#the-delay">The delay</a>, <a href="#the-reverb">The reverb</a>, <a href="#modulation">Modulation</a>, <a href="#play-along">Play along</a>).</td></tr>
 <tr><td><b>SHIFT + SEQ</b></td><td>a new random modulation for the chosen track.</td></tr>
 <tr><td><b>MASTER</b></td><td>the output level.</td></tr>
 <tr><td>MIDI in (USB and TRS)</td><td>notes and CCs for each track (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
@@ -386,7 +387,7 @@
 <p>From the top: the track number in the track's colour, with the octave, VAR (while the loops VARY) and the battery at the top right; the engine; the sound's family, or a short message; <b>ARMED</b> or <b>REC</b> while the looper records; the track's level meter, with a mark at its SELECT level; and its pan. KNOB 1–4 show a full-screen dial while they turn.</p>
 <p>Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.</p>
 <h3 id="scales">Scales</h3>
-<p>One scale and root for all the tracks, saved with the session; C major at the start. The root is the first white key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.</p>
+<p>One scale and root for all the tracks, saved with the session. At start, and in an empty session, both are drawn at random (ARP shows which). The root is the first white key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.</p>
 <table>
 <tr><th>Scale</th><th>Steps</th></tr>
 <tr><td>MAJOR</td><td>0 2 4 5 7 9 11</td></tr>
@@ -440,6 +441,43 @@
 <tr><td><b>MOD A</b> – <b>MOD D</b></td><td><b>FROM</b>: OFF, LFO 1, LFO 2, VELOCITY, KEY, RANDOM</td><td><b>TO</b>: the four macros, FILTER, GRAINS, CRUSH, DRIVE, REVERB, DELAY, LEVEL, PAN, LFO 1 RATE, LFO 2 RATE</td><td><b>AMOUNT</b>: −100 to +100</td><td><b>NOW</b>: what the slot does at the moment</td></tr>
 </table>
 <p><b>SHIFT + SEQ</b> draws a random modulation for the chosen track; press again for another. HOME also draws one with some sounds, mostly slow FM, HIVE, BAYAREA and DRUID sounds. Sessions keep each track's modulation.</p>
+<h3 id="play-along">Play along</h3>
+<p>Other tracks play along with the one you play. The chosen track is the <b>guide</b>. The tracks you take in listen to everything the guide sounds (its keys, latches, chords, MIDI in, loops, BALLSY and BRICKLAYER) and play their own sounds in answer, in the scale. Three modes: <b>REACT</b>, <b>SHADOW</b> and <b>ARPEGGIO</b>. After the SMK-37 Pro port of Tonitor.</p>
+<p>Press <b>SEQ</b> four times for the <b>PLAY ALONG page</b>:</p>
+<ul>
+<li><b>PRESETS</b> chooses the mode. Changing it lets go of the notes the tracks are playing.</li>
+<li><b>PLAY</b> turns the mode on or off (REACT, REACT OFF ...). The mode's name is in its colour while on, grey while off. Off the page, SEQ blinks slowly while it is on.</li>
+<li><b>The track buttons</b> take tracks in or out (2 IN, 2 OUT). The guide's button stays lit; a track taken in glows dimly; a track out is dark. The guide's own button says GUIDE TRACK (a track cannot follow itself). At first no track is in.</li>
+<li><b>KNOB 1–4</b> set the mode's values, 0–100; ARPEGGIO has two more, on <b>SELECT</b> and <b>ALGORITHM</b>. In REACT and SHADOW, SELECT and ALGORITHM stay the guide's level and pan. The page shows the knob turned last, its value large, and a bar for each.</li>
+<li><b>SEQ</b> goes back to playing; the mode goes on running. Choosing another track there makes it the guide.</li>
+</ul>
+<p>The tracks taken in play their notes as a sequencer's: the looper does not record them, and they never play on the guide. When the guide stops, they stop. The mode, the tracks taken in and the values are not kept in sessions.</p>
+<p><b>REACT</b> improvises from a memory of everything the guide plays: its last 128 events (notes or chords), with their levels, lengths and the gaps before them. Each track taken in goes on as the guide once went on, or jumps to another place where the guide played the same intervals, so its lines are the guide's own, recombined, in the guide's rhythm. Its notes fit the harmony the guide holds. At each of the guide's phrases the tracks regroup, each taking a way to play: <b>FOLLOWS</b> (with the guide), <b>CONTRASTS</b> (slow under a busy guide, moving under long chords), <b>ECHOES</b> (the guide's line a few events behind, a third, sixth or octave away), <b>ANSWERS</b> (in the guide's rests), or <b>RESTS</b>. After François Pachet's Continuator, IRCAM's OMax and Somax, and George Lewis's Voyager.</p>
+<table>
+<tr><th>Knob</th><th></th><th></th></tr>
+<tr><td><b>KNOB 1</b></td><td><b>DENSITY</b></td><td>how much they play, how long they wait, how many sit out</td></tr>
+<tr><td><b>KNOB 2</b></td><td><b>COMPLEXITY</b></td><td>low: single notes in plain rhythms; high: harmonised notes, steps split, notes off the beat</td></tr>
+<tr><td><b>KNOB 3</b></td><td><b>CONTINUITY</b></td><td>low: they jump about the guide's memory; high: they keep to its phrases as played</td></tr>
+<tr><td><b>KNOB 4</b></td><td><b>SPREAD</b></td><td>how far from the guide's register: low, around its hands; high, from deep bass to high air</td></tr>
+</table>
+<p><b>SHADOW</b>: each track taken in shadows what the guide sounds, from its own distance behind, at its own pace; now and then backwards or to and fro, resting and coming in again, moved along the scale.</p>
+<table>
+<tr><th>Knob</th><th></th><th></th></tr>
+<tr><td><b>KNOB 1</b></td><td><b>DELAY</b></td><td>how far behind: from right behind to 15 s</td></tr>
+<tr><td><b>KNOB 2</b></td><td><b>DRIFT</b></td><td>how far each one's pace strays from the guide's: a little loose, to half or twice</td></tr>
+<tr><td><b>KNOB 3</b></td><td><b>VARIATION</b></td><td>how often each changes its way: backwards, to and fro, resting, notes late or left out</td></tr>
+<tr><td><b>KNOB 4</b></td><td><b>TRANSPOSE</b></td><td>how far it is moved: as played, or a third, fourth, fifth or sixth away</td></tr>
+</table>
+<p><b>ARPEGGIO</b>: the tracks taken in break the guide's chord (what it holds; a single note over its octaves) into arpeggios, each at its own pace, its own way and in its own octaves, and follow the chord as it changes, at their next step.</p>
+<table>
+<tr><th>Knob</th><th></th><th></th></tr>
+<tr><td><b>KNOB 1</b></td><td><b>RATE</b></td><td>a step every 2 s (0) to every 62 ms (100)</td></tr>
+<tr><td><b>KNOB 2</b></td><td><b>RELATION</b></td><td>how the tracks' paces relate: all one, or twice, half, three in two ...</td></tr>
+<tr><td><b>KNOB 3</b></td><td><b>MOTION</b></td><td>which way: all up, or each its own (down, up and down, as played, at random ...)</td></tr>
+<tr><td><b>KNOB 4</b></td><td><b>MUTATE</b></td><td>how much a pattern changes as it repeats</td></tr>
+<tr><td><b>SELECT</b></td><td><b>RANGE</b></td><td>how many octaves each spans, 1 to 4</td></tr>
+<tr><td><b>ALGORITHM</b></td><td><b>CHANCE</b></td><td>steps left out and struck twice</td></tr>
+</table>
 <h3 id="presets">Presets</h3>
 <p>Each engine has <b>64 presets</b>. <b>SHIFT + ARP</b> opens the PRESETS page of the chosen track's engine; <b>PRESETS</b> chooses a slot.</p>
 <ul>
