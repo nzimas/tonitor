@@ -93,320 +93,208 @@ FM-1's flash only when you save a session — into a user data area that other f
 
 | Control | What it does |
 | --- | --- |
-| **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1 2 3 4 5 6**. The chosen track's button is lit; the others glow while they sound. **Held** (0.8 s): **copy** the track, or **paste** the copy onto it — see [Copying a track](#copying-a-track). |
-| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA** or **HIVE**, left to right. Each track keeps a sound of each engine, so turning back finds the sound it had. |
-| **SHIFT + PRESETS** | in the track's view, a **new sound of the family before or after** on the track's engine (the family's name shows under the engine). At the first or last family, a new sound of that family again. |
-| **HOME** | a **new sound** for the chosen track, on its engine (never the same family twice in a row). HOME lights for a moment. |
-| **SHIFT + HOME** | a **new sound of the same family** (kind, species) as the chosen track's sound — to explore a family you like. The screen says SAME FAMILY. |
-| **OCT− / OCT+** | the chosen track's octave, −3 to +3, shown at the top right of the screen (+1, −2; nothing at 0). OCT− is lit below the middle, OCT+ above. |
-| **SHIFT + OCT− / OCT+** | **every loop** of every track down or up **one step of the scale** (see [the loopers](#the-loopers)). |
-| **SHIFT + a track's button held + OCT− / OCT+** | **that track's loops** only, down or up one step of the scale (TRANSP T3 +2). |
-| the white keys | play the chosen track **in the scale chosen** (ARP): the first white key is the root, each white key the next note of the scale, up across all 16. **Voices come from one pool of twelve shared by all the tracks**: a note takes a free voice, so a track has as many as its notes need — a chord on one, a single line on another — and **a new note never cuts the release of the one before it** while voices are free. With the twelve all busy, a new note takes the release that has rung longest (on any track), else the oldest note held on its own track, else the oldest held anywhere. (CALIGULA and RUSSOLO are one organism a track, outside the pool.) A key lifted ends its note on the track it was played on, so **a held note keeps sounding while you choose and play another track**. The keys you hold on the chosen track light up. **The keys that play the root glow dimly** (in every octave, and moved with the loops' transposition, SHIFT + OCT), so you can see where the scale starts. |
-| the rightmost black key | **SHIFT** (lit while held). Hold white keys and press SHIFT: they **latch** — they keep sounding after you let go, and their keys stay lit. Hold SHIFT and press a lit key to let go of it. |
-| the two leftmost black keys | the chosen track's **generative path**: the first **AMBIENT**, the second **EXPERIMENTAL** (lit while chosen; the screen says which). Pressing the lit one again goes back to **OPEN**. See below. |
-| the 3rd black key from the right | the **ENVELOPE** page, up and down (lit while up; it acts when let go): KNOB 1–4 set the chosen track's attack, decay, sustain and release. See [Envelope](#envelope). With SHIFT: the chosen track's step sequencer, **BRICKLAYER**, on and off (the key blinks while it is on; PLAY starts it); **held** (0.6 s) while it is on, its page up or down. See [BRICKLAYER](#bricklayer). |
-| the black key before SHIFT | **EDIT**, on and off (lit while on): KNOB 1–4 become four **macros** that shape the chosen track's sound. See [Macros](#macros). With SHIFT: the chosen track's physics sequencer, **BALLSY**, on and off (EDIT blinks while it is on; PLAY starts it); **held** (0.6 s) while it is on, its page up or down. A short press is always EDIT. See [BALLSY](#ballsy). |
-| the 3rd black key | **chord mode** for the chosen track: **held** (0.6 s), on or off — **CHO** at the top left of the screen while on, the key lit; **pressed**, the next chord form (its name on the screen). See [Chords](#chords). |
-| the 4th, 5th and 6th black keys | the chosen track's loops **REVERSE** (played backwards), **PENDULUM** (forwards and backwards in turn) or **RANDOM** (the notes in an order drawn at random); pressed again, forwards. Lit while on. See [Direction and speed](#direction-and-speed). |
-| the 7th and 8th black keys | the chosen track's loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Lit while on. |
-| all black keys | play no notes. They glow dimly while off and are fully lit while on — the loop direction and speed keys only while the chosen track's loops play; SHIFT is lit only while held. |
-| **SHIFT + ARP** | the chosen track's engine's **PRESETS page** (see [Presets](#presets)): there **ARP held** saves the track's sound into the slot chosen, **ARP** pressed loads it. SHIFT + ARP again, or a track button, goes back. (SHIFT + SAVE before build 51.) |
-| **ARP** | the **SCALE page** (ARP lit): **SELECT** chooses the root (C to B), **ALGORITHM** the scale. The root is shown very large, the scale under it; what you just turned flashes black on white. ARP again, or a track button, goes back. |
-| **REC** | the chosen track's looper. Press to **arm** a new loop (REC flashes, the band shows ARMED and its number); the **first note** you play starts it (REC lights; REC and the number). Press REC again to **end** it: the loop is exactly as long as from that first note to this press, and it starts playing at once, round and round. **Press REC again while it plays to overdub**: the same again, a new loop over the others — up to **10 loops a track**. |
-| **SHIFT + REC** | the chosen track's loops **VARY**, on and off (VAR at the top right of the screen, under the octave and the battery, while on): each note they play gets a random level (from −10 dB to full) and a random length (50 ms to 1.5 s) instead of the recorded one, and now and then, at odds of its own, it is changed or joined: dropped this time round (5 %), late by 5–40 ms (25 %), an octave up or down (8 %), replaced or joined by a note that was not recorded — a step or two of the scale away, or a fifth (8 %), preceded by a grace note a step away (4 %), struck 2–4 times quickly (4 %), joined by a third or fifth above (10 %), echoed 1–4 times 120–400 ms apart, each quieter, sometimes climbing or falling a step each time (15 %); the notes of a chord are sometimes strummed 20–60 ms apart (12 %). Every note stays in the scale. The loops' **pace** is no longer steady either: it rises and falls slowly, and every few seconds on average it halts for a moment and resumes at once, bursts to 2–3× for a moment, grinds to a stop and snaps back, or climbs to 2–2.5× and drops suddenly (not while REC records). Applies to all its overdubs. Stored in sessions; ends when the track's loops are emptied. |
-| **REC held** (1 s) | **empty** the chosen track's looper, all its loops: the whole screen flashes LOOP n / EMPTY. |
-| **PLAY** | on BALLSY's or BRICKLAYER's page: starts or stops that sequencer (PLAY or STOP on the screen; PLAY blinks with the sequencer's key while it plays). On every other page, pressed and let go: stop the chosen track's loops, or play them again, each from its start. **Held**: the chosen track's loops on the white keys, to bring each in or take it out (see [The loopers](#the-loopers)). PLAY is lit, steadily, while they play. **SHIFT and PLAY**, from any track: if any loop or sequencer plays, every loop and sequencer on every track stops (ALL STOPPED; the loops are kept); if none plays, every loop and every sequencer that is on starts, all together from their starts (ALL PLAYING). PLAY alone still starts or stops the chosen track's own. |
-| **SELECT** knob | the chosen track's **level**: 1.5 dB a click, from OFF up to +4.5 dB. The message band says it as the knob's share of its turn, OFF and 4 % to 100 % (VOL 74 %); a track starts at 87 % (0 dB). |
-| **KNOB 1** | the chosen track's **DJ filter**: from the middle (off), left is a resonant **low-pass** coming down from 20 kHz to ~35 Hz, right a resonant **high-pass** going up from 16 Hz to ~12 kHz; the further from the middle, the more resonant. While you turn it, and for a second after, the **whole screen is its dial** (in the track's colour, the mode and cutoff under it: LP 1.2 KHZ). Saved with the session. |
-| **KNOB 2** | the chosen track's **granulator**: the middle is off (as it starts). **Left** towards dark ambient: long, overlapping, slowly drifting grains, pitched down now and then, darkened, fed back on themselves, sometimes frozen. **Right** towards scattering: short, fast grains, their timing, place, pitch and level jittered more and more, reversed, stuttered, full of holes, decimated at the far end. The further from the middle, the more grains and the less of the track. While you turn it, the **whole screen is its dial** (DARK 40, SCATTER 25, OFF). Saved with the session. |
-| **KNOB 3** | the chosen track's **crush**: the middle is off (as it starts). **Left** takes the bit depth down from 16 to 1.5 bits (the sound coarsens, then breaks up, quiet tails gating out); **right** takes the sample rate down from 44.1 kHz to ~300 Hz (metallic aliasing, then a stepped buzz). Both along curves that keep the first half of the way playable; the rate glides, it does not jump. While you turn it, the **whole screen is its dial** (BITS 6.5, RATE 2.6K). After the granulator, before the track's limiter. Saved with the session. |
-| **KNOB 4** | the chosen track's **reverb send**, 0–100 (40 at the start). While you turn it, the **whole screen is its dial** (SEND 40), as for the filter and the granulator. |
-| **SAVE** | the **SESSIONS page**: **PRESETS** turns through the **64 slots** (the number shown very large: **red** when the slot holds a session, faint **grey** with EMPTY under it when it does not; the session loaded says LOADED). **SAVE** on a saved slot **loads** it; on an empty slot it starts a **new session** there: a clean slate, as when the FM-1 is switched on — the loops and latches gone, every track on its first engine with new sounds and its settings at their defaults, the scale, reverb and transposition too (the session you were in stays saved as it was) — and the next save goes there. Either way back to playing. A track button goes back without either. |
-| **SHIFT + SAVE** | **GLOBAL SETUP**: the FM-1's own settings, MIDI for now (see [Global setup and MIDI](#global-setup-and-midi)). SAVE is lit while it is up; a track button goes back. |
-| **SAVE held** (0.8 s) | **save** into the session loaded or chosen, at once; the whole screen flashes SAVED and the number. With none loaded or chosen yet (just after switching on), the first empty slot is offered: **PRESETS** chooses **NO** / **YES**, **SAVE** answers. **On the SESSIONS page**, SAVE held saves into the slot shown, whatever is loaded: an empty one asks SAVE NEW; one holding a session asks **OVERWRITE?** in red, on **NO** until PRESETS turns it to YES; SAVE answers. |
-| **SEQ** | pressed again and again, three pages in turn, then back to playing (SEQ lit while one is up; a track button also goes back): the **DELAY page** — **KNOB 1–4** are **TIME** (20 ms – 2 s), **FEEDBACK**, **DAMP**, **MIX** (see [The delay](#the-delay)); the **REVERB page** — **SIZE**, **DECAY**, **DAMP**, **MIX**; the **MOD page** — the chosen track's modulation (see [Modulation](#modulation)). |
-| **SHIFT + SEQ** | the chosen track's **modulation thrown anew**: both LFOs and two to four slots, at random (MOD RANDOM). |
-| **SHIFT + KNOB 3** | the chosen track's **distortion**, 0–100 (0, off, at the start); its dial reads DISTORTION n and the amount. See [The distortion](#the-distortion). |
-| **SHIFT + KNOB 4** | the chosen track's **delay send**, 0–100 (0 at the start); its dial reads DELAY n / SEND. |
-| **ALGORITHM** knob | the chosen track's **pan**, left to right in 41 steps. The message band says it (PAN L 50, PAN C). Tracks start spread out: 1 in the middle, 2 half right, 3 and 4 a quarter left and right, 5 and 6 near the middle. |
-| MIDI in (USB, and the TRS jack) | notes play the tracks by channel, CCs set their level, pan, macros, filter and sends (see [Global setup and MIDI](#global-setup-and-midi)). |
-| **MASTER** | the level. |
+| **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1–6** (lit: chosen; glowing: sounding). From any page, back to playing. **Held** (0.8 s): copy the track, or paste the copy onto it ([Copying a track](#copying-a-track)). |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA**, **HIVE**. Each track keeps one sound per engine. |
+| **SHIFT + PRESETS** | a new sound of the previous or next family. |
+| **HOME** | a new sound for the chosen track. |
+| **SHIFT + HOME** | a new sound of the same family. |
+| **OCT− / OCT+** | the chosen track's octave, −3 to +3. |
+| **SHIFT + OCT− / OCT+** | every loop of every track one step of the scale down or up ([The loopers](#the-loopers)). |
+| **SHIFT + a track's button held + OCT− / OCT+** | that track's loops only. |
+| the white keys | play the chosen track in the scale; the first white key is the root, and the root's keys glow dimly. A held note keeps sounding when you choose another track. The tracks share twelve voices. |
+| the rightmost black key | **SHIFT**. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it ([Latched keys](#latched-keys)). |
+| black keys 1 and 2 | the chosen track's generative path: **AMBIENT**, **EXPERIMENTAL**; the lit one again: **OPEN** ([Generative paths](#generative-paths)). |
+| black key 3 | chord mode: **held** (0.6 s), on or off; **pressed**, the next chord form ([Chords](#chords)). |
+| black keys 4, 5, 6 | the chosen track's loops **REVERSE**, **PENDULUM**, **RANDOM**; pressed again, forwards ([Direction and speed](#direction-and-speed)). |
+| black keys 7, 8 | the loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. |
+| black key 9 (3rd from the right) | the **ENVELOPE** page ([Envelope](#envelope)). **SHIFT +**: BRICKLAYER on or off; **held** (0.6 s) while it is on: its page ([BRICKLAYER](#bricklayer)). |
+| black key 10 (left of SHIFT) | **EDIT**: KNOB 1–4 become four macros ([Macros](#macros)). **SHIFT +**: BALLSY on or off; **held** (0.6 s) while it is on: its page ([BALLSY](#ballsy)). |
+| **ARP** | the SCALE page: **SELECT** sets the root, **ALGORITHM** the scale ([Scales](#scales)). |
+| **SHIFT + ARP** | the engine's PRESETS page ([Presets](#presets)). |
+| **REC** | press to arm; the first note starts the loop; REC again ends it and it plays. REC while it plays: overdub. Up to 10 loops a track. |
+| **SHIFT + REC** | **VARY** on or off: the loops play with random changes of level, length, timing, notes and pace, always in the scale. |
+| **REC held** (1 s) | empty the chosen track's loops. |
+| **PLAY** | stop or restart the chosen track's loops. **Held**: bring loops in or out on the white keys. On BALLSY's or BRICKLAYER's page: start or stop that sequencer. |
+| **SHIFT + PLAY** | stop everything, or, if nothing plays, start every loop and sequencer. |
+| **SELECT** knob | the chosen track's level, OFF to +4.5 dB. |
+| **ALGORITHM** knob | the chosen track's pan. |
+| **KNOB 1** | the chosen track's filter: off in the middle, low-pass to the left, high-pass to the right. |
+| **KNOB 2** | the chosen track's granulator: off in the middle, dark to the left, scattered to the right ([The granulator](#the-granulator)). |
+| **KNOB 3** | the chosen track's crush: off in the middle, fewer bits to the left, a lower sample rate to the right. |
+| **KNOB 4** | the chosen track's reverb send. |
+| **SHIFT + KNOB 3** | the chosen track's distortion ([The distortion](#the-distortion)). |
+| **SHIFT + KNOB 4** | the chosen track's delay send. |
+| **SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there ([Sessions](#sessions)). |
+| **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting. |
+| **SHIFT + SAVE** | GLOBAL SETUP: the MIDI settings ([Global setup and MIDI](#global-setup-and-midi)). |
+| **SEQ** | the DELAY, REVERB and MOD pages in turn, then back ([The delay](#the-delay), [The reverb](#the-reverb), [Modulation](#modulation)). |
+| **SHIFT + SEQ** | a new random modulation for the chosen track. |
+| **MASTER** | the output level. |
+| MIDI in (USB and TRS) | notes and CCs for each track ([Global setup and MIDI](#global-setup-and-midi)). |
 
 ### Generative paths
 
-Each track has a path that leans what **HOME** draws, on every engine. A path changes nothing already
-playing: it shapes the next sounds drawn on that track. The path's key is lit while that track is chosen.
+Each track has a path that steers the sounds **HOME** draws next on it; sounds already playing do not change.
+Every track starts on OPEN, and sessions keep each track's path.
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | 1st black key | sounds for ambient, dark ambient above all: ethereal, melodic, often melancholic. FM draws drones, beating spectra (SPECTRE), the depths (ABYSS), bells, voices (CHOIR), bowed, hollow, blooming and tidal tones, never BRUIT, IMPACT, FRICTION, SHARDS or STATIC — and plucks and mallets, never WARP, GLITCH or RUBBER; then softer attacks (a pluck or a mallet may keep its strike), long tails, darker modulators, slow LFOs, no sirens, narrower glides, often an octave down. ANIMA draws mostly HAZE, GOLDEN, VOYAGE, TIDE, CHOIR, BOWL, FOG and DRIFT, never GRIT, SHARDS, MACHINE, BITS or HOWL, with a darker tone, more space, a slower hand, long releases, no crusher. CALIGULA draws SPORE, VEIL and LITANY most, UNDERTOW, CARRION, MOTH, sometimes RUST; tuned on root, fifths, octaves, depths and unisons; slow swells, softer edges, fewer bursts and surges, a slower hand. RUSSOLO draws CHORD most, then DUST, CRACKLE, BLIPS, WALK and WANDER, never the logic kinds (NOR, XOR, RING, CASCADE, CLANG), JUMP, BEND or QUAD; clean (9–10 bits), slow attacks, long releases, calmer chance, no major chords |
-| **EXPERIMENTAL** | 2nd black key | sounds for electroacoustic and acousmatic music: edgier, gnarlier. FM draws bruits, frictions, shards, static, impacts, iterations, warps, glitches and rubber, brighter, bent more often (sometimes twice), never SPECTRE, CHOIR, BOWED or TIDE. ANIMA draws mostly GRIT, SWARM, SHARDS, MACHINE, BITS and HOWL, never HAZE, TIDE, CHOIR, FOG or DRIFT, and makes them wild: the sliders near their tops (FM, grain, texture, density, a quick hand), the resonance often screaming, and on most designs a crushed sample rate, folding drive, a band of noise and scattered grains, all dragged about by the hand, often a fast tremolo tearing it apart, the comb ringing hard. CALIGULA draws WIRE, THORN, HIVE and RUST most, never VEIL or LITANY; semitone clusters and tritones; sharper, more driven, more bursts and surges, a quicker hand. RUSSOLO draws NOR, XOR, CLANG, BEND and QUAD most, never WALK or CHORD; crushed to 4–9 bits, often sample-held, abrupt attacks and short releases, chance driving it hard |
-| **OPEN** | neither lit | every family, kind and species alike, as before the paths. Every track starts here |
-
-Sessions keep each track's path, and the path each of its sounds was drawn on.
+| **AMBIENT** | black key 1 | ambient and dark ambient: soft attacks, long tails, darker, often melodic |
+| **EXPERIMENTAL** | black key 2 | electroacoustic and acousmatic: noisier, brighter, more bent, crushed and driven |
+| **OPEN** | neither lit | every family alike |
 
 ### Macros
 
-Press **EDIT** (the black key just left of SHIFT; lit while on) and the four knobs across the top stop being
-the filter, the granulator, the crush and the send: they become **four macros** that reshape the chosen
-track's sound, while it plays, under a held note. Every macro answers early in the turn (a quarter of the way, half the change). Each is turned from the middle, which is the sound as HOME
-drew it; either way transforms it. While a knob turns, the whole screen is its dial, with the macro's name
-for this sound and how far it is turned (+40 %, -25 %, AS DRAWN). Press EDIT again to give the knobs back.
-
-The macros are chosen for each engine, and for some by the kind of sound:
+Press **EDIT** (black key 10) and KNOB 1–4 become four macros that reshape the chosen track's sound. The middle
+is the sound as HOME drew it; turn either way. The screen shows the macro's name and position. Press EDIT again
+to get the knobs back. Each sound keeps its macros, and sessions and presets store them.
 
 | | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| **FM** | **BRIGHTNESS**: the modulation index about 27 dB either way (down: towards pure sines; up: the feedback too), the carriers tilted (the higher partials up) | **DETUNE**: the carriers pulled apart ±40 cents and the modulators ±25 cents off them — beating, chorus, the partials off their places — or **INHARMONIC** for metallic and noisy families (every partial off its ratio: clangour) | **SATURATION**: feedback and saturation turning up; a low-pass, smoother, turning down | **MOTION**: the LFO's depths; turning up, a tremolo, quicker and deeper |
-| **ANIMA** | **TONE**: every filter four octaves up or down (sharper when up), the FM brighter or darker | what the kind is about, from nothing to far more: **GRAINS**, **NOISE**, **FM** (the index), **FORMANT** (sharper when up) or **DRIVE** (folded hard; turned down, a pure tone: the second voice, FM, noise and grains drawn out) | **RESONATOR**: much wetter and ringing longer (brought in if the sound had none), or dry | **MOTION**: the hand four times quicker, a tremolo pulsing — or nearly still, no tremolo |
-| **CALIGULA** | **WAVEFORM**: triangles to squares | **MOD DEPTH**: how deeply the pairs modulate each other | **FEEDBACK** (total feedback and drive) — or **DELAY** for SPORE, VEIL, LITANY and MOTH | **TOUCHES**: how busy the hand is, its touches and bursts — or **GATE RATE** (the gates' speed) for HIVE, MOTH and WIRE |
-| **DRUID** | **STRUCTURE**: on a string, its dispersion (below a quarter, a buzzing bridge; above, the partials stretched, then noise in the period); on sympathetic strings, the intervals they are tuned to; on a body, how its partials are spaced, from squeezed through harmonic to bell-like | **BRIGHTNESS**: the exciter's low-pass and the string's or body's high-frequency loss | **DAMPING**: how long it rings, from ~70 ms to ~18 s to -60 dB, and above 0.95 on without decay | **POSITION**: where it is plucked or struck and where it is picked up — which partials sound |
-| **BAYAREA** | **SHAPE**: the oscillator from sine through triangle and square to saw | **FOLDS**: the wavefolder's drive | **FM**: both modulators' depth | **DECAY**: the gate's decay, or the sustain's release, from an eighth to eight times the sound's own |
-| **HIVE** | **DETUNE**: the swarm's spread around its places, from none to twice the sound's own | **MOVEMENT**: the LFOs' depth on the pitches, the levels and the filter, from none to twice | **MIX**: the swarm against the main oscillator — or **NOISE** on GROUND and AIR | **CUTOFF**: the filter's cutoff |
-| **RUSSOLO** | the kind's first parameter (RATE, TONE, WIDTH, HISS, RATIO, SPREAD, DENSITY, SILENCE, WINDOW, STEP or DEPTH) | the kind's second parameter (CHANCE, DENSITY, WANDER, DRIFT, SUB, CLOCK, CHANGE, JUMPS or RATE) | **CRUSH**: fewer bits and longer sample holds, or cleaner | **RANDOMNESS**: how much chance drives it; above the middle, stutters too |
-
-Each track keeps the macros of each of its seven sounds. **HOME** draws a new sound as it comes (its macros
-in the middle). Sessions and presets keep the macros with the sound.
+| **FM** | **BRIGHTNESS** | **DETUNE** (**INHARMONIC** on metallic and noisy families) | **SATURATION** | **MOTION** |
+| **ANIMA** | **TONE** | **GRAINS**, **NOISE**, **FM**, **FORMANT** or **DRIVE**, by kind | **RESONATOR** | **MOTION** |
+| **CALIGULA** | **WAVEFORM** | **MOD DEPTH** | **FEEDBACK** (**DELAY** on SPORE, VEIL, LITANY, MOTH) | **TOUCHES** (**GATE RATE** on HIVE, MOTH, WIRE) |
+| **DRUID** | **STRUCTURE** | **BRIGHTNESS** | **DAMPING** | **POSITION** |
+| **BAYAREA** | **SHAPE** | **FOLDS** | **FM** | **DECAY** |
+| **HIVE** | **DETUNE** | **MOVEMENT** | **MIX** (**NOISE** on GROUND, AIR) | **CUTOFF** |
+| **RUSSOLO** | the kind's first parameter | the kind's second parameter | **CRUSH** | **RANDOMNESS** |
 
 ### Envelope
 
-The 3rd black key from the right opens the **ENVELOPE** page (the key is lit while it is up; pressed again, or a
-track button, closes it). It shows the amplitude envelope of the chosen track's sound as attack, decay,
-sustain and release, drawn and with their values. As HOME drew the sound, the page reads its own envelope and
-says **AS DRAWN** (in grey): for FM, the envelope of the loudest carrier; for CALIGULA, the average of its
-pairs' attacks and releases; CALIGULA and RUSSOLO have no decay or sustain stage (shown as 5 ms and 100 %).
-
-While the page is up, the four knobs across the top set **ATTACK** (KNOB 1, 1 ms – 10 s), **DECAY** (KNOB 2,
-5 ms – 10 s), **SUSTAIN** (KNOB 3, 0–100 %) and **RELEASE** (KNOB 4, 5 ms – 20 s), on logarithmic scales. The
-first turn starts from the values shown and replaces the sound's own amplitude envelope with this one: the
-attack is linear, the decay and release are exponential, the release ending 60 dB down. FM's carrier envelopes
-and ANIMA's envelope are then held at full; CALIGULA and RUSSOLO are kept playing through the release and
-then let go. The change applies from the next note; once the track's envelope is in use, turning the knobs
-also changes the notes that are sounding.
-
-**HOME** (a new sound) or loading a preset gives the sound's own envelope back. Each track
-keeps an envelope for each of its seven engines. Sessions store them, copying a track copies them, presets do
-not.
+Black key 9 opens the **ENVELOPE** page with the chosen track's amplitude envelope (**AS DRAWN** until you change
+it). KNOB 1–4 set **ATTACK** (1 ms – 10 s), **DECAY** (5 ms – 10 s), **SUSTAIN** (0–100 %) and **RELEASE**
+(5 ms – 20 s). A change applies from the next note, and after that to the notes sounding too. HOME or loading a
+preset brings back the sound's own envelope. Sessions store the envelopes; presets do not.
 
 ### PLAY, the sequencers and the looper
 
-A track has one sequencer at a time: while its BALLSY is on, SHIFT + the envelope key shows NOT ALLOWED and
-changes nothing, and while its BRICKLAYER is on, SHIFT + EDIT does the same. The looper works beside either.
-
-A sequencer turned on waits for **PLAY**. On the sequencer's page, PLAY starts and stops it, and blinks with the
-sequencer's key while it plays. On every other page PLAY is the looper's, as ever, lit steadily while the
-track's loops play: so with a sequencer playing you can put its page down (or choose the track), record loops
-over it from the keys (the looper records only the keys, never the sequencer's notes), and start and stop them
-with PLAY; bring the sequencer's page up again to start or stop the sequencer.
+A track runs one sequencer at a time: with BALLSY on, BRICKLAYER shows NOT ALLOWED, and the other way round. A
+sequencer waits for **PLAY** on its own page. On every other page PLAY is the looper's, so you can record loops
+over a running sequencer. The looper records only the keys, never the sequencer.
 
 ### BALLSY
 
-**SHIFT + EDIT** turns on BALLSY, a physics sequencer of bouncing balls, for the chosen track and shows its page; EDIT blinks
-while it is on, and SHIFT + EDIT again turns it off. The balls wait in the middle until **PLAY** (on their page) starts
-them; PLAY again holds them still where they are (their notes let go), and PLAY once more moves them on from there.
-Each track has its own, and they run at the same time.
-**Holding EDIT** (0.6 s) while the chosen track's balls are on puts their page down or up: with the page down the
-balls keep playing and the knobs, the screen and the other pages work as usual; a track button or another page
-also puts it down. A short press of EDIT still turns EDIT on or off.
+**SHIFT + EDIT** turns on BALLSY, a sequencer of bouncing balls, for the chosen track and shows its page (EDIT
+blinks while it is on). **PLAY** starts and pauses the balls. **Hold EDIT** (0.6 s) to hide or show the page; the
+balls keep playing.
 
-One to eight balls move in a box on the screen. Each time a ball hits a wall, it plays a note on the track, as
-a key would: in the scale, with the loops' transposition and chord mode. The looper does not record them: it
-records only what is played on the keys. Each note's length (50 ms to 1.5 s) and level (from −10 dB to full) are drawn at random; the level applies to
-FM, ANIMA, DRUID, BAYAREA and HIVE (CALIGULA and RUSSOLO play at their own level). Each bounce changes the ball's angle at random by up to 12°, kept between 15° and 75° from the walls, so
-the paths change and every wall is reached. Each wall holds the notes of the scale, one segment per step, and the
-segment that is hit lights up. The pitch rises clockwise all the way round, one octave per wall:
+Each time a ball hits a wall it plays a note in the scale, of random length and level, with chord mode and the
+loops' transposition. The pitch rises clockwise, one octave per wall:
 
-| Wall | Octave (at the start) | Direction of rising pitch |
+| Wall | Octave (at the start) | Pitch rises |
 | --- | --- | --- |
-| bottom | −1 (the octave below the keyboard's) | right to left |
-| left | 0 (the keyboard's) | upwards |
+| bottom | −1 | right to left |
+| left | 0 | upwards |
 | top | +1 | left to right |
 | right | +2 | downwards |
 
-While their page is up, the four knobs control them:
-
 | Knob | |
 | --- | --- |
-| **KNOB 1** | the number of balls, 1–8; new ones start from the middle in a random direction |
-| **KNOB 2** | speed, 0–100 (from 0.08 to 2.4 box widths per second) |
-| **KNOB 3** | the octaves of the four walls, moved together by one octave per click, from −3…0 to +2…+5 |
-| **KNOB 4** | instability, 0–100 (0 at the start): each ball gets its own wind, two values that wander at random (a new aim about twice a second, followed over ~0.3 s). One scales its speed, up to 8× faster or slower at 100, so a ball can nearly stop and then rush on; the other turns it, up to half a turn per second. Occasional gusts change its direction by up to 60°. At 0 the pace is steady and the paths straight |
-
-The screen shows the box, the walls' segments in the track's colour and the balls; the line above shows the
-number of balls, or the value just turned. Sessions store each track's ball settings and whether they are on;
-copying a track copies them.
+| **KNOB 1** | the number of balls, 1–8 |
+| **KNOB 2** | speed |
+| **KNOB 3** | the walls' octaves, moved together |
+| **KNOB 4** | instability: the balls speed up, slow down and turn at random; at 0, steady and straight |
 
 ### BRICKLAYER
 
-**SHIFT + the envelope key** (the 3rd black key from the right) turns on BRICKLAYER, a step sequencer built a
-note at a time, for the chosen track, and shows its page; the key blinks while it is on, and SHIFT + the key again
-turns it off. It waits for **PLAY** (on its page), which starts it from its first step and, pressed again, stops
-it (its notes let go); notes can be entered whether it plays or not. **Holding the envelope key** (0.6 s) while it is on puts its page down or up: with the page down it
-keeps playing and the knobs, the screen and the other pages work as usual (a track button or another page also
-puts it down). A short press of the key is still the ENVELOPE page. Each track has its own.
+**SHIFT + black key 9** turns on BRICKLAYER, a step sequencer built a note at a time, for the chosen track and
+shows its page (the key blinks while it is on). **PLAY** starts and stops it. **Hold black key 9** (0.6 s) to hide
+or show the page; it keeps playing.
 
 On its page, **REC** is the entry, not the looper:
 
 | Gesture | |
 | --- | --- |
-| **REC** | entry on or off (REC stays lit while it is on) |
-| a white key, entry on | its note is added at the end of the sequence (and sounds) |
-| **SHIFT** + a white key, entry on | that note is taken out, wherever it is |
-| **SHIFT + REC** | the last note added is taken out |
-| **REC** held 1 s | the sequence is emptied (BRICKS / EMPTY) |
+| **REC** | entry on or off |
+| a white key, entry on | add its note at the end |
+| **SHIFT** + a white key, entry on | take that note out |
+| **SHIFT + REC** | take the last note out |
+| **REC** held 1 s | empty the sequence |
 
-The notes play in the order they were added, spread over the sequence's length as evenly as possible (a
-Euclidean rhythm, the first note on the first step: 3 notes in 8 steps fall on steps 1, 4 and 7). Notes are kept
-as steps of the scale, so they follow the loops' transposition (SHIFT + OCT, and SHIFT + the track's button + OCT),
-the scale and the root, as latched notes do; chord mode applies to them as to keys.
+The notes are spread evenly over the length (3 notes in 8 steps fall on steps 1, 4 and 7) and follow the scale,
+the root, the loops' transposition and chord mode.
 
 | Knob | |
 | --- | --- |
-| **KNOB 1** | **LENGTH**: steps, from the number of notes up to 32 |
+| **KNOB 1** | **LENGTH**: from the number of notes up to 32 steps |
 | **KNOB 2** | **RATE**: 0.5–16 steps a second |
-| **KNOB 3** | **HARMONY**: how often a note becomes a diad (a third or a fifth above) or a triad |
-| **KNOB 4** | **VARIATION**: each note's level (down to −12 dB) and length (from a quarter to twice the usual) are spread at random; the pace wanders (from half to twice the rate), and now and then stops for a moment or rushes; as likely as the knob says, a note stutters (struck 2–4 times within its step), the last 2–4 steps are played again (beat repeat), a note echoes 1–3 times, quieter, or an empty step plays a quiet ghost note from the sequence. At 0: a steady level and length, a steady pace |
+| **KNOB 3** | **HARMONY**: how often a note becomes a two- or three-note chord |
+| **KNOB 4** | **VARIATION**: random level, length and pace, stutters, repeats, echoes and ghost notes; at 0, steady |
 
-On its page the loops' direction and speed keys (the 4th to 8th black keys) are BRICKLAYER's own, lit while on and
-glowing while off: **REVERSE**, **PENDULUM** (forwards and backwards in turn), **RANDOM** (a step drawn at random
-each time), **HALF SPEED** and **DOUBLE SPEED**, combined as for the loops. The step lit on the screen follows them.
-With the page down, the keys are the looper's again.
-
-The screen shows the steps as cells, eight to a row (up to four rows): a note's cell filled in the track's
-colour, an empty one as an outline, the step being played in white. The line above shows the notes and the
-steps (3 IN 8), REC and the number of notes while entering, or the value just turned. Each note lasts 70 % of
-its step (VARIATION spreads it). Sessions store each track's sequence and settings; copying a track copies them.
+On its page, black keys 4–8 set BRICKLAYER's own direction and speed.
 
 ### Latched keys
 
-Hold one or more white keys and press **SHIFT** (the rightmost black key): they latch, sounding on after
-you let go, and they stay lit. A key pressed while SHIFT is already held plays as usual (unless it is lit). Latches belong to the track they were made on: the keys are lit while that
-track is chosen, and on another track the same keys play as usual, so a drone can be left on one track
-while you play another. Pressing a latched key without SHIFT does nothing (it sounds already); **SHIFT and
-the lit key** lets go of it, and its note ends as a lifted key's would. Loading a session lets go of every
-latch. Latched notes hold voices of the shared pool: with all twelve busy, a new note can take one, even a latched one's.
+Hold white keys and press **SHIFT**: they latch and stay lit. **SHIFT + a lit key** releases it. Latches belong
+to the track they were made on; on another track the same keys play as usual, so a drone can sound on one track
+while you play another. Loading a session releases every latch.
 
 ### Chords
 
-With chord mode on for a track (the 3rd black key held 0.6 s; CHO at the top left of the screen, the form's
-abbreviation under it in grey: TRI, IN1, IN2, SU2, SU4, OPN, 4TH), each white
-key plays three notes: its own note and two more of the same scale, so every chord stays in the scale and its
-quality (major, minor, diminished) is the scale's at that degree. Pressing the 3rd black key steps through the
-forms (in steps of the scale from the key's note):
+With chord mode on (black key 3 held 0.6 s; **CHO** on the screen), each white key plays three notes of the scale.
+Press black key 3 to step through the forms (in steps of the scale from the key's note):
 
 | Form | Steps | |
 | --- | --- | --- |
-| **TRIAD** | 0, 2, 4 | root, third, fifth (the start) |
-| **INV 1** | 2, 4, 7 | first inversion: the third at the bottom, the root an octave up |
-| **INV 2** | −3, 0, 2 | second inversion: the fifth below the root |
-| **SUS2** | 0, 1, 4 | the third replaced by the second |
-| **SUS4** | 0, 3, 4 | the third replaced by the fourth |
-| **OPEN** | 0, 4, 9 | root, fifth, and the third an octave up |
+| **TRIAD** | 0, 2, 4 | root, third, fifth |
+| **INV 1** | 2, 4, 7 | first inversion |
+| **INV 2** | −3, 0, 2 | second inversion |
+| **SUS2** | 0, 1, 4 | the second instead of the third |
+| **SUS4** | 0, 3, 4 | the fourth instead of the third |
+| **OPEN** | 0, 4, 9 | root, fifth, the third an octave up |
 | **FOURTHS** | 0, 3, 6 | stacked fourths |
 
-One chord sounds at a time on a track: a new key lets the one before go. Chords follow the loops' moves along
-the scale like single notes, latch with SHIFT (all three notes), are recorded by the loopers as three notes,
-and are kept in sessions (chord mode, its form, the chords latched); copying a track copies its chord mode.
+One chord sounds at a time on a track. Chords latch, loop and are saved like single notes.
 
 ### Direction and speed
 
-The 4th to 8th black keys set how the chosen track's loops play, all its overdubs together, each within its own
-length:
+Black keys 4–8 set how the chosen track's loops play:
 
 | Key | Setting |
 | --- | --- |
-| 4th black key | **REVERSE**: the loops play backwards — each note starts where it ended and ends where it started |
-| 5th black key | **PENDULUM**: forwards to the end of each loop, backwards to its start, and so on |
-| 6th black key | **RANDOM**: the loops play forwards, but each time the next note is due (and at the loop's end) they jump to a note of the loop drawn at random and go on from there — each note keeps its length and the time to the note that followed it when recorded; notes struck together stay together; the notes sounding are let go at each jump |
-| 7th black key | **HALF SPEED**: the loops take twice as long (the pitch does not change) |
-| 8th black key | **DOUBLE SPEED**: the loops take half as long |
+| black key 4 | **REVERSE**: backwards |
+| black key 5 | **PENDULUM**: forwards, then backwards, in turn |
+| black key 6 | **RANDOM**: at each note, a jump to a note of the loop drawn at random |
+| black key 7 | **HALF SPEED** (the pitch does not change) |
+| black key 8 | **DOUBLE SPEED** |
 
-REVERSE, PENDULUM and RANDOM exclude each other, as do HALF and DOUBLE; pressing the lit key again returns to forwards
-or to normal speed. Direction and speed combine (backwards at half speed, pendulum at double, and so on).
-Changing the direction while a loop plays continues from where it is: a note sounding at that moment carries on
-and ends where its start was. An overdub recorded at half or double speed, or while the loops play backwards, is
-stored so that it plays back as it was played. Sessions keep the settings; copying a track copies them;
-emptying a track's loops (REC held) returns them to forwards and normal speed.
+The three direction keys exclude each other, as do the two speed keys; a direction and a speed combine. Press the
+lit key again to go back to forwards or normal speed. Emptying the loops (REC held) resets both.
 
 ### Copying a track
 
-Hold a track's button until the screen flashes **COPIED / TRACK n**: the track is on the clipboard, and its
-button blinks. Choose another track and hold its button until **PASTED / TRACK n**: it now has the copied
-track's tone and loops. The clipboard is then empty: the next hold copies again. Holding the copied track's own
-button again copies it again (as it is now), pasting nothing.
-
-What is copied: the **tone** — the engine, the sounds of all seven engines with their macros and envelopes, the filter, the
-granulator, the crush, the reverb send, the octave and the generative path — and **all the loops**, every
-overdub, those taken out still out, playing or stopped as they were (pasted, they start from their beginnings).
-The copy is taken when you hold the button: what the track does afterwards is not pasted. The track pasted
-onto keeps its **level** and **pan** (its place in the mix); whatever it had before is replaced, and its
-latched notes are let go.
+Hold a track's button until the screen shows **COPIED / TRACK n** (the button blinks). Choose another track and
+hold its button until **PASTED / TRACK n**. The track pasted onto gets everything of the copied one, its sounds,
+settings and loops, except its own level and pan; its latched notes are released.
 
 ### The loopers
 
-Every track has its own looper of up to **ten loops**, and they are all **free**: no tempo, no grid, no
-quantising — not even between a track's own loops. Each overdub is a loop of its own, as long as you made
-it (from its first note to REC), going round in its own length over the others, so they drift in and out of
-phase. Each plays back exactly what was played, to 0.73 ms. A note still held when REC closes the loop is
-**tied over its end**: it sounds on unbroken as the loop goes round, so a drone stays one long note rather than
-being struck again each time. The keys go on playing the track over its loops,
-and the loops' notes and the keys' never cut each other's notes off — but all of them share the pool's twelve
-voices with the other tracks, so many loops and tracks at once take voices from each other. A track's loops hold about 500 notes between
-them; nothing is lost when the FM-1 is switched off if the session is saved.
+Each track has a looper of up to **ten loops**, and they run **free**: no tempo, no grid. Each overdub is as long
+as you played it, so the loops drift against each other. A note still held when REC ends the loop is tied over
+its end, so a drone stays one unbroken note. Loops share the twelve voices with the keys and the other tracks.
 
-**Bringing loops in and out.** Hold **PLAY** (it does not start or stop anything held): the chosen track's
-loops appear on the white keys, the first loop — the foundation — on the leftmost, each overdub on the next,
-up to ten, lit while they play; the screen shows them too (in the track's colour: in; a grey frame: out).
-Press a key to take its loop out — its notes stop, the others go on — or to bring it back in: it comes in
-**at once, from its start**. With the loops stopped it chooses which will play: take out all but one, let go
-of PLAY, press PLAY, and only that one starts; then bring the others in, one by one, as the piece unfolds.
-Every loop is in when recorded. Sessions keep which loops are out.
+**Bringing loops in and out.** Hold **PLAY**: the chosen track's loops appear on the white keys, the first loop on
+the leftmost, lit while they play. Press a key to take its loop out, or to bring it back in from its start. With
+the loops stopped, this chooses which loops the next PLAY starts.
 
-**Moving the loops along the scale.** Hold **SHIFT** and press **OCT+** or **OCT−**: every loop of every track
-moves one step of the chosen scale up or down — from C to D in C major, from C to D♯ in C minor pentatonic —
-so each loop keeps its shape within the scale. The notes sounding move at once; the screen shows how far the
-loops are moved (TRANSP +2, TRANSP -1, TRANSP 0), up to two octaves of the scale either way. Choosing another scale
-or root while they are moved walks the new one. A note outside the scale keeps its distance from the scale note
-below it. **The white keys move with them**: on a track, they play the scale moved as far as that track's loops are
-(all the loops' move and its own), so what you add fits what is there — and **an overdub recorded while the
-loops are moved plays back as you played it**, the others staying where they are. (USB MIDI notes are not
-moved.) Sessions keep how far the loops are moved.
-
-**One track's loops along the scale.** Hold **SHIFT**, hold a track's button, and press **OCT+** or **OCT−**:
-only that track's loops move (every overdub with them), a step of the scale at a time; the screen says
-TRANSP T3 +2. It adds to the move of all the loops, and that track's white keys and **latched notes** (and chords)
-move with it; SHIFT + OCT alone moves every track's latched notes with all the loops. The lit latched keys move
-along the keyboard by as many white keys, in the same direction (a latch that would leave the keyboard stays on
-its key, its note still moved). Holding the track's button with SHIFT down never copies
-it. Emptying a track's loops (REC held) takes its own move away; copying a track takes it along; sessions keep
-it.
+**Moving the loops along the scale.** **SHIFT + OCT+ / OCT−** moves every loop of every track one step of the
+scale (TRANSP +1), up to two octaves either way; the white keys and latched notes move with them, and an overdub
+recorded meanwhile plays back as you played it. **SHIFT + a track's button held + OCT+ / OCT−** moves that
+track's loops only (TRANSP T3 +2). Emptying a track's loops resets its own move.
 
 ### The screen
 
-From top to bottom: the **track number** (very large, in the track's colour), with the **battery** at the top
-right (three bars green, two green, one amber, one red when low; a white bolt on a computer's USB power, when
-the reading is the supply's, not the battery's -- coarse levels, not a percentage) and the track's **octave**
-to its left (+1, −2; nothing at 0), VAR under them while the loops VARY; its **engine** (in white), the **family of its sound** (in the track's colour). When something changes (NEW,
-OCT +1, LOOP), a black-on-white message replaces the family for a moment. While the chosen track's
-looper is armed the band below the engine flashes **ARMED** in red; while it records it shows **REC**,
-white on red. A message too long for the band at its usual size (EXPERIMENTAL) is drawn a size smaller.
-Under it, across the screen, the track's **level meter**: a bar filling from the left with the track's colour
-as it sounds (-48 to +6 dB), and a white mark at the level the SELECT knob sets (red at the left when the
-track is off). At the very bottom, the track's **pan**: a block in its colour on a track from left to right,
-with a tick at the middle.
+From the top: the track number in the track's colour, with the octave, VAR (while the loops VARY) and the battery
+at the top right; the engine; the sound's family, or a short message; **ARMED** or **REC** while the looper
+records; the track's level meter, with a mark at its SELECT level; and its pan. KNOB 1–4 show a full-screen dial
+while they turn.
 
-KNOB 1 to 4 (filter, granulator, crush, reverb send) each show, while they turn and for a second after, the
-same full-screen dial: the knob's name and the track, an arc from 7 to 5 o'clock lit in the track's colour,
-a white pointer, and in large type what it does.
-
-The **REVERB page** shows the title and its four values in rows, each with a bar; the row you just
-turned is drawn black on white for a moment.
+Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 
 ### Scales
 
-One scale and root for the whole keyboard (and saved with the session); C major at the start. The root
-sits on the first white key, in the octave from C3 to B3 (each track's OCT moves it); the scale climbs
-from there across the 16 white keys, so a pentatonic scale spans more than three octaves.
+One scale and root for all the tracks, saved with the session; C major at the start. The root is the first white
+key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.
 
 | Scale | Steps |
 | --- | --- |
@@ -418,7 +306,7 @@ from there across the 16 white keys, so a pentatonic scale spans more than three
 | MINOR PENTA | 0 3 5 7 10 |
 | WHOLE TONE | 0 2 4 6 8 10 |
 | ENIGMATIC | 0 1 4 6 8 10 11 |
-| JAPANESE IN | 0 1 5 7 8 — the *in* (miyako-bushi) scale of the koto and shakuhachi, known for its sorrow |
+| JAPANESE IN | 0 1 5 7 8 |
 | PHRYGIAN | 0 1 3 5 7 8 10 |
 | LYDIAN | 0 2 4 6 7 9 11 |
 | MIXOLYDIAN | 0 2 4 5 7 9 10 |
@@ -426,26 +314,21 @@ from there across the 16 white keys, so a pentatonic scale spans more than three
 | MAJOR PENTA | 0 2 4 7 9 |
 | BLUES | 0 3 5 6 7 10 |
 | HUNGARIAN MINOR | 0 2 3 6 7 8 11 |
-| DOUBLE HARMONIC | 0 1 4 5 7 8 11 (also called Byzantine) |
-| PHRYGIAN DOMINANT | 0 1 4 5 7 8 10 — the fifth mode of the harmonic minor |
+| DOUBLE HARMONIC | 0 1 4 5 7 8 11 |
+| PHRYGIAN DOMINANT | 0 1 4 5 7 8 10 |
 | JAPANESE HIRAJOSHI | 0 2 3 7 8 |
 | JAPANESE IWATO | 0 1 5 6 10 |
-| PELOG | 0 1 3 7 8 — Balinese *selisir*, in equal temperament |
-| OCTATONIC | 0 1 3 4 6 7 9 10 — half step, whole step, alternating (eight notes: the 16 white keys span two octaves) |
-| PROMETHEUS | 0 2 4 6 9 10 — Scriabin's |
+| PELOG | 0 1 3 7 8 |
+| OCTATONIC | 0 1 3 4 6 7 9 10 |
+| PROMETHEUS | 0 2 4 6 9 10 |
 
-The screen splits the longer names over its two lines (MIXO- LYDIAN, HUNGAR- IAN MINOR, OCTA- TONIC, PROME- THEUS)
-rather than squeezing the letters together.
-
-MIDI notes are not quantised.
+MIDI notes are not quantised to the scale.
 
 ### Global setup and MIDI
 
-**SHIFT + SAVE** opens **GLOBAL SETUP**, the FM-1's own settings, kept apart from the sessions (a track
-button, or SHIFT + SAVE at its top level, goes back; what changed is kept when you leave). It has one section,
-**MIDI**, for now. **PRESETS** moves through the entries and **SAVE** goes into one; on a setting SAVE puts
-the focus on its value (a white field), PRESETS changes it and SAVE sets it, while **SHIFT + SAVE** leaves it
-as it was, or goes back a level. Each level below the top starts with **BACK**.
+**SHIFT + SAVE** opens **GLOBAL SETUP**, the FM-1's own settings (MIDI), kept apart from the sessions. **PRESETS**
+moves through the entries; **SAVE** opens one, or selects a value and sets it; **SHIFT + SAVE** cancels or goes
+back a level. A track button leaves; changes are kept.
 
 | Part | Settings | At the start |
 | --- | --- | --- |
@@ -455,347 +338,192 @@ as it was, or goes back a level. Each level below the top starts with **BACK**.
 | **SEND** | NOTES, CC (ON / OFF) | OFF, OFF |
 | **PORTS** | USB IN, TRS IN (the 3.5 mm MIDI IN jack, Type A) | ON, ON |
 
-MIDI comes in over USB and on the TRS jack. A note plays every track whose IN channel it is on (and the chosen
-track on the AUTO channel), at its velocity. The CCs a track answers to, on the same channels, and sends when
-SEND CC is on:
+A note plays every track whose IN channel it arrives on (and the chosen track on AUTO). Each track answers to,
+and with SEND CC on sends, these CCs on its channel:
 
 | CC | | CC | |
 | --- | --- | --- | --- |
 | 7 | level | 74 | filter (64 off; below, low-pass; above, high-pass) |
 | 10 | pan | 91 | reverb send |
-| 16–19 | the four macros of the track's sound | 92 | delay send |
+| 16–19 | the four macros | 92 | delay send |
 
-With SEND NOTES on, each track sends the notes it plays — from the keys, the loops, BALLSY, BRICKLAYER and
-MIDI — on its OUT channel, over USB. With SEND CC on, the values above go out when they change, whatever
-changed them. There is no MIDI clock, transport or program change: Tonitor has no tempo or patterns. The
-Backup page keeps the setup with the sessions and presets.
+With SEND NOTES on, each track sends the notes it plays (keys, loops, sequencers, MIDI) on its OUT channel over
+USB. There is no MIDI clock, transport or program change.
 
 ### Modulation
 
-Each track has a small **modulation matrix**: two LFOs and four slots that move the track's own values while it
-plays. The third press of **SEQ** opens the **MOD page**, in the track's colour. **PRESETS** goes through its six
-entries — **LFO 1**, **LFO 2**, then **MOD A** to **MOD D** — and **KNOB 1–4** set the entry's four rows.
+Each track has two LFOs and four modulation slots. Press **SEQ** three times for the **MOD page**: **PRESETS**
+chooses the entry, **KNOB 1–4** set its rows.
 
 | Entry | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| **LFO 1**, **LFO 2** | **SHAPE**: SINE, TRI, SAW UP, SAW DN, SQUARE, STEPS (a new random value each cycle), DRIFT (a smooth random wander) | **RATE**: 0.01 Hz (a cycle in 100 s) to 20 Hz | **MODE**: FREE (never restarted), NOTE (from the start at each note), ONCE (one cycle from each note, then held: an envelope) | **FADE**: off, or in over up to 10 s from each note |
-| **MOD A** – **MOD D** | **FROM**: OFF, LFO 1, LFO 2, VELOCITY (softer notes less), KEY (the note, around C4), RANDOM (a new value each note) | **TO**: the sound's four macros (by their names), FILTER, GRAINS, CRUSH, DRIVE, REVERB, DELAY, LEVEL, PAN, LFO 1 RATE, LFO 2 RATE | **AMOUNT**: −100 to +100 of the destination's whole swing | — (the row **NOW** shows what the slot does at the moment) |
+| **LFO 1**, **LFO 2** | **SHAPE**: SINE, TRI, SAW UP, SAW DN, SQUARE, STEPS, DRIFT | **RATE**: 0.01–20 Hz | **MODE**: FREE, NOTE (restarts at each note), ONCE (one cycle from each note) | **FADE**: in over up to 10 s |
+| **MOD A** – **MOD D** | **FROM**: OFF, LFO 1, LFO 2, VELOCITY, KEY, RANDOM | **TO**: the four macros, FILTER, GRAINS, CRUSH, DRIVE, REVERB, DELAY, LEVEL, PAN, LFO 1 RATE, LFO 2 RATE | **AMOUNT**: −100 to +100 | **NOW**: what the slot does at the moment |
 
-The modulation moves the values the track already has — what the knobs set, or the macros — around where they
-are, and the whole track follows (every voice of it). It moves a value once a block, so it costs next to nothing.
-Sessions keep each track's modulation, and copying a track copies it.
-
-**SHIFT + SEQ** throws the chosen track's modulation anew (MOD RANDOM): both LFOs (any shape, rate, mode and fade)
-and two to four slots, from any source to any destination, by amounts that may go far. It takes risks on
-purpose; press it again for another, or set what you like on the MOD page.
-
-**HOME** draws a modulation with some sounds, by engine and family: often with the slow, sustained families of
-FM, HIVE, BAYAREA and DRUID (drones, pads, washes, bowed and swelling sounds) — a slow LFO on the tone, sometimes a
-fade in, sometimes a second, slower one wandering in the stereo field or the reverb; now and then a struck or
-plucked sound gets its brightness on the velocity; never ANIMA or CALIGULA, whose sounds already move by
-themselves. A new sound with none clears the track's modulation; a preset loaded draws the same modulation again.
+**SHIFT + SEQ** draws a random modulation for the chosen track; press again for another. HOME also draws one with
+some sounds, mostly slow FM, HIVE, BAYAREA and DRUID sounds. Sessions keep each track's modulation.
 
 ### Presets
 
-Each engine has **64 presets**, P1 to P64, for the sounds you want to keep and bring back on any track.
-Hold **SHIFT** and press **ARP**: the PRESETS page of the chosen track's engine opens, four slots a page.
-**PRESETS** turns through them; a slot holding a sound shows its number in red and the sound's name, an
-empty one EMPTY in grey.
+Each engine has **64 presets**. **SHIFT + ARP** opens the PRESETS page of the chosen track's engine; **PRESETS**
+chooses a slot.
 
-- **ARP held** (or SAVE held) saves the track's sound into the slot chosen. Over a sound already there it asks
-  **OVERWRITE?** first, on **NO** until PRESETS turns it to YES; ARP (or SAVE) answers.
-- **ARP** (or SAVE) pressed loads the slot chosen into the track (which crossfades to it, as to a new sound) and
-  goes back to playing.
+- **ARP held** (or SAVE held) saves the track's sound there, asking before overwriting.
+- **ARP** (or SAVE) loads it and goes back to playing.
 
-A preset keeps what draws the sound again, exactly — its seed, its path and the generation of the
-generators that drew it — and its level: all 256 take one sector of flash, beside the sessions. Saving
-erases flash, which silences the audio for a moment, as a session save does.
+Saving silences the audio for a moment.
 
 ### Sessions
 
-The FM-1 always starts with no session loaded. There are 64 slots, numbered 1–64.
+There are 64 session slots; the FM-1 starts with none loaded. A session stores the whole machine: every track's
+sounds, settings, latched notes and loops, the scale, the delay and the reverb. Sessions saved under an older
+Tonitor load with the same sounds after an update. Saving silences the audio for a moment.
 
-A session stores in full the sound of the engine each track is on, and the others as the seed that
-made them and their level (the same sounds, drawn again at once), so a session usually takes one 4 KB
-sector of flash. A session is the whole machine: every track's engine and its seven sounds, its path, octave, level, pan,
-reverb send, filter, granulator (and the character it was drawn with), crush, distortion, envelopes, latched notes and loops (playing or stopped, each overdub in or out); the scale and root, the reverb, and
-the track chosen. They are kept in the
-FM-1's flash, in its user data area (**saving overwrites any projects, presets or samples another firmware
-left there**): dozens of typical sessions, at least ten even with six full loops.
-A session also keeps the seeds its sounds were made from, with the path and the *generation* of the
-generators that drew them: every generation is kept exactly as it was (a test checks thousands of sounds of
-each), so sessions and presets saved under an older Tonitor load with the same sounds after an update that
-brings new generators. Erasing flash silences the audio for a moment: a save
-uses blank flash when there is some, and the FM-1 blanks free flash by itself while nothing sounds.
-
+Sessions are kept in the FM-1's flash: **saving overwrites any projects, presets or samples another firmware left
+there**.
 
 **Backing up.** The [backup page](https://nzimas.github.io/tonitor/backup.html) (desktop Chrome, Edge or Opera,
-over USB MIDI; Tonitor build 47 or later) copies every session and both preset tables from the FM-1 to a file on the
-computer, and writes them back from that file — before trying another firmware, which may erase or overwrite
-them, and after reinstalling Tonitor. Each record is copied whole and checked (its head and body CRCs) before it
-replaces the one with the same number; the others on the FM-1 are kept. The FM-1 shows RESTORED and the number as
-each one arrives.
+over USB MIDI; Tonitor build 47 or later) copies every session and preset to a file on the computer and writes
+them back. Use it before trying another firmware and after reinstalling Tonitor.
+
 ### The granulator
 
-Each track keeps the last half second of its own sound (at 22 kHz, 8-bit mu-law: a little grit is part of
-it) and plays grains out of it, after its filter. Each track's granulator has a **character of its own**,
-drawn at random when the FM-1 starts and every time a session is loaded: the intervals its grains are
-pitched to, how often they reverse, stutter, drop out or freeze, the shape of its scattered grains, how far
-its feedback and darkening go, how it drifts. The knob's position is saved with the session; the character
-is drawn anew. When the track's notes end, its grains ring on for about two seconds.
+Each track's granulator plays grains from the last half second of the track's sound (KNOB 2). Off in the middle;
+to the left, long, overlapping, drifting grains, sometimes frozen; to the right, short grains, scattered,
+reversed and stuttered. Each track's granulator has a character of its own, drawn anew at power-on and when a
+session is loaded. Grains ring on for about two seconds after the notes end.
 
 ### The distortion
 
-Each track has a distortion, set with **SHIFT + KNOB 3** (0–100; 0 is off). It comes after the track's filter,
-granulator, crush and limiter, and before its level, pan and sends, so the delay and the reverb receive the
-distorted sound.
-
-- Two gain stages in series: the first symmetric (odd harmonics), the second asymmetric (even harmonics).
-  The amount sets the drive into the first stage (×0.5 to ×32, up to +36 dB) and the second stage's gain and
-  bias.
-- A bias in proportion to the input's own level is added before the first stage, so the clipped wave stays
-  asymmetric and keeps its even harmonics at any drive. At low amounts the second harmonic dominates; higher
-  amounts add more harmonics (on a sine, up to 14 of the first 15 above −60 dB).
-- The highs are raised 6 dB before the stages and lowered 6 dB after, so the mids and highs distort more than
-  the bass. The stages run at twice the sample rate to reduce aliasing. A low-pass after them goes from 16 kHz
-  down to 6.5 kHz as the amount goes up.
-- The output level is matched to the dry signal's RMS level (measured over about 0.2 s), so turning the
-  amount up changes the drive and the harmonics, not the loudness.
-
-Stored in sessions and copied with the track.
+**SHIFT + KNOB 3**, 0–100 (0 is off): a two-stage drive after the track's filter, granulator and crush, before its
+sends, so the delay and the reverb receive the distorted sound. Its output is matched to the dry level, so the
+amount changes the tone, not the loudness.
 
 ### The delay
 
-A master delay, mono, placed before the reverb: each track's delay send (SHIFT + KNOB 4) feeds it, its echoes
-go to both sides of the master, and half of their level also goes into the reverb, so the echoes are
-reverberated. Its line holds 2 seconds at 22.05 kHz in 8 bits (μ-law, as the granulator's), so the repeats are
-slightly dark and grainy.
+A master delay, before the reverb, fed by each track's delay send (**SHIFT + KNOB 4**); half its echoes also go
+into the reverb. The repeats are slightly dark and grainy. **SEQ** once opens its page:
 
 | Parameter | |
 | --- | --- |
-| **TIME** | 20 ms to 2 s, on a logarithmic scale (shown in ms). Turning it glides the delay over about 0.1 s, so the repeats bend in pitch rather than click |
-| **FEEDBACK** | how much of each repeat comes back: 0 (one repeat) to 0.95 |
-| **DAMP** | a low-pass in the feedback path: each repeat darker than the one before |
+| **TIME** | 20 ms to 2 s; turning it bends the repeats' pitch |
+| **FEEDBACK** | from one repeat to nearly endless |
+| **DAMP** | each repeat darker than the one before |
 | **MIX** | the level of the echoes |
-
-The delay's parameters and every track's send are kept in sessions; copying a track copies its send.
 
 ### The reverb
 
-A plate after Jon Dattorro (1997): predelay, input diffusion, and a figure-of-eight tank whose two
-allpasses sweep slowly out of step, so the tail stays in motion and never rings. Each track sends to it
-after its level; the reverb's return is added to the mix before the master.
+A plate reverb (after Jon Dattorro), fed by each track's reverb send (**KNOB 4**). **SEQ** twice opens its page:
 
-| | | at the start |
+| | | At the start |
 | --- | --- | --- |
-| **SIZE** | the room: every delay 0.5–1.25 times Dattorro's (turning it bends the tail, gently) | 70 |
-| **DECAY** | the time to fall 60 dB, 0.4 s to about 25 s, whatever the size | 65 (about 3.5 s) |
-| **DAMP** | how fast the highs die in the tail | 40 |
-| **MIX** | the reverb's return level, ×0 to ×4 | 50 (×1) |
-
-Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
+| **SIZE** | the room | 70 |
+| **DECAY** | 0.4 s to about 25 s | 65 (about 3.5 s) |
+| **DAMP** | how fast the highs die | 40 |
+| **MIX** | the reverb's level | 50 |
 
 ### USB audio
 
-Connected to a computer (or a phone or tablet that takes USB audio), the FM-1 is also a **USB audio input**:
-choose "FM-1 Tonitor" as the input in the recording program. It carries the master output, stereo, 16-bit, at
-**48 kHz** by default (resampled from the 44.1 kHz the FM-1 renders at) or **44.1 kHz** (as rendered, a little
-less CPU), as the recording program or the computer's audio settings choose. It is a class-compliant device
-(macOS, Windows, Linux, and phones and tablets that take USB audio). The stream is taken before the **MASTER** knob,
-so the knob sets the headphones' level and not the recording's. No driver is needed; MIDI goes on over the same
-cable.
+Connected to a computer, phone or tablet, the FM-1 is also a class-compliant **USB audio input** ("FM-1
+Tonitor"): the master output, stereo, 16-bit, at 48 or 44.1 kHz. It is taken before **MASTER**, which sets only
+the headphones' level. No driver is needed, and MIDI works over the same cable.
 
 ## The engines
 
 ### FM — six operators, DX7 style
 
-The classic six-operator FM (msfa, the core of Dexed: 32 algorithms, rate/level envelopes, ratio or
-fixed frequencies, feedback, LFO, pitch envelope). HOME draws a patch from one of twenty-five families of
-sound objects (since build 22 with their operators on the ratios they were designed with — before, a slip in the
-generator put nearly every ratio near an even multiple and the patches two octaves above the key; sounds
-saved then come back as they were):
+Six-operator FM after the DX7 (msfa, the core of Dexed). HOME draws a patch from one of these families and
+levels it to one loudness:
 
-| Family | After |
+| Family | |
 | --- | --- |
-| **METAL** | bells and gongs: many carriers on inharmonic ratios, the high partials dying first |
-| **DRONE** | spectral drones: near-harmonic pairs detuned to beat, an index wandering over minutes |
-| **BRUIT** | noises: feedback and high ratios scattered by a sample-and-hold LFO |
-| **IMPACT** | struck bodies of several kinds: thuds, wooden knocks, metal hits, drum skins (membrane-like partials), debris (heavy feedback, fixed-frequency modulators); the modulators dying before the carriers; the octave sometimes moved; the pitch falling to the note on about one sound in ten |
-| **ITERATIF** | iterative objects: a sound pulsed by its own LFO, square or random |
-| **GLISSE** | glissandi: a pitch envelope travelling octaves, slowly (from build 56 drawn as part of WARP) |
-| **SPECTRE** | a spectral arpeggio: rich tones a few cents apart whose beating lifts one harmonic after another |
-| **ABYSS** | sub-bass rumble folded by feedback, breathing slowly |
-| **FRICTION** | creaking: sub-audio fixed-frequency modulators and random pitch |
-| **CHOIR** | vowels: carriers on the harmonics nearest two formants, a late vibrato |
-| **BOWED** | a bowed string: a saw from feedback, the bow's pressure rising with the swell |
+| **METAL** | bells and gongs, inharmonic |
+| **DRONE** | spectral drones, slowly beating |
+| **BRUIT** | noises |
+| **IMPACT** | struck bodies: thuds, knocks, metal hits, drum skins, debris |
+| **ITERATIF** | a sound pulsed by its own LFO |
+| **SPECTRE** | a spectral arpeggio: harmonics lifted one after another by beating |
+| **ABYSS** | sub-bass rumble, breathing slowly |
+| **FRICTION** | creaking |
+| **CHOIR** | vowels |
+| **BOWED** | a bowed string |
 | **HOLLOW** | odd harmonics only: a dark pipe |
-| **BLOOM** | a tone that opens over seconds and half closes again |
-| **TIDE** | three stacks crossfading, one fading as the next swells, under a slow tide of level |
-| **SHARDS** | a tone broken by random steps of pitch and chopped by a square |
-| **STATIC** | ring-modulated bands from modulators nailed to audio frequencies |
+| **BLOOM** | a tone opening over seconds |
+| **TIDE** | three stacks crossfading under a slow tide |
+| **SHARDS** | a tone broken by random pitch steps and chopped |
+| **STATIC** | ring-modulated bands |
 | **WIND** | breath and gusts over a soft drone |
-| **PLUCK** | plucked strings, bright or dark: the modulators die at once (the attack's brightness), the carriers die away, higher strings quicker |
-| **MALLET** | struck bars — marimba, vibraphone, kalimba: a high modulator's knock, gone at once, the bar ringing on |
-| **WARP** | anything: ratios anywhere, partials nailed to frequencies, the pitch bent about by its envelope; from build 56 now and then GLISSE's long glide (sometimes with a siren) or RUBBER's bounce, or both, and RUBBER's plain ratios |
-| **GLITCH** | broken, mechanical sounds of several kinds: the level chopped by a square or random LFO, a crunch of heavy feedback with fixed-frequency modulators, the pitch thrown between steps by its envelope, a slow uneven wobble, and now and then a gentle sample-and-hold on the pitch |
-| **RUBBER** | low ratios and the pitch bouncing in at every note: up past it, back under, onto it (from build 56 drawn as part of WARP) |
-| **SHAPER** | a carrier nailed to 1–19 Hz under modulators that follow the key: it works as a wave shaper, the tone rolling between odd and even harmonics a few times a second, at the same pace up and down the keyboard |
-| **LADDER** | four to six carriers on a ladder of ratios (near unison, an octave stack, uneven steps), their envelopes staggered: the partials enter, or die, one by one |
-| **REVERSE** | a sound that swells for as long as the key is held and stops when it is let go: tape run backwards |
-| **CREEP** | a held note leaving its pitch slowly, over seconds to tens of seconds |
-| **CLANG** | bells as the DX7's programmers made them: carriers turned by modulators on ratios off their harmonics, the index dying with the note |
+| **PLUCK** | plucked strings |
+| **MALLET** | struck bars: marimba, vibraphone, kalimba |
+| **WARP** | anything: odd ratios, long glides, bouncing pitch |
+| **GLITCH** | broken, mechanical sounds |
+| **SHAPER** | a tone rolling between odd and even harmonics a few times a second |
+| **LADDER** | partials entering or dying one by one |
+| **REVERSE** | a sound swelling while the key is held: tape run backwards |
+| **CREEP** | a held note slowly leaving its pitch |
+| **CLANG** | DX7-style bells |
 
-From build 56 (generation 6) GLISSE and RUBBER are no longer drawn as families of their own: WARP has their glides
-and bounces (SHIFT + PRESETS steps over them). SHAPER, LADDER, REVERSE, CREEP and CLANG were learned from a
-collection of 9,606 DX7 voices (the idioms their programmers used that the other families do not make; each
-patch is a new one of that kind, never one of the collection's voices), after the SMK-37 port of Tonitor.
-
-Each patch is then shaped with care: modulators on high ratios turned down (their sidebands alias and
-scream), the brightness scaled down the keyboard so high notes are not shrill nor low ones muddy, rate
-scaling on the carriers. HOME draws several patches, measures each, and keeps one whose brightness suits
-the track's path (darker on AMBIENT, brighter on EXPERIMENTAL) and that is not of the family the track had.
-
-Since 0.29 (generation 3) a patch may also be made plucked whatever its family, have a modulator moved to
-another ratio, or an operator detuned against the rest; the last five families are drawn only from then.
-About half the patches are then bent once more, gently (an operator detuned to beat, an envelope turned
-over to grow as it holds, the LFO waiting and then moving the timbre, an octave down, more feedback, a
-modulator's ratio moved to a neighbour, a partial nailed to a frequency).
-Every patch is rendered offline as it is made and given the gain that brings it to one loudness.
+GLISSE and RUBBER, families of older builds, are now part of WARP; sounds saved with them load as they were.
 
 ### ANIMA — a lo-fi synthesizer played by a simulated hand
 
-ANIMA is the lo-fi engine: each voice runs at half the sample rate (22.05 kHz, so nothing above 11 kHz),
-its samples drawn out to the full rate by straight lines between them. Its pitches, rates and filters are
-scaled to sound where they would at the full rate; what goes is the top octave of air — and half of the
-chip's time, so more voices sound at once.
-
-A fixed-point port of the *anima* opcode from Vascular, rebuilt for the FM-1. While a key is held, a
-simulated finger rests on a virtual surface and drags one figure after another — orbits, figures of
-eight, scribbles, slow glides, now and then a flick — pressing in slow swells, and now and then lifting
-to land elsewhere. A ghost finger comes and goes on an irregular clock. Where the finger is, how hard it
-presses, how fast it moves and how long it has been down move the timbre, never the pitch.
-
-The voice: two wavetable oscillators (24 band-limited single cycles), an FM pair, a stack of copies, a
-grain cloud, a filtered noise, a resonant filter, a wavetable tremolo; then the hand's chain: a
-downsampler, a waveshaper, a phaser, a second filter and a comb resonator tuned to the note. Each new
-sound is a *design*: which of these are in, on which waveforms, and for every parameter which gesture
-moves it, over what range, along what curve, plus a mod matrix of three to seven routes and Anima's
-eight sliders, drawn — often far from their middle. Twenty-two kinds: **HAZE**, **VOYAGE**, **GLASS**,
-**BELLS**, **GOLDEN** (Anima's own) and **BREATH**, **GRIT**, **SWARM**, **TIDE** (waves of noise over a low
-drone), **CHOIR** (vowels, a formant the hand moves), **SHARDS** (glass grains scattered and crushed),
-**BOWL** (a beating inharmonic hum in a ringing comb), **DUST** (sparse crackle over a dark drone),
-**MACHINE** (a pulsing, folded mechanism), and since build 29 **PLUCK** (a plucked string: a burst through the
-comb tuned to the note, dying away), **REED** (nasal, through a formant the hand moves, a breath in it),
-**FOG** (a stack under fog, a slow phaser drifting through it), **ORGAN** (drawbars, a rotary tremolo, a
-little drive), **BITS** (pulses in few bits: the rate crushed and dragged about, folded), **DRIFT** (two saws
-drifting against each other, a chorus the hand moves), **MURMUR** (a dark cloud of noisy grains) and
-**HOWL** (noise through a resonance so sharp it whistles, swept by the hand). Every kind draws wider since
-0.29 (generation 3): any of the 24 waveforms, wider intervals and ratios, a detuning, now and then a plucked
-envelope or a slow swell, another way for the hand to move, a pulsing tremolo, a crushed rate or a sharp
-resonance. The filter follows the keyboard, so low notes are not muffled
-nor high ones shrill; the second oscillator's interval suits the path (consonant on AMBIENT, anything on
-EXPERIMENTAL); and an AMBIENT sound nearly always has a resonant space to ring in.
-
-In Vascular a design plays up to six fingers, each a voice; here a track has one voice, so the hand has
-one finger on the sound.
+A port of the *anima* opcode from Vascular, at half the sample rate. While a key is held, a simulated finger drags
+figures across a virtual surface; where it is, how hard it presses and how fast it moves change the timbre, never
+the pitch. HOME draws one of twenty-two kinds: **HAZE**, **VOYAGE**, **GLASS**, **BELLS**, **GOLDEN**,
+**BREATH**, **GRIT**, **SWARM**, **TIDE**, **CHOIR**, **SHARDS**, **BOWL**, **DUST**, **MACHINE**, **PLUCK**,
+**REED**, **FOG**, **ORGAN**, **BITS**, **DRIFT**, **MURMUR** and **HOWL**.
 
 ### CALIGULA — an organism
 
-The third engine, after the architecture of SOMA's LYRA-8 as Mike Moreno's LIRA-8 emulates it (BSD
-licence), rebuilt for the FM-1 and bent towards dark, restless textures. Eight oscillators in four pairs
-on two sides; each a triangle that its pair's SHARP pushes towards a square; each with a **sensor** and an
-envelope, slow (a long swell, a longer fall) or fast; each pair frequency-modulated at audio rate by its
-partner, the other pair of its side, a pair of the other side or the **total feedback** (the whole
-organism, saturated, fed back in). A **hyper LFO** of two LFOs (alone, AND, OR, XOR) opens and closes the
-modulation and gates chosen pairs into irregular rhythms; a short modulated delay (two lines, ~35 ms)
-choruses, flanges or warps it; a drive.
-
-A CALIGULA track is **played like the others**: the white keys play the scale's notes, and it is
-**silent until a key is down**. A key wakes the organism at that note; a second key on top moves the
-whole organism to the new note at once (a snap, not a glide), and letting go of it goes back to the key
-still held; letting go of the last key lifts the hand and the organism rings out. It is **rooted**:
-tuned around the note played, in intervals of it (octaves, fifths, unisons and semitone clusters that
-beat, tritones, the depths). The hyper LFO moves timbre, never pitch: no sirens.
-
-Nobody touches the eight plates: **a simulated hand** does, while a key is held. Each species has its own
-hand: how often it touches, how long a finger stays, how many fingers at most, its favourite plates,
-quick taps against long holds. The first finger stays down until the key is let go, so the sound never
-drops out under a held key. Around the hand the organism has a life of its own: the modulation depths
-and the sharpness wander, oscillators fire in **bursts** at irregular times, and now and then the
-feedback and the drive **surge** for a moment. A pair's envelope may be slow: a swell of seconds, a release of up to
-nine seconds after the key is let go.
-
-The hand often has a **phrase**: two to four plates it keeps coming back to, varied now and then, often on
-a pulse of its own (long, short, short, longer) — so it plays like someone rather than like chance. A pair
-the hyper LFO's gates never close stays under it all. **HOME** draws a new organism from ten species, tuned
-on one of ten sets of intervals (pillars of octaves and fifths, semitone clusters, the depths, the
-harmonics, unisons, tritones, fourths, a minor seventh, open fifths, a quarter-tone cluster):
+After SOMA's LYRA-8, as Mike Moreno's LIRA-8 emulates it (BSD licence): eight cross-modulating oscillators in four
+pairs, a total feedback, gating LFOs and a short modulated delay, played by a simulated hand that touches the
+plates while a key is held. It is silent until a key is down and is tuned around the note played; a second key
+moves it to the new note, and letting go of the last key lets it ring out. It is one organism per track, outside
+the twelve voices. HOME draws one of ten species:
 
 | Species | |
 | --- | --- |
 | **SPORE** | slow swells, held drones, breathing; low |
 | **THORN** | sharp, deep FM, driven, bursting often |
-| **HIVE** | the hyper LFO quick and gating: irregular rhythms, bursts |
-| **CARRION** | the depths, heavy total feedback, the delay warped by the voices, surges |
+| **HIVE** | quick gates: irregular rhythms, bursts |
+| **CARRION** | the depths, heavy feedback, a warped delay, surges |
 | **VEIL** | mostly triangles, light modulation: the calmest |
 | **RUST** | driven, cross-modulated, surging, sometimes rhythmic |
-| **LITANY** | a slow choir: unisons and octaves beating, nothing sharp, a hand that stays |
-| **UNDERTOW** | deep: heavy feedback and a warped delay pulling it under, slow surges |
-| **WIRE** | high and sharp, clusters and quarter tones, a quick hand tapping, bursts |
+| **LITANY** | a slow choir of unisons and octaves |
+| **UNDERTOW** | deep, heavy feedback, slow surges |
+| **WIRE** | high and sharp, clusters, a quick hand tapping |
 | **MOTH** | soft triangles fluttering through the gates, on a pulse |
-
 
 ### RUSSOLO — noise, logic and broken buffers
 
-The fourth engine re-makes the techniques of Robert Heel's Noisferatu (GPL-3.0) in fixed point, for the
-keys. It runs at a third of the sample rate (about 14.7 kHz) in 10-bit values, each held until the next —
-the grit of a small DAC — then reduces its bits and holds its samples further as the sound says.
-
-A RUSSOLO track is **played like the others** and is **silent until a key is down**: the key opens an
-envelope and sets the pitch (the oscillators' frequency, the speed a buffer is read at, the rate noise is
-sampled at); a second key on top moves it there at once; letting go of the last key lets it fade. Like
-CALIGULA it is one organism a track, outside the pool of voices. **HOME** draws one of seventeen kinds:
+The techniques of Robert Heel's Noisferatu (GPL-3.0), at a low sample rate and bit depth. Like CALIGULA it is
+silent until a key is down, one organism per track, and a key sets its pitch. HOME draws one of seventeen kinds;
+the first two macros are the kind's own parameters, the others **CRUSH** and **RANDOMNESS**.
 
 | Kind | |
 | --- | --- |
-| **HOLD** | sample-and-hold noise, its rate from the key |
-| **DUST** | random clicks through a low-pass that follows the key |
-| **GATES** | noise opened and closed by two triangles, one wandering off the other |
-| **CRACKLE** | sparse clicks ringing on short pitched decays, over hiss |
+| **HOLD** | sample-and-hold noise |
+| **DUST** | random clicks through a low-pass |
+| **GATES** | noise opened and closed by two triangles |
+| **CRACKLE** | sparse clicks ringing over hiss |
 | **NOR**, **XOR** | two oscillators combined bit by bit |
 | **RING** | two oscillators multiplied |
-| **CASCADE** | squares modulating squares, a sub-octave below |
-| **CLANG** | two triangles at an inharmonic ratio, XOR'd; the ratio redrawn when two clocks meet |
-| **CHUNKS** | a generated buffer of noise, saw and silent chunks, read at the key's speed and rebuilt in parts |
-| **JUMP** | the buffer read with jumps at random |
+| **CASCADE** | squares modulating squares |
+| **CLANG** | two triangles at an inharmonic ratio, XOR'd |
+| **CHUNKS** | a buffer of noise, saw and silence, read at the key's speed |
+| **JUMP** | the buffer read with random jumps |
 | **WANDER** | a window wandering through the buffer |
-| **BEND** | an address bit of the buffer forced to 0 or 1, flipped or held; which and how change on a clock |
-| **QUAD** | four such bendings at once, each switched on and off by chance |
-| **BLIPS** | decaying triangles fired by chance on the key's harmonics |
-| **WALK** | a random walk over a scale's steps from the key |
-| **CHORD** | triangles on the key (minor, major, open fifths or suspended), slowly beating and swelling |
-
-Each kind has two parameters of its own, the first two macros; **CRUSH** and **CHAOS** are the other two.
-Its level is measured when it is drawn, and never raised so far that its loudest click could clip.
+| **BEND** | the buffer's addresses bent on a clock |
+| **QUAD** | four such bendings, switched by chance |
+| **BLIPS** | decaying triangles on the key's harmonics |
+| **WALK** | a random walk over a scale from the key |
+| **CHORD** | triangles on a chord, slowly beating |
 
 ### DRUID — strings and resonant bodies
 
-The fifth engine is a fixed-point port of the resonators of **Mutable Instruments Rings** by Émilie Gillet
-(MIT licence). It plays from the shared pool of voices, like FM and ANIMA. Each kind is one of Rings'
-resonators and an exciter:
-
-| Resonator | |
-| --- | --- |
-| **String** | a Karplus-Strong string: a delay line read with Hermite interpolation, damped by a short FIR filter (brightness) and a state-variable low-pass, its decay set as a time to −60 dB. Dispersion (STRUCTURE) stretches the partials with an all-pass stage, adds noise to the period near the top, or below a quarter of the range bends the bridge so the string buzzes. The output is picked up at the position along the string |
-| **Sympathetic strings** | a string and three more tuned to intervals of its note (octaves, fifths, a twelfth, chosen by STRUCTURE), driven only by the first string's sound; their pickup positions drift slowly |
-| **Modal** | up to 16 two-pole resonators at the partials of a bar or plate, stretched or squeezed by STRUCTURE; each partial's level depends on the position |
-
-| Exciter | |
-| --- | --- |
-| **Pluck** | Rings' plucker: a burst of noise as long as the position's share of the period, through a comb filter and a low-pass |
-| **Strike** | a short pulse, longer and softer as the brightness goes down |
-| **Bow** | noise for as long as the key is held, swelling in and dying away when released |
-| **Dust** | random impacts for as long as the key is held |
+A port of the resonators of Mutable Instruments Rings by Émilie Gillet (MIT licence): strings, sympathetic
+strings and modal bodies, plucked, struck, bowed or rattled. Letting go of a key damps the sound by an amount set
+per sound.
 
 | Kind | Resonator | Exciter |
 | --- | --- | --- |
@@ -810,92 +538,43 @@ resonators and an exciter:
 | **BOWL** | modal | bow |
 | **PLATE** | modal | dust |
 
-AMBIENT favours BOWED, HARP, DRONE, BELL and BOWL, with long decays that carry on after the key is released;
-EXPERIMENTAL favours RATTLE and PLATE, with shorter decays, faster dust, extreme positions and a stronger damping
-when the key is released. Releasing a key damps the sound by an amount set per sound, from ringing on to stopping
-short. Each voice's delay lines are 16-bit and use the memory an ANIMA voice would use: a string reaches
-down to about 29 Hz, and sympathetic strings that would not fit their shorter lines are tuned an octave up.
-
 ### BAYAREA — a West Coast voice
 
-The sixth engine is a fixed-point port of the bayarea opcode of Vascular, contributed by its author. It plays
-from the shared pool of voices, like FM, ANIMA and DRUID. Each voice has:
-
-- an oscillator that morphs from sine through triangle and square to saw (SHAPE), its frequency modulated
-  linearly, through zero, by two sines at ratios of it (0.66 and 3.3 by default, other ratios on some sounds),
-  each ratio wandering slightly and slowly;
-- a wavefolder (FOLDS), reflecting the wave back into range;
-- a 12 kHz smoothing low-pass and a trace of noise;
-- either a **low-pass gate**, where a resonant low-pass and an amplifier are struck together by one-shot
-  envelopes (an attack of 2–3 ms and a decay), or a **sustaining envelope** over two resonant low-passes (an
-  attack while the key is held, a release when it is let go). The filters sweep from 300 Hz to the sound's peak
-  frequency, higher for louder notes;
-- a saturating output stage (tanh, then a soft clip) with its own drive;
-- a bank of three resonators (508, 270 and 1153 Hz, ringing for 1–1.4 s), mixed in by the sound's amount;
-- an LFO (triangle, ramp, square or random steps) that moves the shape, the folds, the two FM depths, the
-  attack, the peak, the decay and the resonator mix, by amounts drawn with the sound.
-
-Changed from the opcode: the square and saw are band-limited with polyBLEP instead of being summed from 44
-partials (too costly for this chip), and the opcode's reverb is replaced by the track's sends to the master
-delay and reverb, keeping only its resonator bank.
+A port of the bayarea opcode of Vascular: an oscillator from sine to saw, frequency-modulated by two sines, a
+wavefolder, then a low-pass gate (struck) or a sustaining envelope over resonant low-passes, a drive and a bank of
+resonators, all moved by an LFO.
 
 | Kind | Envelope | |
 | --- | --- | --- |
-| **BONGO** | gate | low peak, short decay, little folding |
-| **PLUCK** | gate | brighter, square to saw, short to medium decay |
-| **CHIME** | gate | the upper modulator deep, long decay, resonators |
+| **BONGO** | gate | low, short decay |
+| **PLUCK** | gate | brighter, short to medium decay |
+| **CHIME** | gate | long decay, resonators |
 | **FOLDED** | gate | heavy folding |
-| **SWELL** | sustain | slow attack (0.3–3 s), long release |
-| **DRONE** | sustain | slower attack (0.5–4 s), the lower modulator deep, long release |
-
-AMBIENT favours BONGO, CHIME, SWELL and DRONE; EXPERIMENTAL favours PLUCK and FOLDED, with more drive and folding
-and other FM ratios more often.
+| **SWELL** | sustain | slow attack, long release |
+| **DRONE** | sustain | slower attack, long release |
 
 ### HIVE — a swarm of oscillators
 
-The seventh engine is a port of the SWARMER machine of DigiRust, contributed by its author, extended here with
-inharmonic and textural kinds. It plays from the shared pool of voices. Each voice has seven oscillators, and each
-sound draws, for every one of them:
-
-- its place relative to the note: the note itself, an octave or a fifth, a step of a cluster (quarter-tones,
-  seconds), or an inharmonic partial (the modes of a free bar, a bell's partials, a stretched harmonic series, or
-  ratios at random);
-- its share of the spread that DETUNE sets (symmetric, clustered, to one side, at random, or in pairs);
-- its wave, a position along sine, triangle, saw and square (neighbouring waves crossfaded);
-- its level, and which of three LFOs moves its pitch and its level, and at what phase. The LFOs' rates are drawn
-  too, from about 0.02 Hz to a few Hz depending on the kind; MOVEMENT scales their depth.
-
-The seventh oscillator is the main one, set against the other six by MIX. Each voice also has a slow noise on
-every oscillator's pitch; how closely it follows the key (fully for the melodic kinds, partly or hardly at all for
-the textural ones); noise; a ring modulation of the first oscillator by the main one; a 4-pole filter (two
-state-variable filters, low-pass, band-pass or high-pass) whose cutoff follows half the key's movement and is swept
-by its own envelope and by the first LFO; an ADSR envelope on the level; and a drive (tanh).
-
-Changed from DigiRust: the waves are computed as they play (the sine from its table, the triangle directly, the
-saw and square band-limited with polyBLEP) instead of read from band-limited tables, which would not fit in RAM
-here; the filter, envelopes and drive are Tonitor's own.
+A port of DigiRust's SWARMER, extended: seven oscillators per voice, each at its own place around the note (an
+octave, a fifth, a cluster step or an inharmonic partial), each moved by slow LFOs, through a filter with its own
+envelope.
 
 | Kind | |
 | --- | --- |
-| **SUB** | the main oscillator one or two octaves down, short attack; sometimes an octave up in the swarm |
-| **LEAD** | brighter, short attack, resonant |
-| **STAB** | short attack and decay, little or no sustain, a strong filter sweep; sometimes a fifth and an octave in the swarm |
-| **PAD** | slow attack (0.2–3 s), wide detune, long release; sometimes octaves in the swarm |
-| **DRONE** | slower attack, full sustain, long release (1.5–6 s); sometimes fifths and octaves stacked |
-| **WASH** | the slowest attack (0.8–5 s), the longest release (3–9 s), often noise and a moving filter |
-| **CLUSTER** | the oscillators at quarter-tone and semitone steps around the note, slowly beating |
-| **METAL** | inharmonic partials (bar, bell, stretched or random), struck: short attack, a long decay, often a ring modulation |
-| **SPECTRA** | inharmonic partials whose levels and pitches turn slowly (or shimmer), the key hardly followed: a spectrum evolving over seconds |
-| **GROUND** | two octaves down, a dense inharmonic cluster with noise, a slowly moving filter, driven: rumble |
-| **AIR** | filtered noise and one to seven high, drifting whistles, band-pass or high-pass, the filter swept: wind |
-| **TIDES** | the oscillators gliding apart and back by up to five semitones on slow LFOs, sometimes on inharmonic partials |
+| **SUB** | the main oscillator one or two octaves down |
+| **LEAD** | bright, short attack, resonant |
+| **STAB** | short, a strong filter sweep |
+| **PAD** | slow attack, wide detune, long release |
+| **DRONE** | slower attack, full sustain, long release |
+| **WASH** | the slowest attack and release, noise, a moving filter |
+| **CLUSTER** | quarter-tone and semitone steps, slowly beating |
+| **METAL** | inharmonic partials, struck |
+| **SPECTRA** | inharmonic partials turning slowly |
+| **GROUND** | two octaves down, a dense cluster with noise: rumble |
+| **AIR** | filtered noise and high whistles: wind |
+| **TIDES** | oscillators gliding apart and back |
 
-CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are meant for non-melodic, textural use. On GROUND and AIR the third
-macro is **NOISE** (the noise's level) instead of MIX.
-
-AMBIENT favours PAD, DRONE, WASH, SPECTRA and TIDES, and makes the LFOs slower and the sound darker, the attacks
-longer; EXPERIMENTAL favours STAB, CLUSTER, METAL, GROUND and AIR, and adds more noise to the pitches, more drive
-and, sometimes, a ring modulation.
+CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are for textures rather than melodies.
 
 # Building from source
 
