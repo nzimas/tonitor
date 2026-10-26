@@ -10,7 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=ab61317bf0">
+<link rel="stylesheet" href="css/site.css?v=907de1bb4c">
+<script src="js/manual.js?v=6b4f4a2af7" defer></script>
 </head>
 <body>
 <div class="layout">
@@ -42,12 +43,20 @@
   </aside>
   <div class="content">
     <main>
-<h1>Manual</h1>
-<p>Everything the FM-1 does under Tonitor. New here? Start with <a href="#playing-it">Playing it</a>; to install, see <a href="install.html">Install</a>.</p>
+<div class="manual">
+<h1 id="top">Manual</h1>
+<div class="mbar" role="search">
+<input type="search" id="msearch" placeholder="Search the manual" aria-label="Search the manual" autocomplete="off" aria-controls="mresults" aria-expanded="false">
+<a class="btn small" href="#contents">Contents</a>
+<a class="btn small" href="#top">Top</a>
+<div id="mresults" class="mresults" role="listbox" hidden></div>
+</div>
+<p>Everything the FM-1 does under Tonitor. New here? Start with <a href="#the-controls">The controls</a> and <a href="#playing-it">Playing it</a>; to install, see <a href="install.html">Install</a>.</p>
 <h2 id="not-a-groovebox">Not a groovebox</h2>
 <p class="big">No tempo, no steps, no patterns, no drum kit.</p>
 <p>Tonitor is for sound heard for itself: texture, grain, movement and slow transformation. You play drones, gestures and textures, layer them, loop them freely out of time with one another, and shape them while they play. It suits acousmatic and electroacoustic work as much as live ambient music, dark ambient above all.</p>
-<nav class="toc" aria-label="Contents">
+<nav class="toc" id="contents" aria-label="Contents">
+<a href="#the-controls">The controls</a>
 <a href="#playing-it">Playing it</a>
 <a href="#generative-paths" class="sub">Generative paths</a>
 <a href="#macros" class="sub">Macros</a>
@@ -80,6 +89,164 @@
 <a href="#bayarea-a-west-coast-voice" class="sub">BAYAREA — a West Coast voice</a>
 <a href="#hive-a-swarm-of-oscillators" class="sub">HIVE — a swarm of oscillators</a>
 </nav>
+<h2 id="the-controls">The controls</h2>
+<p>The numbers on the drawings are in the table below them; a number links to its row, and a row's number back to its drawing. The names are those printed on the FM-1. Black keys are counted from the left.</p>
+<figure class="fm1-fig" id="fig-panel">
+<div class="fm1-scroll"><svg class="fm1" viewBox="-70 -170 1085 565" role="img" aria-labelledby="fig-panel">
+<path d="M4,318 V44 A40,40 0 0 1 44,4 H956 A40,40 0 0 1 996,44 V318 Z" fill="#1d1d1f"/>
+<line x1="4" y1="318" x2="996" y2="318" class="cut"/>
+<rect x="50" y="250" width="220" height="50" rx="14" fill="#141415"/>
+<rect x="568" y="160" width="400" height="140" rx="14" fill="#141415"/>
+<rect x="292" y="44" width="256" height="256" rx="18" fill="#0b0b0c"/>
+<rect x="300" y="52" width="240" height="240" rx="4" fill="#141418" stroke="#45454a"/>
+<circle cx="105" cy="100" r="29" fill="#141415"/><circle cx="105" cy="100" r="24" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="105" y1="81" x2="105" y2="89" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="215" cy="100" r="29" fill="#141415"/><circle cx="215" cy="100" r="24" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="215" y1="81" x2="215" y2="89" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="105" cy="205" r="29" fill="#141415"/><circle cx="105" cy="205" r="24" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="105" y1="186" x2="105" y2="194" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="215" cy="205" r="29" fill="#141415"/><circle cx="215" cy="205" r="24" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="215" y1="186" x2="215" y2="194" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="610" cy="100" r="27" fill="#141415"/><circle cx="610" cy="100" r="22" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="610" y1="83" x2="610" y2="91" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="714" cy="100" r="27" fill="#141415"/><circle cx="714" cy="100" r="22" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="714" y1="83" x2="714" y2="91" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="818" cy="100" r="27" fill="#141415"/><circle cx="818" cy="100" r="22" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="818" y1="83" x2="818" y2="91" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<circle cx="922" cy="100" r="27" fill="#141415"/><circle cx="922" cy="100" r="22" fill="#2a2a2d" stroke="#45454a" stroke-width="2"/><line x1="922" y1="83" x2="922" y2="91" stroke="#d6d6d8" stroke-width="3" stroke-linecap="round"/>
+<rect x="60" y="258" width="90" height="34" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="170" y="258" width="90" height="34" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="582" y="174" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="645" y="174" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="708" y="174" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="771" y="174" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="834" y="174" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="897" y="174" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="582" y="236" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="645" y="236" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="708" y="236" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="771" y="236" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="834" y="236" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="897" y="236" width="54" height="48" rx="8" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<a href="#ctl-1" class="callout" data-n="1" aria-label="1"><polyline points="76,100 -40,100" class="lead"/><circle cx="76" cy="100" r="4.5" class="tip"/><circle cx="-40" cy="100" r="17" class="num"/><text x="-40" y="106.5">1</text></a>
+<a href="#ctl-2" class="callout" data-n="2" aria-label="2"><polyline points="215,71 215,-40" class="lead"/><circle cx="215" cy="71" r="4.5" class="tip"/><circle cx="215" cy="-40" r="17" class="num"/><text x="215" y="-33.5">2</text></a>
+<a href="#ctl-3" class="callout" data-n="3" aria-label="3"><polyline points="76,205 -40,205" class="lead"/><circle cx="76" cy="205" r="4.5" class="tip"/><circle cx="-40" cy="205" r="17" class="num"/><text x="-40" y="211.5">3</text></a>
+<a href="#ctl-4" class="callout" data-n="4" aria-label="4"><polyline points="194,185 160,152 -40,152" class="lead"/><circle cx="194" cy="185" r="4.5" class="tip"/><circle cx="-40" cy="152" r="17" class="num"/><text x="-40" y="158.5">4</text></a>
+<a href="#ctl-5" class="callout" data-n="5" aria-label="5"><polyline points="105,292 105,372" class="lead"/><circle cx="105" cy="292" r="4.5" class="tip"/><circle cx="105" cy="372" r="17" class="num"/><text x="105" y="378.5">5</text></a>
+<a href="#ctl-6" class="callout" data-n="6" aria-label="6"><polyline points="215,292 215,372" class="lead"/><circle cx="215" cy="292" r="4.5" class="tip"/><circle cx="215" cy="372" r="17" class="num"/><text x="215" y="378.5">6</text></a>
+<a href="#ctl-7" class="callout" data-n="7" aria-label="7"><polyline points="420,44 420,-40" class="lead"/><circle cx="420" cy="44" r="4.5" class="tip"/><circle cx="420" cy="-40" r="17" class="num"/><text x="420" y="-33.5">7</text></a>
+<a href="#ctl-8" class="callout" data-n="8" aria-label="8"><polyline points="610,73 610,-40" class="lead"/><circle cx="610" cy="73" r="4.5" class="tip"/><circle cx="610" cy="-40" r="17" class="num"/><text x="610" y="-33.5">8</text></a>
+<a href="#ctl-9" class="callout" data-n="9" aria-label="9"><polyline points="714,73 714,-40" class="lead"/><circle cx="714" cy="73" r="4.5" class="tip"/><circle cx="714" cy="-40" r="17" class="num"/><text x="714" y="-33.5">9</text></a>
+<a href="#ctl-10" class="callout" data-n="10" aria-label="10"><polyline points="818,73 818,-40" class="lead"/><circle cx="818" cy="73" r="4.5" class="tip"/><circle cx="818" cy="-40" r="17" class="num"/><text x="818" y="-33.5">10</text></a>
+<a href="#ctl-11" class="callout" data-n="11" aria-label="11"><polyline points="922,73 922,-40" class="lead"/><circle cx="922" cy="73" r="4.5" class="tip"/><circle cx="922" cy="-40" r="17" class="num"/><text x="922" y="-33.5">11</text></a>
+<a href="#ctl-12" class="callout" data-n="12" aria-label="12"><polyline points="609,174 609,150 566,150 566,-95" class="lead"/><circle cx="609" cy="174" r="4.5" class="tip"/><circle cx="566" cy="-95" r="17" class="num"/><text x="566" y="-88.5">12</text></a>
+<a href="#ctl-13" class="callout" data-n="13" aria-label="13"><polyline points="672,174 672,-95" class="lead"/><circle cx="672" cy="174" r="4.5" class="tip"/><circle cx="672" cy="-95" r="17" class="num"/><text x="672" y="-88.5">13</text></a>
+<a href="#ctl-14" class="callout" data-n="14" aria-label="14"><polyline points="735,174 735,150 750,150 750,-95" class="lead"/><circle cx="735" cy="174" r="4.5" class="tip"/><circle cx="750" cy="-95" r="17" class="num"/><text x="750" y="-88.5">14</text></a>
+<a href="#ctl-15" class="callout" data-n="15" aria-label="15"><polyline points="798,174 798,150 782,150 782,-140" class="lead"/><circle cx="798" cy="174" r="4.5" class="tip"/><circle cx="782" cy="-140" r="17" class="num"/><text x="782" y="-133.5">15</text></a>
+<a href="#ctl-16" class="callout" data-n="16" aria-label="16"><polyline points="861,174 861,-95" class="lead"/><circle cx="861" cy="174" r="4.5" class="tip"/><circle cx="861" cy="-95" r="17" class="num"/><text x="861" y="-88.5">16</text></a>
+<a href="#ctl-17" class="callout" data-n="17" aria-label="17"><polyline points="924,174 924,150 968,150 968,-95" class="lead"/><circle cx="924" cy="174" r="4.5" class="tip"/><circle cx="968" cy="-95" r="17" class="num"/><text x="968" y="-88.5">17</text></a>
+<a href="#ctl-18" class="callout" data-n="18" aria-label="18"><polyline points="609,284 609,372" class="lead"/><circle cx="609" cy="284" r="4.5" class="tip"/><circle cx="609" cy="372" r="17" class="num"/><text x="609" y="378.5">18</text></a>
+<a href="#ctl-19" class="callout" data-n="19" aria-label="19"><polyline points="672,284 672,372" class="lead"/><circle cx="672" cy="284" r="4.5" class="tip"/><circle cx="672" cy="372" r="17" class="num"/><text x="672" y="378.5">19</text></a>
+<a href="#ctl-20" class="callout" data-n="20" aria-label="20"><polyline points="735,284 735,372" class="lead"/><circle cx="735" cy="284" r="4.5" class="tip"/><circle cx="735" cy="372" r="17" class="num"/><text x="735" y="378.5">20</text></a>
+<a href="#ctl-21" class="callout" data-n="21" aria-label="21"><polyline points="798,284 798,372" class="lead"/><circle cx="798" cy="284" r="4.5" class="tip"/><circle cx="798" cy="372" r="17" class="num"/><text x="798" y="378.5">21</text></a>
+<a href="#ctl-22" class="callout" data-n="22" aria-label="22"><polyline points="861,284 861,372" class="lead"/><circle cx="861" cy="284" r="4.5" class="tip"/><circle cx="861" cy="372" r="17" class="num"/><text x="861" y="378.5">22</text></a>
+<a href="#ctl-23" class="callout" data-n="23" aria-label="23"><polyline points="924,284 924,372" class="lead"/><circle cx="924" cy="284" r="4.5" class="tip"/><circle cx="924" cy="372" r="17" class="num"/><text x="924" y="378.5">23</text></a>
+</svg></div>
+<figcaption>The panel (1–23).<span class="narrow"> Swipe sideways to see all of it.</span></figcaption>
+</figure>
+<figure class="fm1-fig" id="fig-keys">
+<div class="fm1-scroll"><svg class="fm1" viewBox="-20 255 1040 430" role="img" aria-labelledby="fig-keys">
+<path d="M4,318 V580 A40,40 0 0 0 44,620 H956 A40,40 0 0 0 996,580 V318 Z" fill="#1d1d1f"/>
+<line x1="4" y1="318" x2="996" y2="318" class="cut"/>
+<rect x="36" y="332" width="928" height="256" rx="18" fill="#141415"/>
+<rect x="54.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="110.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="167.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="223.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="280.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="336.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="393.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="449.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="506.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="562.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="619.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="675.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="732.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="788.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="845.2" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="901.7" y="469.6" width="44.1" height="108.8" rx="22.0" fill="#d9d6d0" stroke="#45454a" stroke-width="1.5"/>
+<rect x="82.5" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="139.0" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="195.5" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="308.5" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="365.0" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="478.0" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="534.5" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="591.0" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="704.0" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="760.5" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<rect x="873.5" y="341.6" width="44.1" height="108.8" rx="22.0" fill="#2a2a2d" stroke="#45454a" stroke-width="1.5"/>
+<polyline points="54.2,592 54.2,600 945.8,600 945.8,592" class="lead"/>
+<a href="#ctl-24" class="callout" data-n="24" aria-label="24"><polyline points="104.5,341.6 104.5,282" class="lead"/><circle cx="104.5" cy="341.6" r="4.5" class="tip"/><circle cx="104.5" cy="282" r="17" class="num"/><text x="104.5" y="288.5">24</text></a>
+<a href="#ctl-25" class="callout" data-n="25" aria-label="25"><polyline points="161,341.6 161,282" class="lead"/><circle cx="161" cy="341.6" r="4.5" class="tip"/><circle cx="161" cy="282" r="17" class="num"/><text x="161" y="288.5">25</text></a>
+<a href="#ctl-26" class="callout" data-n="26" aria-label="26"><polyline points="217.5,341.6 217.5,282" class="lead"/><circle cx="217.5" cy="341.6" r="4.5" class="tip"/><circle cx="217.5" cy="282" r="17" class="num"/><text x="217.5" y="288.5">26</text></a>
+<a href="#ctl-27" class="callout" data-n="27" aria-label="27"><polyline points="330.5,341.6 330.5,282" class="lead"/><circle cx="330.5" cy="341.6" r="4.5" class="tip"/><circle cx="330.5" cy="282" r="17" class="num"/><text x="330.5" y="288.5">27</text></a>
+<a href="#ctl-28" class="callout" data-n="28" aria-label="28"><polyline points="387,341.6 387,282" class="lead"/><circle cx="387" cy="341.6" r="4.5" class="tip"/><circle cx="387" cy="282" r="17" class="num"/><text x="387" y="288.5">28</text></a>
+<a href="#ctl-29" class="callout" data-n="29" aria-label="29"><polyline points="500,341.6 500,282" class="lead"/><circle cx="500" cy="341.6" r="4.5" class="tip"/><circle cx="500" cy="282" r="17" class="num"/><text x="500" y="288.5">29</text></a>
+<a href="#ctl-30" class="callout" data-n="30" aria-label="30"><polyline points="556.5,341.6 556.5,282" class="lead"/><circle cx="556.5" cy="341.6" r="4.5" class="tip"/><circle cx="556.5" cy="282" r="17" class="num"/><text x="556.5" y="288.5">30</text></a>
+<a href="#ctl-31" class="callout" data-n="31" aria-label="31"><polyline points="613,341.6 613,282" class="lead"/><circle cx="613" cy="341.6" r="4.5" class="tip"/><circle cx="613" cy="282" r="17" class="num"/><text x="613" y="288.5">31</text></a>
+<a href="#ctl-32" class="callout" data-n="32" aria-label="32"><polyline points="726,341.6 726,282" class="lead"/><circle cx="726" cy="341.6" r="4.5" class="tip"/><circle cx="726" cy="282" r="17" class="num"/><text x="726" y="288.5">32</text></a>
+<a href="#ctl-33" class="callout" data-n="33" aria-label="33"><polyline points="782.5,341.6 782.5,282" class="lead"/><circle cx="782.5" cy="341.6" r="4.5" class="tip"/><circle cx="782.5" cy="282" r="17" class="num"/><text x="782.5" y="288.5">33</text></a>
+<a href="#ctl-34" class="callout" data-n="34" aria-label="34"><polyline points="895.5,341.6 895.5,282" class="lead"/><circle cx="895.5" cy="341.6" r="4.5" class="tip"/><circle cx="895.5" cy="282" r="17" class="num"/><text x="895.5" y="288.5">34</text></a>
+<a href="#ctl-35" class="callout" data-n="35" aria-label="35"><polyline points="500,600 500,662" class="lead"/><circle cx="500" cy="600" r="4.5" class="tip"/><circle cx="500" cy="662" r="17" class="num"/><text x="500" y="668.5">35</text></a>
+</svg></div>
+<figcaption>The keys (24–35).<span class="narrow"> Swipe sideways to see all of it.</span></figcaption>
+</figure>
+<table class="controls">
+<tr><th>No.</th><th>Control</th><th>Under Tonitor</th></tr>
+<tr id="ctl-1" data-n="1"><td class="n"><a href="#fig-panel">1</a></td><td><b>MASTER</b></td><td rowspan="1">The output level.</td></tr>
+<tr id="ctl-2" data-n="2"><td class="n"><a href="#fig-panel">2</a></td><td><b>SELECT</b></td><td rowspan="1">The chosen track's level. On the SCALE page (ARP): the root.</td></tr>
+<tr id="ctl-3" data-n="3"><td class="n"><a href="#fig-panel">3</a></td><td><b>PRESETS</b></td><td rowspan="1">The chosen track's engine. <b>SHIFT +</b>: a new sound of the family before or after. On the SESSIONS, PRESETS, MOD and GLOBAL SETUP pages: the slot or entry.</td></tr>
+<tr id="ctl-4" data-n="4"><td class="n"><a href="#fig-panel">4</a></td><td><b>ALGORITHM</b></td><td rowspan="1">The chosen track's pan. On the SCALE page: the scale.</td></tr>
+<tr id="ctl-5" data-n="5"><td class="n"><a href="#fig-panel">5</a></td><td><b>OCT−</b></td><td rowspan="1">The chosen track's octave down. <b>SHIFT +</b>: every loop one step of the scale down. <b>SHIFT + a track button held +</b>: that track's loops only.</td></tr>
+<tr id="ctl-6" data-n="6"><td class="n"><a href="#fig-panel">6</a></td><td><b>OCT+</b></td><td rowspan="1">The same, up.</td></tr>
+<tr id="ctl-7" data-n="7"><td class="n"><a href="#fig-panel">7</a></td><td><b>the screen</b></td><td rowspan="1">See <a href="#the-screen">The screen</a>.</td></tr>
+<tr id="ctl-8" data-n="8"><td class="n"><a href="#fig-panel">8</a></td><td><b>KNOB 1</b></td><td rowspan="1">The chosen track's filter (low-pass left, high-pass right).</td></tr>
+<tr id="ctl-9" data-n="9"><td class="n"><a href="#fig-panel">9</a></td><td><b>KNOB 2</b></td><td rowspan="1">The chosen track's granulator.</td></tr>
+<tr id="ctl-10" data-n="10"><td class="n"><a href="#fig-panel">10</a></td><td><b>KNOB 3</b></td><td rowspan="1">The chosen track's crush. <b>SHIFT +</b>: its distortion.</td></tr>
+<tr id="ctl-11" data-n="11"><td class="n"><a href="#fig-panel">11</a></td><td><b>KNOB 4</b></td><td rowspan="1">The chosen track's reverb send. <b>SHIFT +</b>: its delay send.</td></tr>
+<tr id="ctl-12" data-n="12"><td class="n"><a href="#fig-panel">12</a></td><td><b>FX (T1)</b></td><td rowspan="6"><b>T1</b> to <b>T6</b>: choose track 1 to 6. From any page, back to playing. <b>Held</b> (0.8 s): copy the track, or paste the copy onto it (<a href="#copying-a-track">Copying a track</a>).</td></tr>
+<tr id="ctl-13" data-n="13"><td class="n"><a href="#fig-panel">13</a></td><td><b>SCL (T2)</b></td></tr>
+<tr id="ctl-14" data-n="14"><td class="n"><a href="#fig-panel">14</a></td><td><b>ENV (T3)</b></td></tr>
+<tr id="ctl-15" data-n="15"><td class="n"><a href="#fig-panel">15</a></td><td><b>LFO (T4)</b></td></tr>
+<tr id="ctl-16" data-n="16"><td class="n"><a href="#fig-panel">16</a></td><td><b>EDIT (T5)</b></td></tr>
+<tr id="ctl-17" data-n="17"><td class="n"><a href="#fig-panel">17</a></td><td><b>GLO (T6)</b></td></tr>
+<tr id="ctl-18" data-n="18"><td class="n"><a href="#fig-panel">18</a></td><td><b>HOME</b></td><td rowspan="1">A new sound for the chosen track. <b>SHIFT +</b>: a new sound of the same family.</td></tr>
+<tr id="ctl-19" data-n="19"><td class="n"><a href="#fig-panel">19</a></td><td><b>SAVE</b></td><td rowspan="1">The SESSIONS page. <b>Held</b> (0.8 s): save the session. <b>SHIFT +</b>: GLOBAL SETUP (<a href="#global-setup-and-midi">MIDI</a>).</td></tr>
+<tr id="ctl-20" data-n="20"><td class="n"><a href="#fig-panel">20</a></td><td><b>ARP</b></td><td rowspan="1">The SCALE page. <b>SHIFT +</b>: the engine's <a href="#presets">PRESETS page</a>.</td></tr>
+<tr id="ctl-21" data-n="21"><td class="n"><a href="#fig-panel">21</a></td><td><b>SEQ</b></td><td rowspan="1">The DELAY, REVERB and MOD pages in turn. <b>SHIFT +</b>: the chosen track's modulation drawn anew.</td></tr>
+<tr id="ctl-22" data-n="22"><td class="n"><a href="#fig-panel">22</a></td><td><b>PLAY</b></td><td rowspan="1">Stop or play the chosen track's loops (on BALLSY's or BRICKLAYER's page, that sequencer). <b>Held</b>: the loops on the white keys, to bring each in or take it out. <b>SHIFT +</b>: stop everything, or play everything (<a href="#the-loopers">The loopers</a>).</td></tr>
+<tr id="ctl-23" data-n="23"><td class="n"><a href="#fig-panel">23</a></td><td><b>REC</b></td><td rowspan="1">Arm a loop, end it, overdub. <b>Held</b> (1 s): empty the track's loops. <b>SHIFT +</b>: VARY. On BRICKLAYER's page: note entry.</td></tr>
+<tr id="ctl-24" data-n="24"><td class="n"><a href="#fig-keys">24</a></td><td><b>black key 1</b></td><td rowspan="1">The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>).</td></tr>
+<tr id="ctl-25" data-n="25"><td class="n"><a href="#fig-keys">25</a></td><td><b>black key 2</b></td><td rowspan="1">The <b>EXPERIMENTAL</b> path; pressed again, OPEN.</td></tr>
+<tr id="ctl-26" data-n="26"><td class="n"><a href="#fig-keys">26</a></td><td><b>black key 3</b></td><td rowspan="1"><a href="#chords">Chord mode</a>: <b>held</b> (0.6 s), on or off; pressed, the next chord form.</td></tr>
+<tr id="ctl-27" data-n="27"><td class="n"><a href="#fig-keys">27</a></td><td><b>black key 4</b></td><td rowspan="1"><b>REVERSE</b>: the chosen track's loops backwards (<a href="#direction-and-speed">Direction and speed</a>). Keys 4 to 8 are BRICKLAYER's own on its page.</td></tr>
+<tr id="ctl-28" data-n="28"><td class="n"><a href="#fig-keys">28</a></td><td><b>black key 5</b></td><td rowspan="1"><b>PENDULUM</b>: forwards and backwards in turn.</td></tr>
+<tr id="ctl-29" data-n="29"><td class="n"><a href="#fig-keys">29</a></td><td><b>black key 6</b></td><td rowspan="1"><b>RANDOM</b>: the loops' notes in an order drawn at random.</td></tr>
+<tr id="ctl-30" data-n="30"><td class="n"><a href="#fig-keys">30</a></td><td><b>black key 7</b></td><td rowspan="1"><b>HALF SPEED</b>.</td></tr>
+<tr id="ctl-31" data-n="31"><td class="n"><a href="#fig-keys">31</a></td><td><b>black key 8</b></td><td rowspan="1"><b>DOUBLE SPEED</b>.</td></tr>
+<tr id="ctl-32" data-n="32"><td class="n"><a href="#fig-keys">32</a></td><td><b>black key 9</b></td><td rowspan="1">The <a href="#envelope">ENVELOPE</a> page. <b>SHIFT +</b>: <a href="#bricklayer">BRICKLAYER</a> on or off; <b>held</b> (0.6 s) while it is on, its page.</td></tr>
+<tr id="ctl-33" data-n="33"><td class="n"><a href="#fig-keys">33</a></td><td><b>black key 10</b></td><td rowspan="1"><b>EDIT</b>: KNOB 1–4 become the four <a href="#macros">macros</a> (not the EDIT button, T5). <b>SHIFT +</b>: <a href="#ballsy">BALLSY</a> on or off; <b>held</b> (0.6 s) while it is on, its page.</td></tr>
+<tr id="ctl-34" data-n="34"><td class="n"><a href="#fig-keys">34</a></td><td><b>black key 11</b></td><td rowspan="1"><b>SHIFT</b>. White keys held, then SHIFT: they <a href="#latched-keys">latch</a>.</td></tr>
+<tr id="ctl-35" data-n="35"><td class="n"><a href="#fig-keys">35</a></td><td><b>the 16 white keys</b></td><td rowspan="1">Play the chosen track in the scale; the root's keys glow. With PLAY held: the loops in and out. On BRICKLAYER's page, with REC on: its notes.</td></tr>
+</table>
+<p>KNOB 1–4 on each page:</p>
+<table class="knob-pages">
+<tr><th>Page</th><th>KNOB 1</th><th>KNOB 2</th><th>KNOB 3</th><th>KNOB 4</th></tr>
+<tr><td>playing</td><td>filter</td><td>granulator</td><td>crush</td><td>reverb send</td></tr>
+<tr><td>SHIFT held</td><td></td><td></td><td>distortion</td><td>delay send</td></tr>
+<tr><td>EDIT (<a href="#macros">macros</a>)</td><td>macro 1</td><td>macro 2</td><td>macro 3</td><td>macro 4</td></tr>
+<tr><td><a href="#envelope">ENVELOPE</a></td><td>ATTACK</td><td>DECAY</td><td>SUSTAIN</td><td>RELEASE</td></tr>
+<tr><td><a href="#the-delay">DELAY</a> (SEQ)</td><td>TIME</td><td>FEEDBACK</td><td>DAMP</td><td>MIX</td></tr>
+<tr><td><a href="#the-reverb">REVERB</a> (SEQ twice)</td><td>SIZE</td><td>DECAY</td><td>DAMP</td><td>MIX</td></tr>
+<tr><td><a href="#modulation">MOD</a> (SEQ three times)</td><td>the entry's first row</td><td>second row</td><td>third row</td><td>—</td></tr>
+<tr><td><a href="#ballsy">BALLSY</a></td><td>balls</td><td>speed</td><td>octaves</td><td>instability</td></tr>
+<tr><td><a href="#bricklayer">BRICKLAYER</a></td><td>LENGTH</td><td>RATE</td><td>HARMONY</td><td>VARIATION</td></tr>
+</table>
+<p>Every gesture in full: <a href="#playing-it">Playing it</a>.</p>
 <h2 id="playing-it">Playing it</h2>
 <table>
 <tr><th>Control</th><th>What it does</th></tr>
@@ -492,6 +659,7 @@
 </table>
 <p>CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are meant for non-melodic, textural use. On GROUND and AIR the third macro is <b>NOISE</b> (the noise's level) instead of MIX.</p>
 <p>AMBIENT favours PAD, DRONE, WASH, SPECTRA and TIDES, and makes the LFOs slower and the sound darker, the attacks longer; EXPERIMENTAL favours STAB, CLUSTER, METAL, GROUND and AIR, and adds more noise to the pitches, more drive and, sometimes, a ring modulation.</p>
+</div>
     </main>
     <footer>
       <p>Tonitor is by Nuno Zimas, built on <a href="https://github.com/hugelton/Felucca">Felucca</a>. Firmware: GPL-3.0. Website and logo: MIT.
@@ -508,6 +676,6 @@
     </footer>
   </div>
 </div>
-<script src="js/menu.js?v=ab61317bf0"></script>
+<script src="js/menu.js?v=907de1bb4c"></script>
 </body>
 </html>

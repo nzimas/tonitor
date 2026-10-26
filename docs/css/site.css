@@ -118,6 +118,49 @@ main blockquote { border-left: 4px solid var(--l5); margin: 16px 0; padding: 4px
 .toc a { display: block; padding: 2px 0; text-decoration: none; }
 .toc a.sub { padding-left: 16px; color: var(--dim); }
 
+/* the manual: a bar that stays at the top (search, back to the contents or the top) */
+.mbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; align-items: center;
+        margin: 0 0 18px; padding: 12px 0; background: var(--bg); border-bottom: 1px solid var(--line); }
+.mbar input { flex: 1; min-width: 0; font: inherit; font-size: 17px; color: var(--fg); background: var(--bg2);
+              border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; }
+.mbar input:focus { outline: 2px solid var(--l2); outline-offset: 0; border-color: transparent; }
+.mresults { position: absolute; top: 100%; left: 0; right: 0; max-height: min(70vh, 560px); overflow-y: auto;
+            background: var(--bg2); border: 1px solid var(--line); border-radius: 0 0 10px 10px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); }
+.mresults a { display: block; padding: 9px 14px; border-bottom: 1px solid var(--line); color: var(--fg); text-decoration: none; }
+.mresults a:last-child { border-bottom: 0; }
+.mresults a[aria-selected="true"], .mresults a:hover { background: #24211f; }
+.mresults .where { display: block; font-size: 14px; font-weight: 700; color: var(--l5); }
+.mresults .what { display: block; font-size: 15px; color: var(--dim); line-height: 1.45; }
+.mresults mark { background: none; color: var(--fg); font-weight: 700; text-decoration: underline; text-decoration-color: var(--l5); }
+.mresults .none { padding: 10px 14px; color: var(--dim); }
+.manual h2, .manual h3, .manual p, .manual tr, .manual li, .manual figure, .manual nav { scroll-margin-top: 80px; }
+.found { animation: found 2.4s ease-out; }
+@keyframes found { from { background: rgba(255, 140, 0, 0.35); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .found { animation: none; outline: 2px solid var(--l5); } }
+
+/* the manual: the FM-1 drawn, numbered, with its table */
+.fm1-fig { margin: 22px 0 8px; }
+.fm1-scroll { overflow-x: auto; }
+.fm1-fig .narrow { display: none; }
+@media (max-width: 700px) { .fm1-fig .narrow { display: inline; } }
+.fm1-fig svg { display: block; width: 100%; height: auto; min-width: 640px; }
+.fm1-fig figcaption { color: var(--dim); font-size: 15px; margin-top: 4px; }
+.fm1 .cut { stroke: var(--dim); stroke-width: 1.5; stroke-dasharray: 6 6; }
+.fm1 .lead { fill: none; stroke: var(--l5); stroke-width: 2; }
+.fm1 .tip { fill: var(--l5); }
+.fm1 .num { fill: var(--l5); stroke: var(--bg); stroke-width: 2; }
+.fm1 text { fill: var(--bg); font: 700 19px "Atkinson Hyperlegible", system-ui, sans-serif; text-anchor: middle; }
+.fm1 .callout:hover .lead, .fm1 .callout.hot .lead, .fm1 .callout:focus-visible .lead { stroke: var(--fg); stroke-width: 3; }
+.fm1 .callout:hover .num, .fm1 .callout.hot .num, .fm1 .callout:focus-visible .num,
+.fm1 .callout:hover .tip, .fm1 .callout.hot .tip, .fm1 .callout:focus-visible .tip { fill: var(--fg); }
+.fm1 .callout:focus { outline: none; }
+table.controls td.n { text-align: center; font-weight: 700; }
+table.controls td.n a { display: inline-block; min-width: 30px; padding: 1px 0; border-radius: 999px; background: var(--l5);
+                        color: var(--bg); text-decoration: none; }
+table.controls tr.hot td { background: #24211f; }
+table.controls tr.hot td.n a { background: var(--fg); }
+
 /* other projects */
 p.lead { font-size: 20px; color: var(--dim); margin: 0; max-width: 36em; }
 .projects { display: grid; gap: 24px; margin: 34px 0 0; }
