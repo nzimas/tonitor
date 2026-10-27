@@ -177,12 +177,14 @@ static const uint8_t MODP_FM[FF_N] = {10, 80, 10, 5, 10, 30, 70, 70, 40, 70, 60,
 static const uint8_t MODP_HV[HK_N] = {20, 25, 10, 70, 80, 70, 50, 20, 40, 60, 50, 30};
 static const uint8_t MODP_BA[BK_N] = {5, 10, 20, 30, 70, 80};
 static const uint8_t MODP_DR[DK_N] = {10, 60, 10, 20, 20, 15, 80, 20, 50, 30};
+static const uint8_t MODP_OB[OBK_N] = {60, 30, 70, 10, 40, 50, 20, 70, 10, 60};
 /* each engine's macros for the tone (the first) and the texture (the second) */
-static const uint8_t MOD_TONE[NENG][2] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}, {1, 3}, {0, 1}, {3, 0}};
+static const uint8_t MOD_TONE[NENG][2] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}, {1, 3}, {0, 1}, {3, 0}, {0, 1}};
 static int mod_sustained(uint32_t e, uint32_t kind)   /* (a family that holds: slow modulation; else velocity) */
 {
     return e == ENG_FM ? MODP_FM[kind % FF_N] >= 40 : e == ENG_HIVE ? MODP_HV[kind % HK_N] >= 40
-           : e == ENG_BAY ? kind >= 4u : e == ENG_DRUID ? MODP_DR[kind % DK_N] >= 50 : 0;
+           : e == ENG_BAY ? kind >= 4u : e == ENG_DRUID ? MODP_DR[kind % DK_N] >= 50
+           : e == ENG_OB ? MODP_OB[kind % OBK_N] >= 40 : 0;
 }
 /* track l's modulation, drawn with its new sound (engine e, family kind, its seed and path): or none */
 static void mod_draw(uint32_t l, uint32_t e, uint32_t kind, uint32_t seed, uint32_t path)
@@ -190,7 +192,7 @@ static void mod_draw(uint32_t l, uint32_t e, uint32_t kind, uint32_t seed, uint3
     rnd_t r;
     mod_t m;
     uint32_t p = e == ENG_FM ? MODP_FM[kind % FF_N] : e == ENG_HIVE ? MODP_HV[kind % HK_N] : e == ENG_BAY ? MODP_BA[kind % BK_N]
-                 : e == ENG_DRUID ? MODP_DR[kind % DK_N] : 0u;
+                 : e == ENG_DRUID ? MODP_DR[kind % DK_N] : e == ENG_OB ? MODP_OB[kind % OBK_N] : 0u;
     memset(&m, 0, sizeof m);
     rnd_seed(&r, seed ^ 0x5EEDu * 31u ^ kind * 977u);
     if (path == PATH_AMBIENT && p)

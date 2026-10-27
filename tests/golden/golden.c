@@ -74,5 +74,19 @@ int main(int argc, char **argv)
                 }
                 printf("rus %d %u %08x\n", k, pa, h);
             }
+    if (gen >= 6)                /* OBRADOR came with generation 6's builds (62): its lines go after */
+        for (pa = 0; pa < PATH_N; pa++)
+            for (k = -1; k < OBK_N; k++) {
+                static ob_design_t od;
+                uint32_t h = 2166136261u;
+                for (s = 0; s < (k < 0 ? 400u : 40u); s++) {
+                    memset(&od, 0, sizeof od);
+                    ob_design(&od, k, 1234u + s * 7919u, pa, gen);
+                    if (s < 4u)
+                        ob_measure(&od);                   /* (and the level a few of them are given) */
+                    h = fnv(h, &od, sizeof od);
+                }
+                printf("ob %d %u %08x\n", k, pa, h);
+            }
     return 0;
 }

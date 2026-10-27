@@ -28,6 +28,7 @@ build/host transpose
 build/host tracktransp
 build/host loopmodes
 build/host looptie
+build/host obrador
 build/host playalong
 build/host delay build/screens
 build/host glow

@@ -88,6 +88,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 #include "druid.c"
 #include "bayarea.c"
 #include "hive.c"
+#include "obrador.c"
 #include "reverb.c"
 /* CPU1's mailbox (src/audio_worker.h), as one core sees it: a job posted runs at the join -- the units of work are
  * apart, so the sound is the same as with the two cores at once. host_cores 1: CPU1 off (the one-core path) */
@@ -6817,6 +6818,79 @@ static int cmd_looptie(void)
     return fail ? 1 : 0;
 }
 
+/* OBRADOR: the eighth engine, chosen with PRESETS; each family sounds (the output in range), a chord's voices end
+ * once let go; EDIT's macros are named; a session keeps its sound in full (the track on it) and as its seed (not) */
+static int cmd_obrador(void)
+{
+    uint32_t fail = 0, k, g = 0, sec = 44100u / CTL;
+    static ob_design_t keep;
+    layers_init();
+    ui_init();
+    sounds_init();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    master_q12 = 4096;
+    press_btn(B_FX);
+    while (ui.engine[0] != ENG_OB && g++ < NENG) {
+        host_enc[PANEL_ENC[EN_PRESET]] = 1;
+        ui_input();
+    }
+    run_blocks(20, 0);
+    if (ui.engine[0] != ENG_OB || lay[0].engine != ENG_OB || strcmp(ENG_NAME[ENG_OB], "OBRADOR"))
+        printf("FAIL obrador: PRESETS does not reach OBRADOR (%u)\n", ui.engine[0]), fail++;
+    if (strcmp(mac_name(0, 0), "CUTOFF") || strcmp(mac_name(0, 3), "DETUNE"))
+        printf("FAIL obrador: its macros are not CUTOFF .. DETUNE (%s)\n", mac_name(0, 0)), fail++;
+    for (k = 0; k < OBK_N; k++) {
+        int32_t pk = 0;
+        uint32_t b, i;
+        new_sound_of((int32_t)k, 0);
+        run_blocks(20, 0);
+        if (ob_buf[0][ob_pub[0]].kind != k || strcmp(sound_name(0, ENG_OB), OBK_NAME[k]))
+            printf("FAIL obrador: no %s drawn\n", OBK_NAME[k]), fail++;
+        press_key(0, 1);
+        press_key(2, 1);
+        press_key(4, 1);
+        for (b = 0; b < 2u * sec; b++) {
+            run_blocks(1, 0);
+            for (i = 0; i < 2u * CTL; i++)
+                pk = absi(mix_out[i]) > pk ? absi(mix_out[i]) : pk;
+        }
+        if (!lsound(0) || pk < 300 || pk > 32767)
+            printf("FAIL obrador: %s does not sound, or out of range (peak %d)\n", OBK_NAME[k], pk), fail++;
+        press_key(0, 0);
+        press_key(2, 0);
+        press_key(4, 0);
+        run_blocks(12u * sec, 0);
+        if (lsound(0))
+            printf("FAIL obrador: %s still sounds 12 s after the chord was let go\n", OBK_NAME[k]), fail++;
+    }
+    new_sound_of(OBK_STRINGS, 0);                      /* a session: the track on OBRADOR, its sound in full */
+    run_blocks(10, 0);
+    keep = ob_buf[0][ob_pub[0]];
+    if (ses_save(1) != SES_OK)
+        printf("FAIL obrador: the session was not saved\n"), fail++;
+    new_sound_of(OBK_BASS, 0);
+    run_blocks(10, 0);
+    ses_scan(1);
+    ses_load(0);
+    run_blocks(10, 0);
+    if (ui.engine[0] != ENG_OB || memcmp(&ob_buf[0][ob_pub[0]], &keep, sizeof keep))
+        printf("FAIL obrador: the session does not bring its sound back (engine %u)\n", ui.engine[0]), fail++;
+    g = 0;                                            /* .. and on another engine: its seed, the same sound when played */
+    while (ui.engine[0] != ENG_FM && g++ < NENG) {
+        host_enc[PANEL_ENC[EN_PRESET]] = -1;
+        ui_input();
+    }
+    ses_save(2);
+    ses_scan(1);
+    ses_load(1);
+    snd_ready(0, ENG_OB);
+    if (memcmp(&ob_buf[0][ob_pub[0]], &keep, sizeof keep))
+        printf("FAIL obrador: kept as its seed, the sound does not come back\n"), fail++;
+    printf("obrador: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -6895,6 +6969,8 @@ int main(int argc, char **argv)
         return cmd_delay(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "playalong"))
         return cmd_playalong();
+    if (argc >= 2 && !strcmp(argv[1], "obrador"))
+        return cmd_obrador();
     if (argc >= 2 && !strcmp(argv[1], "looptie"))
         return cmd_looptie();
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))

@@ -38,7 +38,7 @@ track in its own colour.
 
 ### Highlights
 
-- **Seven sound engines**, chosen per track:
+- **Eight sound engines**, chosen per track:
   - **FM** — six-operator, DX7-style FM, generating sound objects: bells and gongs, spectral drones,
     noise, impacts, iterations, glissandi, beating spectra, sub-bass, creaks.
   - **ANIMA** — a lo-fi synthesizer played by a simulated hand (oscillators, FM, grains, noise, filters,
@@ -54,6 +54,8 @@ track in its own colour.
     gate or a sustaining envelope over resonant low-passes.
   - **HIVE** — a swarm of seven oscillators per voice, detuned, stacked or on inharmonic partials, moved by
     slow LFOs and noise, through a 4-pole filter with its own envelope and a drive; melodic kinds and textural ones.
+  - **OBRADOR** — an analog polysynth after the Oberheim SEM: two oscillators and a second voice card, the SEM's
+    filter morphing from low-pass through notch to high-pass, analog envelopes and drift.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
 - **Play along**: other tracks improvise with the one you play (REACT), shadow it (SHADOW) or arpeggiate its
@@ -96,7 +98,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | Control | What it does |
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1–6** (lit: chosen; glowing: sounding). From any page, back to playing. **Held** (0.8 s): copy the track, or paste the copy onto it ([Copying a track](#copying-a-track)). |
-| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA**, **HIVE**. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA. |
+| **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA**, **HIVE**, **OBRADOR**. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA. |
 | **SHIFT + PRESETS** | a new sound of the previous or next family. |
 | **HOME** | a new sound for the chosen track. |
 | **SHIFT + HOME** | a new sound of the same family. |
@@ -159,6 +161,7 @@ to get the knobs back. Each sound keeps its macros, and sessions and presets sto
 | **DRUID** | **STRUCTURE** | **BRIGHTNESS** | **DAMPING** | **POSITION** |
 | **BAYAREA** | **SHAPE** | **FOLDS** | **FM** | **DECAY** |
 | **HIVE** | **DETUNE** | **MOVEMENT** | **MIX** (**NOISE** on GROUND, AIR) | **CUTOFF** |
+| **OBRADOR** | **CUTOFF** (four octaves either way) | **MORPH** (the filter: low-pass, notch, high-pass) | **RESONANCE** | **DETUNE** (none to three times as wide) |
 | **RUSSOLO** | the kind's first parameter | the kind's second parameter | **CRUSH** | **RANDOMNESS** |
 
 ### Envelope
@@ -660,6 +663,29 @@ envelope.
 | **TIDES** | oscillators gliding apart and back |
 
 CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are for textures rather than melodies.
+
+### OBRADOR — an analog polysynth
+
+An analog polysynth voice after the Oberheim SEM and the two-voice Oberheims, written for Tonitor with OberVave
+(an Oberheim-style firmware for the FM-1, by zvenson) as its frame of reference. Per voice: two oscillators (saw,
+pulse or both, band-limited), the second detuned or an interval away, hard-synced or cross-modulating now and
+then; in the lush kinds a second voice card, detuned against the first; a drive into the SEM's 12 dB filter, its
+output morphing from low-pass through notch to high-pass, its resonance soft-limited; a second low-pass stage for
+24 dB, or the band-pass; filter and amplifier envelopes on analog curves; an LFO that comes in after a delay; and
+each card's own small offsets of tune and cutoff with a slow drift.
+
+| Kind | |
+| --- | --- |
+| **STRINGS** | two cards of saws, a slow attack, a delayed vibrato: the string pad |
+| **BRASS** | the envelope opening the 24 dB low-pass |
+| **PWM PAD** | two pulses, their widths moving slowly |
+| **BASS** | the second oscillator an octave down, the 24 dB low-pass, a plucked envelope |
+| **SYNC** | the second oscillator synced, its pitch swept by the envelope |
+| **NOTCH** | the filter near its notch, the LFO moving it: a phasing sweep |
+| **METAL** | cross-modulation at an odd interval through the band-pass: bells, clangs |
+| **DRONE** | two cards a fifth or an octave apart, the cutoff and the morph moving slowly |
+| **KEYS** | a struck filter, no sustain |
+| **SWELL** | the filter opening slowly under a held chord |
 
 # Building from source
 

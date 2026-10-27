@@ -630,6 +630,8 @@ static void env_native(uint32_t l, int8_t *v)
         ba_env_adsr(&ba_buf[l][ba_pub[l]], a);
     else if (e == ENG_HIVE)
         hv_env_adsr(&hv_buf[l][hv_pub[l]], a);
+    else if (e == ENG_OB)
+        ob_env_adsr(&ob_buf[l][ob_pub[l]], a);
     else {
         const rus_design_t *d = &rus_buf[l][rus_pub[l]];
         a[0] = d->att;
@@ -659,7 +661,7 @@ static const char *mac_name(uint32_t l, uint32_t j)
     return e == ENG_FM ? fm_mac_name(&fm_buf[l][fm_pub[l]], j) : e == ENG_ANIMA ? an_mac_name(&an_buf[l][an_pub[l]], j)
            : e == ENG_CAL ? cal_mac_name(&cal_buf[l][cal_pub[l]], j) : e == ENG_RUS ? rus_mac_name(&rus_buf[l][rus_pub[l]], j)
            : e == ENG_DRUID ? dr_mac_name(&dr_buf[l][dr_pub[l]], j) : e == ENG_BAY ? ba_mac_name(&ba_buf[l][ba_pub[l]], j)
-           : hv_mac_name(&hv_buf[l][hv_pub[l]], j);
+           : e == ENG_OB ? ob_mac_name(&ob_buf[l][ob_pub[l]], j) : hv_mac_name(&hv_buf[l][hv_pub[l]], j);
 }
 
 /* the family (kind, species) layer l plays on its engine now */
@@ -671,6 +673,7 @@ static int32_t cur_kind(uint32_t l)
            : ui.engine[l] == ENG_RUS   ? (int32_t)rus_buf[l][rus_pub[l]].kind
            : ui.engine[l] == ENG_DRUID ? (int32_t)dr_buf[l][dr_pub[l]].kind
            : ui.engine[l] == ENG_BAY   ? (int32_t)ba_buf[l][ba_pub[l]].kind
+           : ui.engine[l] == ENG_OB    ? (int32_t)ob_buf[l][ob_pub[l]].kind
                                        : (int32_t)hv_buf[l][hv_pub[l]].kind;
 }
 static uint32_t cur_seed(uint32_t l)             /* (the seed of the sound layer l plays on its engine now) */
@@ -681,6 +684,7 @@ static uint32_t cur_seed(uint32_t l)             /* (the seed of the sound layer
            : ui.engine[l] == ENG_RUS   ? rus_buf[l][rus_pub[l]].seed
            : ui.engine[l] == ENG_DRUID ? dr_buf[l][dr_pub[l]].seed
            : ui.engine[l] == ENG_BAY   ? ba_buf[l][ba_pub[l]].seed
+           : ui.engine[l] == ENG_OB    ? ob_buf[l][ob_pub[l]].seed
                                        : hv_buf[l][hv_pub[l]].seed;
 }
 /* a new sound for the layer chosen, of family kind (-1: any); msg said first (0: none, the family's name shows) */
@@ -699,6 +703,7 @@ static void new_sound_of(int32_t kind, const char *msg)
          : ui.engine[l] == ENG_RUS   ? new_rus(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_DRUID ? new_druid(l, next_seed(), ui.path[l])
          : ui.engine[l] == ENG_BAY   ? new_bay(l, next_seed(), ui.path[l])
+         : ui.engine[l] == ENG_OB    ? new_ob(l, next_seed(), ui.path[l])
                                      : new_hive(l, next_seed(), ui.path[l]);
     new_kind = -1;
     if (!ok)
@@ -1207,7 +1212,7 @@ static void ui_input(void)
             !ui.pre_page && !ui.ses_page && !ui.ovd) {
             uint32_t e = ui.engine[ui.sel];
             int32_t n = e == ENG_FM ? FF_N : e == ENG_ANIMA ? AK_N : e == ENG_CAL ? CS_N : e == ENG_RUS ? RK_N
-                        : e == ENG_DRUID ? DK_N : e == ENG_BAY ? BK_N : HK_N;
+                        : e == ENG_DRUID ? DK_N : e == ENG_BAY ? BK_N : e == ENG_OB ? OBK_N : HK_N;
             int32_t k = clampi(cur_kind(ui.sel) + s, 0, n - 1), d = s > 0 ? 1 : -1;
             while (e == ENG_FM && fm_retired(k) && k + d >= 0 && k + d < n)
                 k += d;                          /* (FM's GLISSE and RUBBER are WARP's now: stepped over) */
@@ -2230,10 +2235,27 @@ static const char *kind_name(uint32_t e, int32_t k)
 {
     return e == ENG_FM ? FF_NAME[k % FF_N] : e == ENG_ANIMA ? AK_NAME[k % AK_N] : e == ENG_CAL ? CS_NAME[k % CS_N]
            : e == ENG_RUS ? RK_NAME[k % RK_N] : e == ENG_DRUID ? DK_NAME[k % DK_N]
-           : e == ENG_BAY ? BK_NAME[k % BK_N] : HK_NAME[k % HK_N];
+           : e == ENG_BAY ? BK_NAME[k % BK_N] : e == ENG_OB ? OBK_NAME[k % OBK_N] : HK_NAME[k % HK_N];
+}
+/* engine e's preset in slot: its family's name and its number among that engine's presets of the family, in the
+ * order of the slots (BRASS 1, BRASS 2 ..); EMPTY */
+static void pre_name(uint32_t e, uint32_t slot, char *b, uint32_t nb)
+{
+    int32_t k = pre_kind(e, slot), n = 1;
+    uint32_t s;
+    if (k < 0) {
+        str_cpy(b, "EMPTY", nb);
+        return;
+    }
+    for (s = 1; s < slot; s++)
+        n += pre_kind(e, s) == k;
+    str_cpy(b, kind_name(e, k), nb);
+    str_cpy(b + str_len(b), " ", nb - str_len(b));
+    fmt_int(b + str_len(b), n);
 }
 /* the PRESETS page: the engine's name over four slots (the page of the one chosen), the chosen one in white; a
- * full slot's number in red with its sound's name, an empty one grey. Or, asked: OVERWRITE?, the slot, NO | YES */
+ * full slot's number in red with its sound's name and number (BRASS 2), an empty one grey. Or, asked: OVERWRITE?,
+ * the slot, NO | YES */
 static void draw_pre_page(void)
 {
     char t[20], n[8];
@@ -2265,11 +2287,13 @@ static void draw_pre_page(void)
         int sel = slot == ui.pre_ix;
         int32_t k = pre_kind(ui.pre_eng, slot);
         uint16_t bg = sel ? C_WHITE : C_BLACK;
+        char nm[20];
+        pre_name(ui.pre_eng, slot, nm, sizeof nm);
         cv_begin(240, 47, bg);                   /* (47: the rows meet, nothing of the screen before between) */
         n[0] = 'P';
         fmt_int(n + 1, (int32_t)slot);
         cv_text_in(6, 84, 47, n, k >= 0 ? C_FULL : sel ? C_BLACK : C_GREY);
-        cv_text_in(92, 142, 47, k >= 0 ? kind_name(ui.pre_eng, k) : "EMPTY", sel ? C_BLACK : k >= 0 ? C_WHITE : C_GREY);
+        cv_text_in(92, 142, 47, nm, sel ? C_BLACK : k >= 0 ? C_WHITE : C_GREY);
         cv_blit(0, 52 + 47 * j);
     }
 }
@@ -2524,7 +2548,8 @@ static void sounds_init(void)
         dr_design(&dr_buf[l][0], -1, s * 19u + 11u, PATH_OPEN, GEN_NOW);
         ba_design(&ba_buf[l][0], -1, s * 23u + 13u, PATH_OPEN, GEN_NOW);
         hv_design(&hv_buf[l][0], -1, s * 29u + 17u, PATH_OPEN, GEN_NOW);
-        fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = 0;
+        ob_design(&ob_buf[l][0], -1, s * 31u + 19u, PATH_OPEN, GEN_NOW);
+        fm_pub[l] = fm_use[l] = an_pub[l] = an_use[l] = ob_pub[l] = ob_use[l] = 0;
         cal_pub[l] = cal_use[l] = rus_pub[l] = rus_use[l] = dr_pub[l] = dr_use[l] = ba_pub[l] = ba_use[l] = hv_pub[l] = hv_use[l] = 0;
         snd_raw[l] = (uint8_t)((1u << NENG) - 1u);   /* (none measured yet:) */
         snd_measure(l, ui.engine[l], 0);         /* the one it plays (before the audio starts) */

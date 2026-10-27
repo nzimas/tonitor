@@ -1,5 +1,17 @@
 # Changelog
 
+## Build 63
+
+Added
+- OBRADOR, an eighth engine: an analog polysynth after the Oberheim SEM and the two-voice Oberheims, with OberVave
+  (zvenson/obervave) as its frame of reference. Two band-limited oscillators a voice (saw, pulse; detune, intervals,
+  hard sync, cross-modulation), a second voice card detuned against the first in the lush kinds, the SEM's 12 dB
+  filter morphing low-pass, notch, high-pass (24 dB and band-pass too), filter and amplifier envelopes on analog
+  curves, a delayed LFO, each card's own offsets and drift. Ten kinds: STRINGS, BRASS, PWM PAD, BASS, SYNC, NOTCH,
+  METAL, DRONE, KEYS, SWELL. Macros: CUTOFF, MORPH, RESONANCE, DETUNE.
+- Sessions (format 25) keep each track's OBRADOR sound; earlier sessions load with a new one. A sound kept as its
+  seed keeps its family too, so one chosen with SHIFT + PRESETS comes back the same from a preset or a session.
+
 ## Build 62
 
 Added
