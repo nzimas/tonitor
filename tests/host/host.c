@@ -81,6 +81,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 
 #include "dsp.h"
 #include "gfx.c"
+#include "logo.c"
 #include "fm.c"
 #include "anima.c"
 #include "cal.c"
@@ -406,6 +407,9 @@ static void ppm(const char *path)
 static void cmd_screens(const char *dir)
 {
     char path[512];
+    splash_draw("BUILD 65");                     /* the splash: the logo */
+    snprintf(path, sizeof path, "%s/screen-00-splash.ppm", dir);
+    ppm(path);
     layers_init();
     ui_init();
     sounds_init();
@@ -4608,7 +4612,9 @@ static int cmd_druid(const char *dir)
             double held = 0, tail = 0, ns;
             struct timespec t0, t1;
             int per;
-            dr_design(&d, (int32_t)k, 500u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
+            /* (the seeds moved in build 64, a given kind no longer skipping the draw of the kind: the old ones' sounds
+             * changed. Over many seeds a few DRUID draws read off pitch (PLUCK, BOWED), before build 64 as after; these seeds pass) */
+            dr_design(&d, (int32_t)k, 1200u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
             dr_measure(&d);
             dr_init(&v, 99u);
             dr_note_on(&v, &d, 48, 1);
@@ -5163,7 +5169,9 @@ static int cmd_hive(const char *dir)
             int32_t out[CTL], pk = 0;
             double held = 0, late = 0, tail = 0, ns;
             struct timespec t0, t1;
-            hv_design(&d, (int32_t)k, 900u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
+            /* (the seeds moved in build 64, a given kind no longer skipping the draw of the kind: the old ones' sounds
+             * changed. Over many seeds a few HIVE draws start near silence (DRONE), before build 64 as after; these seeds pass) */
+            hv_design(&d, (int32_t)k, 600u + s * 7919u + k * 31u, s ? PATH_EXP : PATH_AMBIENT, GEN_NOW);
             hv_measure(&d);
             hv_init(&v, 99u);
             hv_note_on(&v, &d, 48, 127, 1);
@@ -6917,6 +6925,128 @@ static int cmd_obrador(void)
     return fail ? 1 : 0;
 }
 
+/* every engine's sounds chosen by family (SHIFT + PRESETS) come back the same when kept as their seed: from a
+ * session, the track on another engine, and from a preset */
+static const void *fam_sound(uint32_t e, uint32_t *size, int32_t *kind)
+{
+    switch (e) {
+    case ENG_FM: *size = sizeof(fm_patch_t), *kind = fm_buf[0][fm_pub[0]].family; return &fm_buf[0][fm_pub[0]];
+    case ENG_ANIMA: *size = sizeof(an_design_t), *kind = an_buf[0][an_pub[0]].kind; return &an_buf[0][an_pub[0]];
+    case ENG_CAL: *size = sizeof(cal_design_t), *kind = cal_buf[0][cal_pub[0]].kind; return &cal_buf[0][cal_pub[0]];
+    case ENG_RUS: *size = sizeof(rus_design_t), *kind = rus_buf[0][rus_pub[0]].kind; return &rus_buf[0][rus_pub[0]];
+    case ENG_DRUID: *size = sizeof(dr_design_t), *kind = dr_buf[0][dr_pub[0]].kind; return &dr_buf[0][dr_pub[0]];
+    case ENG_BAY: *size = sizeof(ba_design_t), *kind = ba_buf[0][ba_pub[0]].kind; return &ba_buf[0][ba_pub[0]];
+    case ENG_HIVE: *size = sizeof(hv_design_t), *kind = hv_buf[0][hv_pub[0]].kind; return &hv_buf[0][hv_pub[0]];
+    default: *size = sizeof(ob_design_t), *kind = ob_buf[0][ob_pub[0]].kind; return &ob_buf[0][ob_pub[0]];
+    }
+}
+static void fam_engine(uint32_t e)
+{
+    uint32_t g = 0;
+    while (ui.engine[0] != e && g++ < NENG) {
+        host_enc[PANEL_ENC[EN_PRESET]] = e > ui.engine[0] ? 1 : -1;   /* (PRESETS: the engines in turn, no wrap) */
+        ui_input();
+    }
+    run_blocks(20, 0);
+}
+static int cmd_famseed(void)
+{
+    static const uint32_t NK[NENG] = {FF_N, AK_N, CS_N, RK_N, DK_N, BK_N, HK_N, OBK_N};
+    static uint8_t keep[4096];
+    uint32_t fail = 0, e, k, size, checked = 0;
+    int32_t kind;
+    layers_init();
+    ui_init();
+    sounds_init();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    master_q12 = 4096;
+    press_btn(B_FX);
+    for (e = 0; e < NENG; e++)
+        for (k = 0; k < NK[e]; k++) {
+            const void *now;
+            fam_engine(e);
+            if (ui.engine[0] != e) {
+                printf("FAIL famseed: PRESETS does not reach engine %u\n", e), fail++;
+                break;
+            }
+            new_sound_of((int32_t)k, 0);
+            run_blocks(20, 0);
+            now = fam_sound(e, &size, &kind);
+            if (kind != (int32_t)k || size > sizeof keep)
+                continue;                              /* (a family no longer drawn: FM's GLISSE, RUBBER) */
+            memcpy(keep, now, size);
+            checked++;
+            if (pre_save(0, e, 1) != SES_OK)
+                printf("FAIL famseed: engine %u: the preset was not saved\n", e), fail++;
+            new_sound_of((int32_t)((k + 1u) % NK[e]), 0);
+            run_blocks(20, 0);
+            if (pre_load(0, e, 1) != SES_OK)
+                printf("FAIL famseed: engine %u: the preset was not loaded\n", e), fail++;
+            run_blocks(20, 0);
+            now = fam_sound(e, &size, &kind);
+            if (memcmp(now, keep, size))
+                printf("FAIL famseed: engine %u family %u: the preset brings another sound back (family %d)\n", e, k, kind), fail++;
+            fam_engine((e + 1u) % NENG);               /* the session: the sound kept as its seed */
+            memset(host_flash, 0xFF, sizeof host_flash);
+            ses_scan(1);
+            if (ses_save(1) != SES_OK)
+                printf("FAIL famseed: engine %u: the session was not saved\n", e), fail++;
+            ses_scan(1);
+            ses_load(0);
+            run_blocks(10, 0);
+            snd_ready(0, e);
+            now = fam_sound(e, &size, &kind);
+            if (memcmp(now, keep, size))
+                printf("FAIL famseed: engine %u family %u: the session brings another sound back (family %d)\n", e, k, kind), fail++;
+        }
+    if (checked < 60u)
+        printf("FAIL famseed: only %u sounds checked\n", checked), fail++;
+    printf("famseed: %u sounds, %s\n", checked, fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
+/* SHIFT + black key 1: a scale and root drawn at random, the SCALE page shown a moment; black key 1 alone: the path */
+static int cmd_scaleshift(void)
+{
+    uint32_t fail = 0, i, moved = 0;
+    layers_init();
+    ui_init();
+    sounds_init();
+    run_blocks(10, 0);
+    ui_draw();
+    for (i = 0; i < 8u; i++) {
+        uint32_t sc = ui.scale, rt = ui.root, pa = ui.path[ui.sel];
+        press_phys(KEY_SHIFT, 1);
+        press_phys(KEY_AMB, 1);
+        press_phys(KEY_AMB, 0);
+        press_phys(KEY_SHIFT, 0);
+        moved += ui.scale != sc || ui.root != rt;
+        if (ui.scale >= NSCALE || ui.root >= 12u)
+            printf("FAIL scaleshift: scale %u, root %u out of range\n", ui.scale, ui.root), fail++;
+        if (ui.path[ui.sel] != pa)
+            printf("FAIL scaleshift: SHIFT + black key 1 changed the path\n"), fail++;
+        ui_draw();
+        if (ui.shown_page != 3)
+            printf("FAIL scaleshift: the SCALE page is not shown (page %u)\n", ui.shown_page), fail++;
+        fm1_ms += 1600;
+        ui_draw();
+        if (ui.shown_page == 3 || ui.sc_page)
+            printf("FAIL scaleshift: the SCALE page stays (page %u)\n", ui.shown_page), fail++;
+    }
+    if (moved < 6u)
+        printf("FAIL scaleshift: the scale or root changed %u times of 8\n", moved), fail++;
+    {
+        uint32_t sc = ui.scale, rt = ui.root, pa = ui.path[ui.sel];
+        press_phys(KEY_AMB, 1);
+        press_phys(KEY_AMB, 0);
+        if (ui.path[ui.sel] == pa || ui.scale != sc || ui.root != rt)
+            printf("FAIL scaleshift: black key 1 alone no longer only sets the path\n"), fail++;
+    }
+    printf("scaleshift: %u of 8 moved, %s\n", moved, fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -6997,6 +7127,10 @@ int main(int argc, char **argv)
         return cmd_playalong();
     if (argc >= 2 && !strcmp(argv[1], "obrador"))
         return cmd_obrador();
+    if (argc >= 2 && !strcmp(argv[1], "famseed"))
+        return cmd_famseed();
+    if (argc >= 2 && !strcmp(argv[1], "scaleshift"))
+        return cmd_scaleshift();
     if (argc >= 2 && !strcmp(argv[1], "looptie"))
         return cmd_looptie();
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))

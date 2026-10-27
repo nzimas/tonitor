@@ -38,7 +38,7 @@ static const uint8_t BK_R[BK_N][8][2] = {
 };
 
 typedef struct {
-    uint32_t seed;               /* what made it: ba_design(-1, seed, path, gen) + ba_measure give it again */
+    uint32_t seed;               /* what made it: ba_design(kind, seed, path, gen) + ba_measure give it again */
     uint8_t kind, path, gen, asr;   /* asr: the sustaining envelope (else the low-pass gate) */
     uint8_t lfo_shape, rsv[3];
     int32_t shape, folds, fm1, fm2;    /* Q15 sliders (folds 0 .. 3 as Q15 x 3) */
@@ -429,8 +429,12 @@ static void ba_design(ba_design_t *d, int32_t kind, uint32_t seed, uint32_t path
     int32_t sl[8], k;
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed ^ 0xBA7A4Eu);
-    if (kind < 0 || kind >= BK_N)
-        kind = (int32_t)rnd_weighted(r, BK_W[path], BK_N);
+    {   /* (the family drawn always, a family given or not: the seed and the family then make the sound again, however
+         * the family was come to -- SHIFT + PRESETS, a preset, a session) */
+        int32_t drawn = (int32_t)rnd_weighted(r, BK_W[path], BK_N);
+        if (kind < 0 || kind >= BK_N)
+            kind = drawn;
+    }
     memset(d, 0, sizeof *d);
     d->seed = seed;
     d->kind = (uint8_t)kind;

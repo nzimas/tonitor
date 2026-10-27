@@ -2,7 +2,8 @@
  * TONITOR: the sounds of each past generation of the generators -- 0 (up to 0.20), 1 (0.21), 2 (0.22, and RUSSOLO from 0.26), 3 (0.29) -- fingerprinted, so
  * that every later firmware draws them again bit for bit from their seeds: the sessions and presets that keep only
  * seeds depend on it. `golden G` prints one line per (engine, kind, path): an FNV-1a hash over many seeds of the
- * design's fields as generation G had them. Built with the host harness (tests/run_tests.sh). */
+ * design's fields as generation G had them (since build 64 a given kind no longer skips the draw of the kind, so the
+ * lines of given kinds were drawn anew then; kind -1 lines as they were). Built with the host harness (tests/run_tests.sh). */
 #define main host_main
 #include "../host/host.c"
 #undef main

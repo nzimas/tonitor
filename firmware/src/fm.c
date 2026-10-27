@@ -93,7 +93,7 @@ typedef struct {
     uint8_t path;                /* PATH_*: what it was drawn on */
     uint8_t gen;                 /* the generators' generation that drew it */
     int32_t gain;                /* Q12: the measured level brought to the target */
-    uint32_t seed;               /* what made it: fm_generate(-1, seed, path, gen) + fm_measure gives it again */
+    uint32_t seed;               /* what made it: fm_generate(kind, seed, path, gen) + fm_measure gives it again */
 } fm_patch_t;
 
 typedef struct {
@@ -1336,16 +1336,22 @@ static void fm_generate(fm_patch_t *pt, int32_t f, uint32_t seed, uint32_t path,
     path = path < PATH_N ? path : PATH_OPEN;
     fm_gen_cur = gen;
     rnd_seed(r, seed ^ 0xF00Du);
-    if (gen == 0u && (f < 0 || f >= FF_N0))
-        f = path == PATH_OPEN ? rnd_below(r, FF_N0) : (int32_t)rnd_weighted(r, FF_W[path], FF_N0);
-    else if (gen <= 2u && (f < 0 || f >= FF_N1))
-        f = (int32_t)rnd_weighted(r, FF_W1[path], FF_N1);
-    else if (gen <= 4u && (f < 0 || f >= FF_N5))
-        f = (int32_t)rnd_weighted(r, FF_W3[path], FF_N5);
-    else if (gen <= 5u && (f < 0 || f >= FF_N5))
-        f = (int32_t)rnd_weighted(r, FF_W5[path], FF_N5);
-    else if (f < 0 || f >= FF_N)
-        f = (int32_t)rnd_weighted(r, FF_W6[path], FF_N);
+    {   /* (the family drawn always, a family given or not: the seed and the family then make the sound again, however
+         * the family was come to -- SHIFT + PRESETS, a preset, a session) */
+        int32_t drawn;
+        if (gen == 0u)
+            drawn = path == PATH_OPEN ? rnd_below(r, FF_N0) : (int32_t)rnd_weighted(r, FF_W[path], FF_N0);
+        else if (gen <= 2u)
+            drawn = (int32_t)rnd_weighted(r, FF_W1[path], FF_N1);
+        else if (gen <= 4u)
+            drawn = (int32_t)rnd_weighted(r, FF_W3[path], FF_N5);
+        else if (gen <= 5u)
+            drawn = (int32_t)rnd_weighted(r, FF_W5[path], FF_N5);
+        else
+            drawn = (int32_t)rnd_weighted(r, FF_W6[path], FF_N);
+        if (f < 0 || f >= FF_N)
+            f = drawn;
+    }
     if (gen >= 5u && fm_retired(f))
         f = FF_WARP;                                     /* (a GLISSE or a RUBBER asked for: a WARP, which has them) */
     fm_voice_defaults(p);

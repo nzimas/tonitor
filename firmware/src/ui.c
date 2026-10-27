@@ -52,7 +52,8 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define NKEY 27u
 #define KEY_SHIFT 25u            /* the rightmost black key: pressed, the keys held latch; held, a latched key lets go */
 #define KEY_NONE 0xFFu
-#define KEY_AMB 1u               /* the leftmost black key: the AMBIENT path (again: back to the open path) */
+#define KEY_AMB 1u               /* the leftmost black key: the AMBIENT path (again: back to the open path); SHIFT +:
+                                  * a scale and root drawn at random */
 #define KEY_EXP 3u               /* the second: the EXPERIMENTAL path */
 #define KEY_ENV 20u              /* the 3rd black key from the right: the ENVELOPE page, up and down (SHIFT: the
                                  * sound's own envelope again) */
@@ -95,6 +96,8 @@ static struct {
     uint16_t flash_col;
     char flash_l1[12], flash_l2[12];
     uint8_t sc_page;             /* the SCALE page is up */
+    uint8_t sc_peek;             /* .. or shown a moment, until sc_peek_until (SHIFT + black key 1: a new scale) */
+    uint32_t sc_peek_until;
     uint8_t scale, root;         /* the keyboard's scale (SCALES) and root (0 = C .. 11 = B) */
     int8_t lx;                   /* the loops' transposition, in steps of the scale (SHIFT + OCT) */
     int8_t lxt[NLAYER];          /* each track's own, on top (SHIFT + its button held + OCT) */
@@ -1362,7 +1365,12 @@ static void ui_input(void)
         }
     }
     for (k = KEY_AMB; k <= KEY_EXP; k += KEY_EXP - KEY_AMB)
-        if ((ch & keys) >> k & 1u) {              /* a path for the layer chosen: its next sounds lean to it */
+        if (((ch & keys) >> k & 1u) && k == KEY_AMB && (keys >> KEY_SHIFT) & 1u) {
+            scale_draw();                         /* SHIFT + black key 1: a scale and root at random, as at start */
+            lx_post();                           /* (the loops moved walk the new scale) */
+            ui.sc_peek = 1;                      /* (the SCALE page shown a moment, over any page) */
+            ui.sc_peek_until = fm1_ms + 1500u;
+        } else if ((ch & keys) >> k & 1u) {       /* a path for the layer chosen: its next sounds lean to it */
             uint32_t pa = k == KEY_AMB ? PATH_AMBIENT : PATH_EXP;
             ui.path[ui.sel] = (uint8_t)(ui.path[ui.sel] == pa ? PATH_OPEN : pa);
             say(ui.path[ui.sel] == PATH_AMBIENT ? "AMBIENT" : ui.path[ui.sel] == PATH_EXP ? "EXPERIMENTAL" : "OPEN", 1200);
@@ -2375,6 +2383,20 @@ static void ui_draw(void)
     int32_t px;
     if (draw_flash())
         return;
+    if (ui.sc_peek && (int32_t)(ui.sc_peek_until - fm1_ms) > 0) {   /* a new scale and root (SHIFT + black key 1) */
+        if (ui.shown_page != 3)
+            ui.force = 1;
+        draw_sc_page();
+        ui.shown_page = 3;
+        ui.shown_ses = 0;
+        ui.force = 0;
+        return;
+    }
+    if (ui.sc_peek) {                            /* (shown: back to the page as it was) */
+        ui.sc_peek = 0;
+        ui.shown_page = 0xFF;
+        ui.force = 1;
+    }
     if (ui.set_page) {                           /* GLOBAL SETUP (setup.c) */
         if (ui.shown_page != 10)
             ui.force = 1;

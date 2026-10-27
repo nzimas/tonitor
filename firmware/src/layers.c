@@ -2216,7 +2216,7 @@ static void layers_init(void)
  * third of a second each, here): at start and for an empty session only the engine each layer plays is measured;
  * the others when the layer first comes to them (snd_ready). A session keeps them unmeasured (level 0) */
 static uint8_t snd_raw[NLAYER];
-/* layer l's sound on engine e measured -- drawn again from what made it first (the same sound, at its design's own
+/* layer l's sound on engine e measured -- drawn again from what made it first, its family too (the same sound, at its design's own
  * level, which ANIMA's measure scales). snd_ready: if it was not yet, in place (the ISR renders it only once the
  * layer is on engine e): before the layer is moved to e */
 static void snd_measure(uint32_t l, uint32_t e, uint32_t k)   /* (its buffer k) */
@@ -2224,35 +2224,35 @@ static void snd_measure(uint32_t l, uint32_t e, uint32_t k)   /* (its buffer k) 
     snd_raw[l] &= (uint8_t)~(1u << e);
     if (e == ENG_FM) {
         fm_patch_t *d = &fm_buf[l][k];
-        fm_generate(d, -1, d->seed, d->path, d->gen);
+        fm_generate(d, d->family, d->seed, d->path, d->gen);
         fm_measure(d);
     } else if (e == ENG_ANIMA) {
         an_design_t *d = &an_buf[l][k];
-        an_design(d, -1, d->seed, d->path, d->gen);
+        an_design(d, d->kind, d->seed, d->path, d->gen);
         an_measure(d);
     } else if (e == ENG_CAL) {
         cal_design_t *d = &cal_buf[l][k];
-        cal_design(d, -1, d->seed, d->path, d->gen);
+        cal_design(d, d->kind, d->seed, d->path, d->gen);
         cal_measure(d);
     } else if (e == ENG_RUS) {
         rus_design_t *d = &rus_buf[l][k];
-        rus_design(d, -1, d->seed, d->path, d->gen);
+        rus_design(d, d->kind, d->seed, d->path, d->gen);
         rus_measure(d);
     } else if (e == ENG_DRUID) {
         dr_design_t *d = &dr_buf[l][k];
-        dr_design(d, -1, d->seed, d->path, d->gen);
+        dr_design(d, d->kind, d->seed, d->path, d->gen);
         dr_measure(d);
     } else if (e == ENG_BAY) {
         ba_design_t *d = &ba_buf[l][k];
-        ba_design(d, -1, d->seed, d->path, d->gen);
+        ba_design(d, d->kind, d->seed, d->path, d->gen);
         ba_measure(d);
     } else if (e == ENG_OB) {
         ob_design_t *d = &ob_buf[l][k];
-        ob_design(d, -1, d->seed, d->path, d->gen);
+        ob_design(d, d->kind, d->seed, d->path, d->gen);
         ob_measure(d);
     } else {
         hv_design_t *d = &hv_buf[l][k];
-        hv_design(d, -1, d->seed, d->path, d->gen);
+        hv_design(d, d->kind, d->seed, d->path, d->gen);
         hv_measure(d);
     }
 }
@@ -2353,16 +2353,16 @@ static int new_cal(uint32_t l, uint32_t seed, uint32_t path)
     return 1;
 }
 /* layer l's sound on engine e drawn again from what made it (a preset): its seed, path and generation, and the
- * level it was measured at; published as a new sound is. 0: the ISR still holds the other buffer */
+ * level it was measured at, and its family (-1: drawn from the seed); published as a new sound is. 0: the ISR still
+ * holds the other buffer */
 static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path, uint32_t gen, int32_t level, int32_t kind)
 {
     uint32_t k;
-    (void)kind;
     if (e == ENG_FM) {
         if (!sound_slot_free(&fm_pub[l], &fm_use[l]))
             return 0;
         k = fm_use[l] ^ 1u;
-        fm_generate(&fm_buf[l][k], -1, seed, path, gen);
+        fm_generate(&fm_buf[l][k], kind, seed, path, gen);
         fm_buf[l][k].gain = level;
         RING_PUBLISH();
         fm_pub[l] = (uint8_t)k;
@@ -2371,7 +2371,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&an_pub[l], &an_use[l]))
             return 0;
         k = an_use[l] ^ 1u;
-        an_design(&an_buf[l][k], -1, seed, path, gen);
+        an_design(&an_buf[l][k], kind, seed, path, gen);
         an_buf[l][k].out = level;
         RING_PUBLISH();
         an_pub[l] = (uint8_t)k;
@@ -2380,7 +2380,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&cal_pub[l], &cal_use[l]))
             return 0;
         k = cal_use[l] ^ 1u;
-        cal_design(&cal_buf[l][k], -1, seed, path, gen);
+        cal_design(&cal_buf[l][k], kind, seed, path, gen);
         cal_buf[l][k].out = level;
         RING_PUBLISH();
         cal_pub[l] = (uint8_t)k;
@@ -2389,7 +2389,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&hv_pub[l], &hv_use[l]))
             return 0;
         k = hv_use[l] ^ 1u;
-        hv_design(&hv_buf[l][k], -1, seed, path, gen);
+        hv_design(&hv_buf[l][k], kind, seed, path, gen);
         hv_buf[l][k].out = level;
         RING_PUBLISH();
         hv_pub[l] = (uint8_t)k;
@@ -2398,7 +2398,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&ba_pub[l], &ba_use[l]))
             return 0;
         k = ba_use[l] ^ 1u;
-        ba_design(&ba_buf[l][k], -1, seed, path, gen);
+        ba_design(&ba_buf[l][k], kind, seed, path, gen);
         ba_buf[l][k].out = level;
         RING_PUBLISH();
         ba_pub[l] = (uint8_t)k;
@@ -2407,7 +2407,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&ob_pub[l], &ob_use[l]))
             return 0;
         k = ob_use[l] ^ 1u;
-        ob_design(&ob_buf[l][k], kind, seed, path, gen);   /* (OBRADOR: its family too, the others drawn) */
+        ob_design(&ob_buf[l][k], kind, seed, path, gen);
         ob_buf[l][k].out = level;
         RING_PUBLISH();
         ob_pub[l] = (uint8_t)k;
@@ -2416,7 +2416,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&dr_pub[l], &dr_use[l]))
             return 0;
         k = dr_use[l] ^ 1u;
-        dr_design(&dr_buf[l][k], -1, seed, path, gen);
+        dr_design(&dr_buf[l][k], kind, seed, path, gen);
         dr_buf[l][k].out = level;
         RING_PUBLISH();
         dr_pub[l] = (uint8_t)k;
@@ -2425,7 +2425,7 @@ static int sound_from_seed(uint32_t l, uint32_t e, uint32_t seed, uint32_t path,
         if (!sound_slot_free(&rus_pub[l], &rus_use[l]))
             return 0;
         k = rus_use[l] ^ 1u;
-        rus_design(&rus_buf[l][k], -1, seed, path, gen);
+        rus_design(&rus_buf[l][k], kind, seed, path, gen);
         rus_buf[l][k].out = level;
         RING_PUBLISH();
         rus_pub[l] = (uint8_t)k;

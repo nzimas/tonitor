@@ -46,7 +46,7 @@ enum { CSRC_PARTNER, CSRC_SIDE, CSRC_CROSS, CSRC_TOTAL };
 enum { CLNK_A, CLNK_AND, CLNK_OR, CLNK_XOR };
 
 typedef struct {
-    uint32_t seed;               /* what made it: cal_design(-1, seed, path, gen) + cal_measure give it again */
+    uint32_t seed;               /* what made it: cal_design(kind, seed, path, gen) + cal_measure give it again */
     uint8_t kind;
     uint8_t src[4];              /* each pair's FM source */
     uint8_t link, lfo_sq, gate_pairs, del_src;   /* hyper LFO; its shape; the pairs it gates; the delay's mod */
@@ -647,10 +647,13 @@ static void cal_design(cal_design_t *d, int32_t kind, uint32_t seed, uint32_t pa
     uint32_t k, set;
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed ^ 0xCA11u);
-    if (gen == 0u && (kind < 0 || kind >= CS_N0))
-        kind = path == PATH_OPEN ? rnd_below(r, CS_N0) : (int32_t)rnd_weighted(r, CS_W[path], CS_N0);
-    else if (kind < 0 || kind >= CS_N)
-        kind = (int32_t)rnd_weighted(r, CS_W1[path], CS_N);
+    {   /* (the family drawn always, a family given or not: the seed and the family then make the sound again, however
+         * the family was come to -- SHIFT + PRESETS, a preset, a session) */
+        int32_t drawn = gen == 0u ? (path == PATH_OPEN ? rnd_below(r, CS_N0) : (int32_t)rnd_weighted(r, CS_W[path], CS_N0))
+                                  : (int32_t)rnd_weighted(r, CS_W1[path], CS_N);
+        if (kind < 0 || kind >= CS_N)
+            kind = drawn;
+    }
     memset(d, 0, sizeof *d);
     d->seed = seed;
     d->kind = (uint8_t)kind;

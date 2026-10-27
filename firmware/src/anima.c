@@ -69,7 +69,7 @@ static const char *const AK_NAME[AK_N] = {"HAZE", "VOYAGE", "GLASS", "BELLS", "G
 enum { MO_TAPS, MO_DRAGS, MO_ORBITS, MO_SWARM, MO_SWEEPS, MO_HOLDS };
 
 typedef struct {
-    uint32_t seed;               /* what made it: an_design(-1, seed, path, gen) + an_measure gives it again */
+    uint32_t seed;               /* what made it: an_design(kind, seed, path, gen) + an_measure gives it again */
     uint8_t kind;
     uint8_t path;                /* PATH_*: what it was drawn on */
     uint8_t oscA, oscB, fm, multi, gran, ampMod, down, shaper, phaser, resonator, phByHand, golden;
@@ -1683,12 +1683,18 @@ static void an_design(an_design_t *d, int32_t k, uint32_t seed, uint32_t path, u
     int32_t s[8];
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed);
-    if (gen == 0u && (k < 0 || k >= AK_N0))
-        k = path == PATH_OPEN ? rnd_below(r, AK_N0) : (int32_t)rnd_weighted(r, AK_W[path], AK_N0);
-    else if (gen <= 2u && (k < 0 || k >= AK_N1))
-        k = (int32_t)rnd_weighted(r, AK_W1[path], AK_N1);
-    else if (k < 0 || k >= AK_N)
-        k = (int32_t)rnd_weighted(r, AK_W3[path], AK_N);
+    {   /* (the family drawn always, a family given or not: the seed and the family then make the sound again, however
+         * the family was come to -- SHIFT + PRESETS, a preset, a session) */
+        int32_t drawn;
+        if (gen == 0u)
+            drawn = path == PATH_OPEN ? rnd_below(r, AK_N0) : (int32_t)rnd_weighted(r, AK_W[path], AK_N0);
+        else if (gen <= 2u)
+            drawn = (int32_t)rnd_weighted(r, AK_W1[path], AK_N1);
+        else
+            drawn = (int32_t)rnd_weighted(r, AK_W3[path], AK_N);
+        if (k < 0 || k >= AK_N)
+            k = drawn;
+    }
     memset(d, 0, sizeof *d);
     d->kind = (uint8_t)k;
     d->path = (uint8_t)path;

@@ -41,7 +41,7 @@ static const uint16_t HK_ENV[HK_N][4][2] = {
 };
 
 typedef struct {
-    uint32_t seed;               /* what made it: hv_design(-1, seed, path, gen) + hv_measure give it again */
+    uint32_t seed;               /* what made it: hv_design(kind, seed, path, gen) + hv_measure give it again */
     uint8_t kind, path, gen, fmode;   /* fmode: the filter, 1 low-pass, 2 band-pass, 3 high-pass */
     uint8_t wv[7];               /* each oscillator's wave, 0 (sine) .. 255 (square) */
     uint8_t lk[7];               /* each one's LFO (low 2 bits) and its phase (the rest, x 1/64 of a turn) */
@@ -347,8 +347,12 @@ static void hv_design(hv_design_t *d, int32_t kind, uint32_t seed, uint32_t path
     int32_t sw, wj, lo, hi;
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed ^ 0x41E5u);
-    if (kind < 0 || kind >= HK_N)
-        kind = (int32_t)rnd_weighted(r, HK_W[path], HK_N);
+    {   /* (the family drawn always, a family given or not: the seed and the family then make the sound again, however
+         * the family was come to -- SHIFT + PRESETS, a preset, a session) */
+        int32_t drawn = (int32_t)rnd_weighted(r, HK_W[path], HK_N);
+        if (kind < 0 || kind >= HK_N)
+            kind = drawn;
+    }
     memset(d, 0, sizeof *d);
     d->seed = seed;
     d->kind = (uint8_t)kind;

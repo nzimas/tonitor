@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 25u           /* 25: OBRADOR (an eighth sound, after HIVE in each track's; eight engines' macros and envelopes); 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 26u           /* 26: each sound kept as its seed keeps its family too (above its path, as OBRADOR's in 25); 25: OBRADOR (an eighth sound, after HIVE in each track's; eight engines' macros and envelopes); 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -298,7 +298,12 @@ static int32_t ses_c2_level(const ses_head_t *h, uint32_t w)
 }
 static uint32_t ses_c2_path(const ses_head_t *h, uint32_t w)
 {
-    return h->format >= 4u && (w >> 24) < PATH_N ? w >> 24 : PATH_OPEN;
+    uint32_t p = h->format >= 26u ? w >> 24 & 3u : w >> 24;   /* (format 26: the family above it) */
+    return h->format >= 4u && p < PATH_N ? p : PATH_OPEN;
+}
+static int32_t ses_c2_kind(const ses_head_t *h, uint32_t w)   /* the family, -1 if not kept (drawn from the seed) */
+{
+    return h->format >= 26u ? (int32_t)(w >> 26) - 1 : -1;
 }
 static uint32_t ses_c2_gen(const ses_head_t *h, uint32_t w)
 {
@@ -307,6 +312,10 @@ static uint32_t ses_c2_gen(const ses_head_t *h, uint32_t w)
 static uint32_t ses_c2_word(int32_t level, uint32_t gen, uint32_t path)
 {
     return ((uint32_t)level & 0xFFFFFu) | gen << 20 | path << 24;
+}
+static uint32_t ses_c2_fam(int32_t level, uint32_t gen, uint32_t path, uint32_t kind)   /* with the family (+ 1) above the path */
+{
+    return ses_c2_word(level, gen, path | (kind + 1u) << 2);
 }
 /* the sound kept in full, should it have to be drawn again from its seed (another firmware's layout): its path
  * and generation, in loop_n's spare bits (format 5) */
@@ -381,57 +390,56 @@ static void ses_emit(void)
                 ses_out(&fm_buf[l][fm_pub[l]], sizeof(fm_patch_t));
             else {
                 c2[0] = fm_buf[l][fm_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_FM & 1u ? 0 : fm_buf[l][fm_pub[l]].gain, fm_buf[l][fm_pub[l]].gen, fm_buf[l][fm_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_FM & 1u ? 0 : fm_buf[l][fm_pub[l]].gain, fm_buf[l][fm_pub[l]].gen, fm_buf[l][fm_pub[l]].path, fm_buf[l][fm_pub[l]].family);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_ANIMA)
                 ses_out(&an_buf[l][an_pub[l]], sizeof(an_design_t));
             else {
                 c2[0] = an_buf[l][an_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_ANIMA & 1u ? 0 : an_buf[l][an_pub[l]].out, an_buf[l][an_pub[l]].gen, an_buf[l][an_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_ANIMA & 1u ? 0 : an_buf[l][an_pub[l]].out, an_buf[l][an_pub[l]].gen, an_buf[l][an_pub[l]].path, an_buf[l][an_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_CAL)
                 ses_out(&cal_buf[l][cal_pub[l]], sizeof(cal_design_t));
             else {
                 c2[0] = cal_buf[l][cal_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_CAL & 1u ? 0 : cal_buf[l][cal_pub[l]].out, cal_buf[l][cal_pub[l]].gen, cal_buf[l][cal_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_CAL & 1u ? 0 : cal_buf[l][cal_pub[l]].out, cal_buf[l][cal_pub[l]].gen, cal_buf[l][cal_pub[l]].path, cal_buf[l][cal_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_RUS)                    /* (format 9) */
                 ses_out(&rus_buf[l][rus_pub[l]], sizeof(rus_design_t));
             else {
                 c2[0] = rus_buf[l][rus_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_RUS & 1u ? 0 : rus_buf[l][rus_pub[l]].out, rus_buf[l][rus_pub[l]].gen, rus_buf[l][rus_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_RUS & 1u ? 0 : rus_buf[l][rus_pub[l]].out, rus_buf[l][rus_pub[l]].gen, rus_buf[l][rus_pub[l]].path, rus_buf[l][rus_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_DRUID)                  /* (format 17) */
                 ses_out(&dr_buf[l][dr_pub[l]], sizeof(dr_design_t));
             else {
                 c2[0] = dr_buf[l][dr_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_DRUID & 1u ? 0 : dr_buf[l][dr_pub[l]].out, dr_buf[l][dr_pub[l]].gen, dr_buf[l][dr_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_DRUID & 1u ? 0 : dr_buf[l][dr_pub[l]].out, dr_buf[l][dr_pub[l]].gen, dr_buf[l][dr_pub[l]].path, dr_buf[l][dr_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_BAY)                    /* (format 19) */
                 ses_out(&ba_buf[l][ba_pub[l]], sizeof(ba_design_t));
             else {
                 c2[0] = ba_buf[l][ba_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_BAY & 1u ? 0 : ba_buf[l][ba_pub[l]].out, ba_buf[l][ba_pub[l]].gen, ba_buf[l][ba_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_BAY & 1u ? 0 : ba_buf[l][ba_pub[l]].out, ba_buf[l][ba_pub[l]].gen, ba_buf[l][ba_pub[l]].path, ba_buf[l][ba_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_HIVE)                   /* (format 22: in full -- a new size of it needs a new format) */
                 ses_out(&hv_buf[l][hv_pub[l]], sizeof(hv_design_t));
             else {
                 c2[0] = hv_buf[l][hv_pub[l]].seed;
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_HIVE & 1u ? 0 : hv_buf[l][hv_pub[l]].out, hv_buf[l][hv_pub[l]].gen, hv_buf[l][hv_pub[l]].path);
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_HIVE & 1u ? 0 : hv_buf[l][hv_pub[l]].out, hv_buf[l][hv_pub[l]].gen, hv_buf[l][hv_pub[l]].path, hv_buf[l][hv_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
             if (y.engine == ENG_OB)                     /* (format 25) */
                 ses_out(&ob_buf[l][ob_pub[l]], sizeof(ob_design_t));
             else {
-                c2[0] = ob_buf[l][ob_pub[l]].seed;      /* (its family + 1 above its path, in the top byte) */
-                c2[1] = ses_c2_word(snd_raw[l] >> ENG_OB & 1u ? 0 : ob_buf[l][ob_pub[l]].out, ob_buf[l][ob_pub[l]].gen,
-                                    ob_buf[l][ob_pub[l]].path | (uint32_t)(ob_buf[l][ob_pub[l]].kind + 1u) << 2);
+                c2[0] = ob_buf[l][ob_pub[l]].seed;
+                c2[1] = ses_c2_fam(snd_raw[l] >> ENG_OB & 1u ? 0 : ob_buf[l][ob_pub[l]].out, ob_buf[l][ob_pub[l]].gen, ob_buf[l][ob_pub[l]].path, ob_buf[l][ob_pub[l]].kind);
                 ses_out(c2, sizeof c2);
             }
         }
@@ -1215,7 +1223,7 @@ static int ses_load(uint32_t i)
                 fm_measure(&fm_buf[l][fk]);
             } else {
                 ses_in(c2, sizeof c2);
-                fm_generate(&fm_buf[l][fk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                fm_generate(&fm_buf[l][fk], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 fm_buf[l][fk].gain = ses_c2_level(&h, c2[1]);
             }
             full = h.format < 3u || ui.engine[l] == ENG_ANIMA;
@@ -1228,7 +1236,7 @@ static int ses_load(uint32_t i)
                 an_measure(&an_buf[l][ak]);
             } else {
                 ses_in(c2, sizeof c2);
-                an_design(&an_buf[l][ak], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                an_design(&an_buf[l][ak], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 an_buf[l][ak].out = ses_c2_level(&h, c2[1]);
             }
             if (h.format < 3u) {
@@ -1245,7 +1253,7 @@ static int ses_load(uint32_t i)
                 }
             } else {
                 ses_in(c2, sizeof c2);
-                cal_design(&cal_buf[l][ck], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                cal_design(&cal_buf[l][ck], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 cal_buf[l][ck].out = ses_c2_level(&h, c2[1]);
             }
             if (h.format < 9u) {                        /* (before RUSSOLO: one drawn anew) */
@@ -1262,7 +1270,7 @@ static int ses_load(uint32_t i)
                 }
             } else {
                 ses_in(c2, sizeof c2);
-                rus_design(&rus_buf[l][rk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                rus_design(&rus_buf[l][rk], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 rus_buf[l][rk].out = ses_c2_level(&h, c2[1]);
             }
             if (h.format < 17u) {                       /* (before DRUID: one drawn anew) */
@@ -1279,7 +1287,7 @@ static int ses_load(uint32_t i)
                 }
             } else {
                 ses_in(c2, sizeof c2);
-                dr_design(&dr_buf[l][dk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                dr_design(&dr_buf[l][dk], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 dr_buf[l][dk].out = ses_c2_level(&h, c2[1]);
             }
             if (h.format < 19u) {                       /* (before BAYAREA: one drawn anew) */
@@ -1296,7 +1304,7 @@ static int ses_load(uint32_t i)
                 }
             } else {
                 ses_in(c2, sizeof c2);
-                ba_design(&ba_buf[l][bk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                ba_design(&ba_buf[l][bk], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 ba_buf[l][bk].out = ses_c2_level(&h, c2[1]);
             }
             if (h.format < 21u) {                       /* (before HIVE: one drawn anew) */
@@ -1311,7 +1319,7 @@ static int ses_load(uint32_t i)
                 hv_measure(&hv_buf[l][hk]);
             } else {
                 ses_in(c2, sizeof c2);
-                hv_design(&hv_buf[l][hk], -1, c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
+                hv_design(&hv_buf[l][hk], ses_c2_kind(&h, c2[1]), c2[0], ses_c2_path(&h, c2[1]), ses_c2_gen(&h, c2[1]));
                 hv_buf[l][hk].out = ses_c2_level(&h, c2[1]);
             }
             if (h.format < 25u) {                       /* (before OBRADOR: one drawn anew, measured when played) */

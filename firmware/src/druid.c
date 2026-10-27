@@ -45,7 +45,7 @@ static const uint8_t DK_W[PATH_N][DK_N] = {
 };
 
 typedef struct {
-    uint32_t seed;               /* what made it: dr_design(-1, seed, path, gen) + dr_measure give it again */
+    uint32_t seed;               /* what made it: dr_design(kind, seed, path, gen) + dr_measure give it again */
     uint8_t kind, path, gen, model, exc, rsv[3];
     int32_t structure, brightness, damping, position;   /* Rings' four, Q15 */
     int32_t mute;                /* letting go: the damping brought down by this share, Q15 */
@@ -599,8 +599,12 @@ static void dr_design(dr_design_t *d, int32_t kind, uint32_t seed, uint32_t path
     rnd_t rr, *r = &rr;
     path = path < PATH_N ? path : PATH_OPEN;
     rnd_seed(r, seed ^ 0xD401Du);
-    if (kind < 0 || kind >= DK_N)
-        kind = (int32_t)rnd_weighted(r, DK_W[path], DK_N);
+    {   /* (the family drawn always, a family given or not: the seed and the family then make the sound again, however
+         * the family was come to -- SHIFT + PRESETS, a preset, a session) */
+        int32_t drawn = (int32_t)rnd_weighted(r, DK_W[path], DK_N);
+        if (kind < 0 || kind >= DK_N)
+            kind = drawn;
+    }
     memset(d, 0, sizeof *d);
     d->seed = seed;
     d->kind = (uint8_t)kind;
