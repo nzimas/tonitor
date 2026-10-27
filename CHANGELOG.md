@@ -1,5 +1,17 @@
 # Changelog
 
+## Build 64
+
+Fixed
+- A sound chosen by family (SHIFT + PRESETS, HOME's SAME FAMILY) on FM, ANIMA, CALIGULA, RUSSOLO, DRUID, BAYAREA
+  or HIVE came back as another sound, often of another family, when kept as its seed: from a preset, from a
+  session for the engines the track was not playing, and when measured on first being played. Each engine now
+  draws the family from the seed whether one is given or not (as OBRADOR does), so the seed and the family make
+  the same sound again. Sounds drawn without a family are unchanged.
+- Sessions (format 26) keep the family with the seed of every engine's sound, not only OBRADOR's; presets use
+  the family they already kept. Earlier sessions load as before. A preset saved by an earlier build from a sound
+  chosen by family now loads in that family, but not as the same sound.
+
 ## Build 63
 
 Added

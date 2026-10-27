@@ -30,7 +30,7 @@ enum { OBF_SEM, OBF_LP24, OBF_BP };              /* the filter: the 12 dB morph;
 #define OB_PLS 2u
 
 typedef struct {
-    uint32_t seed;               /* what made it: ob_design(-1, seed, path, gen) + ob_measure give it again */
+    uint32_t seed;               /* what made it: ob_design(kind, seed, path, gen) + ob_measure give it again */
     uint8_t kind, path, gen, dual;   /* dual: the second voice card */
     uint8_t w1, w2, ftype, sync; /* the waves (OB_SAW | OB_PLS); the filter; OSC 2 synced to OSC 1 */
     uint8_t lfo_shape, rsv[3];
