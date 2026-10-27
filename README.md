@@ -399,8 +399,8 @@ To turn it on:
 5. Press **PLAY**: the mode is on, its name in its colour (grey while off).
 6. Press **SEQ** to go back to playing, and play the guide.
 
-To turn it off, open the page again and press **PLAY** (REACT OFF ...). While it is on, SEQ blinks slowly off the
-page.
+To turn it off, open the page again and press **PLAY** (REACT OFF ...). While it is on, **PLAY** flashes with
+each note the guide plays, and SEQ blinks slowly off the page.
 
 On the page:
 

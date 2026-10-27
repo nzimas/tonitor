@@ -1,5 +1,11 @@
 # Changelog
 
+## Build 68
+
+Changed
+- While PLAY ALONG is on, PLAY flashes with each note the guide plays (keys, chords, loops, BALLSY, BRICKLAYER, MIDI
+  in), on every page but BALLSY's and BRICKLAYER's.
+
 ## Build 67
 
 Added

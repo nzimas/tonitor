@@ -6958,7 +6958,7 @@ static uint32_t rx_q_busy(void)
 static int cmd_playalong(void)
 {
     static const uint8_t TUNE[12] = {0, 2, 4, 2, 7, 4, 2, 0, 4, 7, 9, 7};
-    uint32_t fail = 0, m, j, k;
+    uint32_t fail = 0, m, j, k, a;
     int8_t lv;
     char path[512];
     layers_init();
@@ -6997,6 +6997,15 @@ static int cmd_playalong(void)
     press_btn(B_PLAY);
     if (!rx.on || rx_ear != 0u || strcmp(ui.msg, "REACT"))
         printf("FAIL playalong: PLAY on the page does not turn REACT on (%s)\n", ui.msg), fail++;
+    press_key(TUNE[0], 1);                            /* PLAY flashes with the guide's note, then goes dark */
+    ui_leds();
+    a = host_led[PANEL_BTN[B_PLAY]];
+    pa_run(150);
+    ui_leds();
+    if (!a || host_led[PANEL_BTN[B_PLAY]])
+        printf("FAIL playalong: PLAY does not flash with the guide's note (%u, then %u)\n", a, host_led[PANEL_BTN[B_PLAY]]), fail++;
+    press_key(TUNE[0], 0);
+    pa_run(400);
     for (m = 0; m < RXM_N; m++) {
         if (m) {
             host_enc[PANEL_ENC[EN_PRESET]] = 1;       /* PRESETS: the next mode */

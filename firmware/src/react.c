@@ -128,6 +128,7 @@ static struct {
     uint8_t vel, mid, ans_done, turn;
     rx_ag_t a[NLAYER];
     uint32_t red_until, rt0;
+    uint32_t flash;              /* the guide's last note struck, + 1 (0: none): PLAY flashes (ui_leds) */
     uint8_t rdown, rdone;
     int8_t k[4];                 /* the page's DENSITY COMPLEXITY CONTINUITY SPREAD, 0 .. 100 */
     struct { uint8_t layer, note, vel, on; uint32_t at, len; } q[RX_Q];   /* on: 1 to strike, 2 sounding */
@@ -614,6 +615,7 @@ static void rx_hear(uint32_t note, uint32_t vel, int on)
         return;
     }
     vel = vel ? vel : 100u;
+    rx.flash = now + 1u;
     ioi = rx.last_on ? now - rx.last_on : 100000u;
     gap = rx.last_ev ? now - rx.last_ev : 100000u;
     rx.ch[note % 12u] = (uint16_t)(rx.ch[note % 12u] + 500u > 4000u ? 4000u : rx.ch[note % 12u] + 500u);

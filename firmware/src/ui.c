@@ -1593,8 +1593,11 @@ static void ui_leds(void)
             fm1_led_key(PANEL_BTN[B_REC], bl.rec[ui.sel]);
         else
             fm1_led_key(PANEL_BTN[B_REC], p->rec == LR_REC || (p->rec == LR_ARMED && (fm1_ms / 250u) & 1u));
-        fm1_led_key(PANEL_BTN[B_PLAY], seq_page() ? (bl.run[ui.sel] || bb.run[ui.sel]) && (fm1_ms / 250u) & 1u   /* (blinking */
-                                                  : p->play && p->ntrk);                               /* as its key) */
+        if (rx.on && !seq_page())              /* (PLAY ALONG on: PLAY flashes with each of the guide's notes) */
+            fm1_led_key(PANEL_BTN[B_PLAY], rx.flash && fm1_ms + 1u - rx.flash < 70u);
+        else
+            fm1_led_key(PANEL_BTN[B_PLAY], seq_page() ? (bl.run[ui.sel] || bb.run[ui.sel]) && (fm1_ms / 250u) & 1u   /* (blinking */
+                                                      : p->play && p->ntrk);                               /* as its key) */
     }
     fm1_led_key(PANEL_BTN[B_HOME], (int32_t)(ui.home_until - fm1_ms) > 0);
     fm1_led_key(PANEL_BTN[B_SEQ], ui.rv_page || ui.mod_page || rx_page_up() || (rx.on && (fm1_ms / 600u) & 1u));   /* (PLAY
