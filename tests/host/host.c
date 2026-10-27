@@ -81,6 +81,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 
 #include "dsp.h"
 #include "gfx.c"
+#include "logo.c"
 #include "fm.c"
 #include "anima.c"
 #include "cal.c"
@@ -406,6 +407,9 @@ static void ppm(const char *path)
 static void cmd_screens(const char *dir)
 {
     char path[512];
+    splash_draw("BUILD 65");                     /* the splash: the logo */
+    snprintf(path, sizeof path, "%s/screen-00-splash.ppm", dir);
+    ppm(path);
     layers_init();
     ui_init();
     sounds_init();

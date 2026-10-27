@@ -53,6 +53,7 @@ bootguard_t bootguard __attribute__((section(".noinit")));
 #include "lcd.c"
 #include "dsp.h"
 #include "gfx.c"
+#include "logo.c"
 #include "fm.c"
 #include "anima.c"
 #include "cal.c"

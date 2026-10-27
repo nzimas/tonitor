@@ -1,5 +1,12 @@
 # Changelog
 
+## Build 66
+
+Changed
+- The splash screen shows the Tonitor logo: the ring mark in the middle, the lettering across the width under it,
+  the build number below. It is drawn from the logo's shapes (docs/assets/logo-dark.svg) at start, with smoothed
+  edges, rather than kept as an image.
+
 ## Build 65
 
 Added
