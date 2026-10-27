@@ -1,5 +1,11 @@
 # Changelog
 
+## Build 65
+
+Added
+- SHIFT + black key 1 draws a new scale and root at random, as at start. The SCALE page shows them for 1.5 s,
+  then the page that was up returns; the loops follow the new scale. Black key 1 alone still sets the AMBIENT path.
+
 ## Build 64
 
 Fixed

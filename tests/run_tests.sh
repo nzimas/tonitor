@@ -30,6 +30,7 @@ build/host loopmodes
 build/host looptie
 build/host obrador
 build/host famseed
+build/host scaleshift
 build/host playalong
 build/host delay build/screens
 build/host glow

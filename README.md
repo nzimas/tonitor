@@ -108,6 +108,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | the white keys | play the chosen track in the scale; the first white key is the root, and the root's keys glow dimly. A held note keeps sounding when you choose another track. The tracks share twelve voices. |
 | the rightmost black key | **SHIFT**. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it ([Latched keys](#latched-keys)). |
 | black keys 1 and 2 | the chosen track's generative path: **AMBIENT**, **EXPERIMENTAL**; the lit one again: **OPEN** ([Generative paths](#generative-paths)). |
+| **SHIFT +** black key 1 | a new scale and root, drawn at random; the SCALE page shows them for 1.5 s ([Scales](#scales)). |
 | black key 3 | chord mode: **held** (0.6 s), on or off; **pressed**, the next chord form ([Chords](#chords)). |
 | black keys 4, 5, 6 | the chosen track's loops **REVERSE**, **PENDULUM**, **RANDOM**; pressed again, forwards ([Direction and speed](#direction-and-speed)). Only while its loops play. |
 | black keys 7, 8 | the loops at **HALF SPEED** or **DOUBLE SPEED**; pressed again, normal speed. Only while the loops play. |
@@ -303,7 +304,7 @@ Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.
 ### Scales
 
 One scale and root for all the tracks, saved with the session. At start, and in an empty session, both are drawn at
-random (ARP shows which). The root is the first white
+random (ARP shows which); **SHIFT +** black key 1 draws them again, and the loops follow the new scale. The root is the first white
 key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.
 
 | Scale | Steps |

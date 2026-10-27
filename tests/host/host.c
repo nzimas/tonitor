@@ -6976,6 +6976,47 @@ static int cmd_famseed(void)
     return fail ? 1 : 0;
 }
 
+/* SHIFT + black key 1: a scale and root drawn at random, the SCALE page shown a moment; black key 1 alone: the path */
+static int cmd_scaleshift(void)
+{
+    uint32_t fail = 0, i, moved = 0;
+    layers_init();
+    ui_init();
+    sounds_init();
+    run_blocks(10, 0);
+    ui_draw();
+    for (i = 0; i < 8u; i++) {
+        uint32_t sc = ui.scale, rt = ui.root, pa = ui.path[ui.sel];
+        press_phys(KEY_SHIFT, 1);
+        press_phys(KEY_AMB, 1);
+        press_phys(KEY_AMB, 0);
+        press_phys(KEY_SHIFT, 0);
+        moved += ui.scale != sc || ui.root != rt;
+        if (ui.scale >= NSCALE || ui.root >= 12u)
+            printf("FAIL scaleshift: scale %u, root %u out of range\n", ui.scale, ui.root), fail++;
+        if (ui.path[ui.sel] != pa)
+            printf("FAIL scaleshift: SHIFT + black key 1 changed the path\n"), fail++;
+        ui_draw();
+        if (ui.shown_page != 3)
+            printf("FAIL scaleshift: the SCALE page is not shown (page %u)\n", ui.shown_page), fail++;
+        fm1_ms += 1600;
+        ui_draw();
+        if (ui.shown_page == 3 || ui.sc_page)
+            printf("FAIL scaleshift: the SCALE page stays (page %u)\n", ui.shown_page), fail++;
+    }
+    if (moved < 6u)
+        printf("FAIL scaleshift: the scale or root changed %u times of 8\n", moved), fail++;
+    {
+        uint32_t sc = ui.scale, rt = ui.root, pa = ui.path[ui.sel];
+        press_phys(KEY_AMB, 1);
+        press_phys(KEY_AMB, 0);
+        if (ui.path[ui.sel] == pa || ui.scale != sc || ui.root != rt)
+            printf("FAIL scaleshift: black key 1 alone no longer only sets the path\n"), fail++;
+    }
+    printf("scaleshift: %u of 8 moved, %s\n", moved, fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
@@ -7058,6 +7099,8 @@ int main(int argc, char **argv)
         return cmd_obrador();
     if (argc >= 2 && !strcmp(argv[1], "famseed"))
         return cmd_famseed();
+    if (argc >= 2 && !strcmp(argv[1], "scaleshift"))
+        return cmd_scaleshift();
     if (argc >= 2 && !strcmp(argv[1], "looptie"))
         return cmd_looptie();
     if (argc >= 2 && !strcmp(argv[1], "loopmodes"))
