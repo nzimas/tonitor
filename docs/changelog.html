@@ -43,6 +43,34 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="build-67">Build 67</h2>
+<p>Added</p>
+<ul>
+<li>Snapshots: 16 per session, each the whole state of the machine at one moment: every track's engine, the sound on each of its eight engines with its macros and envelope, level, pan, sends, filter, granulator, crush, distortion, octave, transposition, path, chord mode, modulation, latched notes and chords, BALLSY and BRICKLAYER settings, BRICKLAYER's notes, and its loops (which loops, their relative position, which are taken out, play, direction, speed, VARY); the reverb, the delay, the scale, the root, the loops' transposition and PLAY ALONG. SAVE opens the SNAPSHOTS page: a white key released recalls its snapshot, held 0.8 s stores the current state, with SHIFT held empties it; PRESETS moves the frame and SAVE held stores into it.</li>
+<li>Loops held by a snapshot stay in memory after the looper is emptied, sharing the looper's room (LOOPER FULL when there is none left). Sounds, latched notes and loops shared by several snapshots are stored once; FULL when there is no room for another snapshot.</li>
+<li>Morph time, 0 to 30 s (KNOB 1 on the SNAPSHOTS page). Continuous values change gradually; pitch (scale, root, octaves, transpositions), the delay's TIME, the reverb's SIZE and on/off settings change at once halfway. A track whose sound changes fades out, switches halfway and fades back in.</li>
+<li>Sessions (format 27) keep the snapshots, the loops they hold, the morph time and PLAY ALONG's settings (not kept before). Earlier sessions load with no snapshots.</li>
+</ul>
+<p>Changed</p>
+<ul>
+<li>SHIFT + SAVE opens the SESSIONS page (SAVE did before). GLOBAL SETUP is now SHIFT + SAVE held 0.8 s.</li>
+</ul>
+<h2 id="build-66">Build 66</h2>
+<p>Changed</p>
+<ul>
+<li>The splash screen shows the Tonitor logo: the ring mark in the middle, the lettering across the width under it, the build number below. It is drawn from the logo's shapes (docs/assets/logo-dark.svg) at start, with smoothed edges, rather than kept as an image.</li>
+</ul>
+<h2 id="build-65">Build 65</h2>
+<p>Added</p>
+<ul>
+<li>SHIFT + black key 1 draws a new scale and root at random, as at start. The SCALE page shows them for 1.5 s, then the page that was up returns; the loops follow the new scale. Black key 1 alone still sets the AMBIENT path.</li>
+</ul>
+<h2 id="build-64">Build 64</h2>
+<p>Fixed</p>
+<ul>
+<li>A sound chosen by family (SHIFT + PRESETS, HOME's SAME FAMILY) on FM, ANIMA, CALIGULA, RUSSOLO, DRUID, BAYAREA or HIVE came back as another sound, often of another family, when kept as its seed: from a preset, from a session for the engines the track was not playing, and when measured on first being played. Each engine now draws the family from the seed whether one is given or not (as OBRADOR does), so the seed and the family make the same sound again. Sounds drawn without a family are unchanged.</li>
+<li>Sessions (format 26) keep the family with the seed of every engine's sound, not only OBRADOR's; presets use the family they already kept. Earlier sessions load as before. A preset saved by an earlier build from a sound chosen by family now loads in that family, but not as the same sound.</li>
+</ul>
 <h2 id="build-63">Build 63</h2>
 <p>Added</p>
 <ul>

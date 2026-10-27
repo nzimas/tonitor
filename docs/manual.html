@@ -73,6 +73,7 @@
 <a href="#modulation" class="sub">Modulation</a>
 <a href="#play-along" class="sub">Play along</a>
 <a href="#presets" class="sub">Presets</a>
+<a href="#snapshots" class="sub">Snapshots</a>
 <a href="#sessions" class="sub">Sessions</a>
 <a href="#granulator" class="sub">Granulator</a>
 <a href="#distortion" class="sub">Distortion</a>
@@ -215,12 +216,12 @@
 <tr id="ctl-16" data-n="16"><td class="n"><a href="#fig-panel">16</a></td><td><b>EDIT (T5)</b></td></tr>
 <tr id="ctl-17" data-n="17"><td class="n"><a href="#fig-panel">17</a></td><td><b>GLO (T6)</b></td></tr>
 <tr id="ctl-18" data-n="18"><td class="n"><a href="#fig-panel">18</a></td><td><b>HOME</b></td><td rowspan="1">A new sound for the chosen track. <b>SHIFT +</b>: a new sound of the same family.</td></tr>
-<tr id="ctl-19" data-n="19"><td class="n"><a href="#fig-panel">19</a></td><td><b>SAVE</b></td><td rowspan="1">The SESSIONS page. <b>Held</b> (0.8 s): save the session. <b>SHIFT +</b>: GLOBAL SETUP (<a href="#global-setup-and-midi">MIDI</a>).</td></tr>
+<tr id="ctl-19" data-n="19"><td class="n"><a href="#fig-panel">19</a></td><td><b>SAVE</b></td><td rowspan="1">The <a href="#snapshots">SNAPSHOTS</a> page. <b>Held</b> (0.8 s): save the session. <b>SHIFT +</b>: the <a href="#sessions">SESSIONS</a> page; <b>held</b>: GLOBAL SETUP (<a href="#global-setup-and-midi">MIDI</a>).</td></tr>
 <tr id="ctl-20" data-n="20"><td class="n"><a href="#fig-panel">20</a></td><td><b>ARP</b></td><td rowspan="1">The SCALE page. <b>SHIFT +</b>: the engine's <a href="#presets">PRESETS page</a>.</td></tr>
 <tr id="ctl-21" data-n="21"><td class="n"><a href="#fig-panel">21</a></td><td><b>SEQ</b></td><td rowspan="1">The DELAY, REVERB and MOD pages in turn. <b>SHIFT +</b>: the chosen track's modulation drawn anew.</td></tr>
 <tr id="ctl-22" data-n="22"><td class="n"><a href="#fig-panel">22</a></td><td><b>PLAY</b></td><td rowspan="1">Stop or play the chosen track's loops (on BALLSY's or BRICKLAYER's page, that sequencer). <b>Held</b>: the loops on the white keys, to bring each in or take it out. <b>SHIFT +</b>: stop everything, or play everything (<a href="#loopers">Loopers</a>).</td></tr>
 <tr id="ctl-23" data-n="23"><td class="n"><a href="#fig-panel">23</a></td><td><b>REC</b></td><td rowspan="1">Arm a loop, end it, overdub. <b>Held</b> (1 s): empty the track's loops. <b>SHIFT +</b>: VARY. On BRICKLAYER's page: note entry.</td></tr>
-<tr id="ctl-24" data-n="24"><td class="n"><a href="#fig-keys">24</a></td><td><b>black key 1</b></td><td rowspan="1">The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>).</td></tr>
+<tr id="ctl-24" data-n="24"><td class="n"><a href="#fig-keys">24</a></td><td><b>black key 1</b></td><td rowspan="1">The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>). <b>SHIFT +</b>: a new <a href="#scales">scale and root</a> at random.</td></tr>
 <tr id="ctl-25" data-n="25"><td class="n"><a href="#fig-keys">25</a></td><td><b>black key 2</b></td><td rowspan="1">The <b>EXPERIMENTAL</b> path; pressed again, OPEN.</td></tr>
 <tr id="ctl-26" data-n="26"><td class="n"><a href="#fig-keys">26</a></td><td><b>black key 3</b></td><td rowspan="1"><a href="#chords">Chord mode</a>: <b>held</b> (0.6 s), on or off; pressed, the next chord form.</td></tr>
 <tr id="ctl-27" data-n="27"><td class="n"><a href="#fig-keys">27</a></td><td><b>black key 4</b></td><td rowspan="1"><b>REVERSE</b>: the chosen track's loops backwards (<a href="#direction-and-speed">Direction and speed</a>). Keys 4 to 8 are BRICKLAYER's own on its page.</td></tr>
@@ -261,6 +262,7 @@
 <tr><td>the white keys</td><td>play the chosen track in the scale; the first white key is the root, and the root's keys glow dimly. A held note keeps sounding when you choose another track. The tracks share twelve voices.</td></tr>
 <tr><td>the rightmost black key</td><td><b>SHIFT</b>. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it (<a href="#latched-keys">Latched keys</a>).</td></tr>
 <tr><td>black keys 1 and 2</td><td>the chosen track's generative path: <b>AMBIENT</b>, <b>EXPERIMENTAL</b>; the lit one again: <b>OPEN</b> (<a href="#generative-paths">Generative paths</a>).</td></tr>
+<tr><td><b>SHIFT +</b> black key 1</td><td>a new scale and root, drawn at random; the SCALE page shows them for 1.5 s (<a href="#scales">Scales</a>).</td></tr>
 <tr><td>black key 3</td><td>chord mode: <b>held</b> (0.6 s), on or off; <b>pressed</b>, the next chord form (<a href="#chords">Chords</a>).</td></tr>
 <tr><td>black keys 4, 5, 6</td><td>the chosen track's loops <b>REVERSE</b>, <b>PENDULUM</b>, <b>RANDOM</b>; pressed again, forwards (<a href="#direction-and-speed">Direction and speed</a>). Only while its loops play.</td></tr>
 <tr><td>black keys 7, 8</td><td>the loops at <b>HALF SPEED</b> or <b>DOUBLE SPEED</b>; pressed again, normal speed. Only while the loops play.</td></tr>
@@ -281,9 +283,10 @@
 <tr><td><b>KNOB 4</b></td><td>the chosen track's reverb send.</td></tr>
 <tr><td><b>SHIFT + KNOB 3</b></td><td>the chosen track's distortion (<a href="#distortion">Distortion</a>).</td></tr>
 <tr><td><b>SHIFT + KNOB 4</b></td><td>the chosen track's delay send.</td></tr>
-<tr><td><b>SAVE</b></td><td>the SESSIONS page: <b>PRESETS</b> chooses a slot, <b>SAVE</b> loads it; on an empty slot, SAVE starts a new, blank session there (<a href="#sessions">Sessions</a>).</td></tr>
-<tr><td><b>SAVE held</b> (0.8 s)</td><td>save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting.</td></tr>
-<tr><td><b>SHIFT + SAVE</b></td><td>GLOBAL SETUP: the MIDI settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
+<tr><td><b>SAVE</b></td><td>the SNAPSHOTS page; SAVE again leaves it (<a href="#snapshots">Snapshots</a>).</td></tr>
+<tr><td><b>SAVE held</b> (0.8 s)</td><td>save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting; on the SNAPSHOTS page, it stores the current state in the framed snapshot.</td></tr>
+<tr><td><b>SHIFT + SAVE</b></td><td>the SESSIONS page: <b>PRESETS</b> chooses a slot, <b>SAVE</b> loads it; on an empty slot, SAVE starts a new, blank session there. SHIFT + SAVE again leaves it (<a href="#sessions">Sessions</a>).</td></tr>
+<tr><td><b>SHIFT + SAVE held</b> (0.8 s)</td><td>GLOBAL SETUP: the MIDI and AUDIO settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
 <tr><td><b>SEQ</b></td><td>the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back (<a href="#delay">Delay</a>, <a href="#reverb">Reverb</a>, <a href="#modulation">Modulation</a>, <a href="#play-along">Play along</a>).</td></tr>
 <tr><td><b>SHIFT + SEQ</b></td><td>a new random modulation for the chosen track.</td></tr>
 <tr><td><b>MASTER</b></td><td>the output level.</td></tr>
@@ -387,7 +390,7 @@
 <p>From the top: the track number in the track's colour, with the octave, VAR (while the loops VARY) and the battery at the top right; the engine; the sound's family, or a short message; <b>ARMED</b> or <b>REC</b> while the looper records; the track's level meter, with a mark at its SELECT level; and its pan. KNOB 1–4 show a full-screen dial while they turn.</p>
 <p>Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.</p>
 <h3 id="scales">Scales</h3>
-<p>One scale and root for all the tracks, saved with the session. At start, and in an empty session, both are drawn at random (ARP shows which). The root is the first white key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.</p>
+<p>One scale and root for all the tracks, saved with the session. At start, and in an empty session, both are drawn at random (ARP shows which); <b>SHIFT +</b> black key 1 draws them again, and the loops follow the new scale. The root is the first white key (C3 to B3, moved by each track's OCT), and the scale climbs across the 16 white keys.</p>
 <table>
 <tr><th>Scale</th><th>Steps</th></tr>
 <tr><td>MAJOR</td><td>0 2 4 5 7 9 11</td></tr>
@@ -416,7 +419,7 @@
 </table>
 <p>MIDI notes are not quantised to the scale.</p>
 <h3 id="global-setup-and-midi">Global setup and MIDI</h3>
-<p><b>SHIFT + SAVE</b> opens <b>GLOBAL SETUP</b>, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions. <b>PRESETS</b> moves through the entries; <b>SAVE</b> opens one, or selects a value and sets it; <b>SHIFT + SAVE</b> cancels or goes back a level. A track button leaves; changes are kept.</p>
+<p><b>SHIFT + SAVE held</b> (0.8 s) opens <b>GLOBAL SETUP</b>, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions. <b>PRESETS</b> moves through the entries; <b>SAVE</b> opens one, or selects a value and sets it; <b>SHIFT + SAVE</b> cancels or goes back a level. A track button leaves; changes are kept.</p>
 <p><b>AUDIO</b> has one setting, <b>USB</b>: what the FM-1 sends to a computer as USB audio (<a href="#usb-audio">USB audio</a>). <b>STEREO</b> (at the start): the master, as the headphones hear it. <b>TRACKS</b>: the six tracks, each on its own mono channel. Changed, the FM-1 leaves the USB for a moment and comes back as the new device; the sound on the headphones goes on.</p>
 <p>MIDI's parts:</p>
 <table>
@@ -487,8 +490,31 @@
 <li><b>ARP</b> (or SAVE) loads it and goes back to playing.</li>
 </ul>
 <p>Saving silences the audio for a moment.</p>
+<h3 id="snapshots">Snapshots</h3>
+<p>A snapshot is the state of the machine at one moment. Each session holds 16 of them.</p>
+<p><b>SAVE</b> opens the SNAPSHOTS page: 16 squares, one for each white key. A filled square holds a snapshot; the one last stored or recalled is white.</p>
+<table>
+<tr><th>To</th><th>Do this</th></tr>
+<tr><td>Recall a snapshot</td><td>press and release its white key</td></tr>
+<tr><td>Store the current state</td><td>hold its white key 0.8 s, or choose it with <b>PRESETS</b> and hold <b>SAVE</b></td></tr>
+<tr><td>Empty a snapshot</td><td>hold <b>SHIFT</b> and hold its white key 0.8 s</td></tr>
+<tr><td>Set the morph time (0 to 30 s)</td><td><b>KNOB 1</b></td></tr>
+<tr><td>Leave the page</td><td><b>SAVE</b>, or a track button</td></tr>
+</table>
+<p>On this page the white keys do not play notes. Stored snapshots glow on the keys; the last one recalled is lit.</p>
+<p><b>What a snapshot holds.</b> The whole state of the machine. For each track: the engine it plays; the sound on every one of its eight engines, each with its macros and envelope; level, pan, reverb and delay sends, filter, granulator, crush, distortion, octave, the track's transposition, its path, chord mode and modulation; its latched notes and chords; BALLSY's and BRICKLAYER's settings, BRICKLAYER's notes, and whether each plays; and its loops: which loops there are, where each stood against the others, which are taken out, whether they play, and their direction, speed and VARY. For the machine: the reverb, the delay, the scale, the root, the loops' transposition and PLAY ALONG (on or off, its mode, the tracks taken in, the values on its pages). Not stored: the track chosen, EDIT and which page is up.</p>
+<p>For example: record a loop and store snapshot 1; record an overdub and store snapshot 2. Snapshot 1 brings back the loop alone and snapshot 2 brings back both. Loops that are in both snapshots keep playing when you switch; a loop that comes back is placed where it stood against the others when it was stored.</p>
+<p>A loop that a snapshot holds stays in the FM-1's memory even after you empty the looper (hold REC). It shares the looper's room with what you record: when the looper has no room left, REC says LOOPER FULL. Snapshots that share sounds, latched notes or loops store them once. If there is no room for a new snapshot, the screen says FULL; empty snapshots you no longer need (SHIFT + hold the key).</p>
+<p><b>Morph.</b> With a morph time of 0 (OFF), a recalled snapshot is applied at once. With a longer time, the machine moves to it over that time; the snapshot's square and key blink until it is reached:</p>
+<ul>
+<li>Levels, pans, sends, filter, granulator, crush, distortion, the macros and envelope of a sound that stays, the modulation amounts, LFO rates and fades, the reverb's DECAY, DAMP and MIX, the delay's REPEATS, DAMP and MIX, and the sequencers' speed, rate, harmony and instability change gradually.</li>
+<li>Everything that affects pitch changes at once, halfway through: scale, root, octaves and transpositions. So do the delay's TIME and the reverb's SIZE, the loops, the latched notes, chord mode, the sequencers and their notes, the modulation routings and LFO shapes, and PLAY ALONG.</li>
+<li>A track whose sound changes fades out from a quarter of the way, switches sound halfway and fades back in by three quarters.</li>
+</ul>
+<p>Recalling another snapshot during a morph starts a new morph from the current state. The morph runs in the main loop and adds no load to the audio.</p>
+<p>Snapshots are saved in the flash with the session (hold <b>SAVE</b> to save). A new session has none.</p>
 <h3 id="sessions">Sessions</h3>
-<p>There are 64 session slots; the FM-1 starts with none loaded. A session stores the whole machine: every track's sounds, settings, latched notes and loops, the scale, the delay and the reverb. Sessions saved under an older Tonitor load with the same sounds after an update. Saving silences the audio for a moment.</p>
+<p>There are 64 session slots; the FM-1 starts with none loaded. <b>SHIFT + SAVE</b> opens the SESSIONS page. A session stores the whole machine: every track's sounds, settings, latched notes and loops, the scale, the delay, the reverb, PLAY ALONG and the 16 snapshots with the loops they hold. Sessions saved under an older Tonitor load with the same sounds after an update. Saving silences the audio for a moment.</p>
 <p>Sessions are kept in the FM-1's flash: <b>saving overwrites any projects, presets or samples another firmware left there</b>.</p>
 <p><b>Backing up.</b> The <a href="https://nzimas.github.io/tonitor/backup.html">backup page</a> (desktop Chrome, Edge or Opera, over USB MIDI; Tonitor build 47 or later) copies every session and preset to a file on the computer and writes them back. Use it before trying another firmware and after reinstalling Tonitor.</p>
 <h3 id="granulator">Granulator</h3>
