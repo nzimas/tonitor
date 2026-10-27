@@ -98,6 +98,16 @@ def to_html(md, toc):
                 i += 1
             q = [x for x in q if not re.fullmatch(r"\[!\w+\]", x)]
             out.append("<blockquote><p>" + inline(" ".join(q)) + "</p></blockquote>")
+        elif re.match(r"\d+\. ", ln):                    # a numbered list: steps, in order
+            para(buf)
+            items = []
+            while i < len(lines) and (re.match(r"\d+\. ", lines[i]) or (lines[i].startswith("   ") and lines[i].strip())):
+                if re.match(r"\d+\. ", lines[i]):
+                    items.append(lines[i].split(". ", 1)[1])
+                else:
+                    items[-1] += " " + lines[i].strip()
+                i += 1
+            out.append("\n".join(["<ol>"] + [f"<li>{inline(t)}</li>" for t in items] + ["</ol>"]))
         elif re.match(r"\s*[-*] ", ln):
             para(buf)
             items, depth0 = [], len(ln) - len(ln.lstrip())

@@ -389,21 +389,33 @@ everything the guide sounds (its keys, latches, chords, MIDI in, loops, BALLSY a
 sounds in answer, in the scale. Three modes: **REACT**, **SHADOW** and **ARPEGGIO**. After the SMK-37 Pro port of
 Tonitor.
 
-Press **SEQ** four times for the **PLAY ALONG page**:
+To turn it on:
 
-- **PRESETS** chooses the mode. Changing it lets go of the notes the tracks are playing.
-- **PLAY** turns the mode on or off (REACT, REACT OFF ...). The mode's name is in its colour while on, grey while
-  off. Off the page, SEQ blinks slowly while it is on.
-- **The track buttons** take tracks in or out (2 IN, 2 OUT). The guide's button stays lit; a track taken in glows
-  dimly; a track out is dark. The guide's own button says GUIDE TRACK (a track cannot follow itself). At first no
-  track is in.
-- **KNOB 1–4** set the mode's values, 0–100; ARPEGGIO has two more, on **SELECT** and **ALGORITHM**. In REACT and
+1. Press the **track button** of the track you will play: it becomes the guide.
+2. Press **SEQ** four times: the **PLAY ALONG page**.
+3. Turn **PRESETS** to choose the mode: REACT, SHADOW or ARPEGGIO.
+4. Press the **track buttons** of the tracks that should play along (2 IN, 3 IN ...). At first no track is in, and
+   with none in, nothing plays along.
+5. Press **PLAY**: the mode is on, its name in its colour (grey while off).
+6. Press **SEQ** to go back to playing, and play the guide.
+
+To turn it off, open the page again and press **PLAY** (REACT OFF ...). While it is on, SEQ blinks slowly off the
+page.
+
+On the page:
+
+- **PRESETS**: the mode. Changing it lets go of the notes the tracks are playing.
+- **PLAY**: the mode on or off.
+- **The track buttons**: tracks in or out (2 IN, 2 OUT). The guide's button stays lit; a track taken in glows
+  dimly; a track out is dark. The guide's own button says GUIDE TRACK (a track cannot follow itself).
+- **KNOB 1–4**: the mode's values, 0–100; ARPEGGIO has two more, on **SELECT** and **ALGORITHM**. In REACT and
   SHADOW, SELECT and ALGORITHM stay the guide's level and pan. The page shows the knob turned last, its value large,
   and a bar for each.
-- **SEQ** goes back to playing; the mode goes on running. Choosing another track there makes it the guide.
+- **SEQ**: back to playing; the mode goes on running. Choosing another track there makes it the guide.
 
 The tracks taken in play their notes as a sequencer's: the looper does not record them, and they never play on the
-guide. When the guide stops, they stop. The mode, the tracks taken in and the values are not kept in sessions.
+guide. When the guide stops, they stop. Sessions and snapshots keep PLAY ALONG: on or off, the mode, the tracks
+taken in and the values.
 
 **REACT** improvises from a memory of everything the guide plays: its last 128 events (notes or chords), with their
 levels, lengths and the gaps before them. Each track taken in goes on as the guide once went on, or jumps to
