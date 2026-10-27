@@ -249,8 +249,8 @@ CONTROLS = [
      "<b>T1</b> to <b>T6</b>: choose track 1 to 6. From any page, back to playing. "
      '<b>Held</b> (0.8 s): copy the track, or paste the copy onto it (<a href="#copying-a-track">Copying a track</a>).'),
     ([18], "HOME", "A new sound for the chosen track. <b>SHIFT +</b>: a new sound of the same family."),
-    ([19], "SAVE", "The SESSIONS page. <b>Held</b> (0.8 s): save the session. <b>SHIFT +</b>: GLOBAL SETUP "
-                   '(<a href="#global-setup-and-midi">MIDI</a>).'),
+    ([19], "SAVE", 'The <a href="#snapshots">SNAPSHOTS</a> page. <b>Held</b> (0.8 s): save the session. <b>SHIFT +</b>: the '
+                   '<a href="#sessions">SESSIONS</a> page; <b>held</b>: GLOBAL SETUP (<a href="#global-setup-and-midi">MIDI</a>).'),
     ([20], "ARP", 'The SCALE page. <b>SHIFT +</b>: the engine\'s <a href="#presets">PRESETS page</a>.'),
     ([21], "SEQ", "The DELAY, REVERB and MOD pages in turn. <b>SHIFT +</b>: the chosen track's modulation drawn anew."),
     ([22], "PLAY", "Stop or play the chosen track's loops (on BALLSY's or BRICKLAYER's page, that sequencer). "
@@ -258,7 +258,7 @@ CONTROLS = [
                    'everything, or play everything (<a href="#loopers">Loopers</a>).'),
     ([23], "REC", "Arm a loop, end it, overdub. <b>Held</b> (1 s): empty the track's loops. <b>SHIFT +</b>: VARY. "
                   "On BRICKLAYER's page: note entry."),
-    ([24], "black key 1", 'The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>).'),
+    ([24], "black key 1", 'The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>). <b>SHIFT +</b>: a new <a href="#scales">scale and root</a> at random.'),
     ([25], "black key 2", "The <b>EXPERIMENTAL</b> path; pressed again, OPEN."),
     ([26], "black key 3", '<a href="#chords">Chord mode</a>: <b>held</b> (0.6 s), on or off; pressed, the next chord form.'),
     ([27], "black key 4", '<b>REVERSE</b>: the chosen track\'s loops backwards (<a href="#direction-and-speed">Direction '

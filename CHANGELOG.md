@@ -1,5 +1,27 @@
 # Changelog
 
+## Build 67
+
+Added
+- Snapshots: 16 per session, each the whole state of the machine at one moment: every track's engine, the sound on
+  each of its eight engines with its macros and envelope, level, pan, sends, filter, granulator, crush, distortion,
+  octave, transposition, path, chord mode, modulation, latched notes and chords, BALLSY and BRICKLAYER settings,
+  BRICKLAYER's notes, and its loops (which loops, their relative position, which are taken out, play, direction,
+  speed, VARY); the reverb, the delay, the scale, the root, the loops' transposition and PLAY ALONG. SAVE opens the
+  SNAPSHOTS page: a white key released recalls its snapshot, held 0.8 s stores the current state, with SHIFT held
+  empties it; PRESETS moves the frame and SAVE held stores into it.
+- Loops held by a snapshot stay in memory after the looper is emptied, sharing the looper's room (LOOPER FULL when
+  there is none left). Sounds, latched notes and loops shared by several snapshots are stored once; FULL when there
+  is no room for another snapshot.
+- Morph time, 0 to 30 s (KNOB 1 on the SNAPSHOTS page). Continuous values change gradually; pitch (scale, root,
+  octaves, transpositions), the delay's TIME, the reverb's SIZE and on/off settings change at once halfway. A track
+  whose sound changes fades out, switches halfway and fades back in.
+- Sessions (format 27) keep the snapshots, the loops they hold, the morph time and PLAY ALONG's settings (not
+  kept before). Earlier sessions load with no snapshots.
+
+Changed
+- SHIFT + SAVE opens the SESSIONS page (SAVE did before). GLOBAL SETUP is now SHIFT + SAVE held 0.8 s.
+
 ## Build 66
 
 Changed

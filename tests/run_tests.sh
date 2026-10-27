@@ -34,6 +34,7 @@ build/host scaleshift
 build/host playalong
 build/host delay build/screens
 build/host glow
+build/host snaps build/screens
 build/host samefam
 build/host chords build/screens
 build/host env build/screens

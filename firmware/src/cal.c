@@ -783,7 +783,8 @@ static void cal_design(cal_design_t *d, int32_t kind, uint32_t seed, uint32_t pa
 /* the design's level from how loud it usually is (as an_measure): C3 held 2 s (the hand playing, the slow
  * pairs swelling), the 75th percentile of 12 ms windows brought to 0.1 RMS */
 #define CAL_PROBE_BLOCKS 2756u
-static cal_t cal_probe POOL;
+#define cal_probe (*(cal_t *)(void *)&an_probe)   /* (ANIMA's probe: never both at once) */
+typedef char cal_probe_fits[sizeof(cal_t) <= sizeof(an_voice_t) && _Alignof(cal_t) <= _Alignof(an_voice_t) ? 1 : -1];
 static void cal_measure(cal_design_t *d)
 {
     static int32_t win[CAL_PROBE_BLOCKS / 16u + 1u];

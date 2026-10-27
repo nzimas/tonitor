@@ -67,6 +67,7 @@ bootguard_t bootguard __attribute__((section(".noinit")));
 #include "reverb.c"
 #include "layers.c"
 #include "ui.c"
+#include "snaps.c"
 #include "sessions.c"
 #include "setup.c"
 #include "backup.c"

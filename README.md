@@ -129,9 +129,10 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **KNOB 4** | the chosen track's reverb send. |
 | **SHIFT + KNOB 3** | the chosen track's distortion ([Distortion](#distortion)). |
 | **SHIFT + KNOB 4** | the chosen track's delay send. |
-| **SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there ([Sessions](#sessions)). |
-| **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting. |
-| **SHIFT + SAVE** | GLOBAL SETUP: the MIDI settings ([Global setup and MIDI](#global-setup-and-midi)). |
+| **SAVE** | the SNAPSHOTS page; SAVE again leaves it ([Snapshots](#snapshots)). |
+| **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting; on the SNAPSHOTS page, it stores the current state in the framed snapshot. |
+| **SHIFT + SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there. SHIFT + SAVE again leaves it ([Sessions](#sessions)). |
+| **SHIFT + SAVE held** (0.8 s) | GLOBAL SETUP: the MIDI and AUDIO settings ([Global setup and MIDI](#global-setup-and-midi)). |
 | **SEQ** | the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back ([Delay](#delay), [Reverb](#reverb), [Modulation](#modulation), [Play along](#play-along)). |
 | **SHIFT + SEQ** | a new random modulation for the chosen track. |
 | **MASTER** | the output level. |
@@ -337,7 +338,7 @@ MIDI notes are not quantised to the scale.
 
 ### Global setup and MIDI
 
-**SHIFT + SAVE** opens **GLOBAL SETUP**, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions.
+**SHIFT + SAVE held** (0.8 s) opens **GLOBAL SETUP**, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions.
 **PRESETS** moves through the entries; **SAVE** opens one, or selects a value and sets it; **SHIFT + SAVE** cancels
 or goes back a level. A track button leaves; changes are kept.
 
@@ -454,11 +455,63 @@ BRASS 1, BRASS 2, STRINGS 1.
 
 Saving silences the audio for a moment.
 
+### Snapshots
+
+A snapshot is the state of the machine at one moment. Each session holds 16 of them.
+
+**SAVE** opens the SNAPSHOTS page: 16 squares, one for each white key. A filled square holds a
+snapshot; the one last stored or recalled is white.
+
+| To | Do this |
+| --- | --- |
+| Recall a snapshot | press and release its white key |
+| Store the current state | hold its white key 0.8 s, or choose it with **PRESETS** and hold **SAVE** |
+| Empty a snapshot | hold **SHIFT** and hold its white key 0.8 s |
+| Set the morph time (0 to 30 s) | **KNOB 1** |
+| Leave the page | **SAVE**, or a track button |
+
+On this page the white keys do not play notes. Stored snapshots glow on the keys; the last one recalled is lit.
+
+**What a snapshot holds.** The whole state of the machine. For each track: the engine it plays; the sound on every
+one of its eight engines, each with its macros and envelope; level, pan, reverb and delay sends, filter, granulator,
+crush, distortion, octave, the track's transposition, its path, chord mode and modulation; its latched notes and
+chords; BALLSY's and BRICKLAYER's settings, BRICKLAYER's notes, and whether each plays; and its loops: which loops
+there are, where each stood against the others, which are taken out, whether they play, and their direction, speed
+and VARY. For the machine: the reverb, the delay, the scale, the root, the loops' transposition and PLAY ALONG (on or
+off, its mode, the tracks taken in, the values on its pages). Not stored: the track chosen, EDIT and which page is up.
+
+For example: record a loop and store snapshot 1; record an overdub and store snapshot 2. Snapshot 1 brings back the
+loop alone and snapshot 2 brings back both. Loops that are in both snapshots keep playing when you switch; a loop
+that comes back is placed where it stood against the others when it was stored.
+
+A loop that a snapshot holds stays in the FM-1's memory even after you empty the looper (hold REC). It shares the
+looper's room with what you record: when the looper has no room left, REC says LOOPER FULL. Snapshots that share
+sounds, latched notes or loops store them once. If there is no room for a new snapshot, the screen says FULL; empty
+snapshots you no longer need (SHIFT + hold the key).
+
+**Morph.** With a morph time of 0 (OFF), a recalled snapshot is applied at once. With a longer time, the machine
+moves to it over that time; the snapshot's square and key blink until it is reached:
+
+- Levels, pans, sends, filter, granulator, crush, distortion, the macros and envelope of a sound that stays, the
+  modulation amounts, LFO rates and fades, the reverb's DECAY, DAMP and MIX, the delay's REPEATS, DAMP and MIX, and
+  the sequencers' speed, rate, harmony and instability change gradually.
+- Everything that affects pitch changes at once, halfway through: scale, root, octaves and transpositions. So do
+  the delay's TIME and the reverb's SIZE, the loops, the latched notes, chord mode, the sequencers and their notes,
+  the modulation routings and LFO shapes, and PLAY ALONG.
+- A track whose sound changes fades out from a quarter of the way, switches sound halfway and fades back in by three
+  quarters.
+
+Recalling another snapshot during a morph starts a new morph from the current state. The morph runs in the main
+loop and adds no load to the audio.
+
+Snapshots are saved in the flash with the session (hold **SAVE** to save). A new session has none.
+
 ### Sessions
 
-There are 64 session slots; the FM-1 starts with none loaded. A session stores the whole machine: every track's
-sounds, settings, latched notes and loops, the scale, the delay and the reverb. Sessions saved under an older
-Tonitor load with the same sounds after an update. Saving silences the audio for a moment.
+There are 64 session slots; the FM-1 starts with none loaded. **SHIFT + SAVE** opens the SESSIONS page. A session
+stores the whole machine: every track's sounds, settings, latched notes and loops, the scale, the delay, the reverb,
+PLAY ALONG and the 16 snapshots with the loops they hold. Sessions saved under an older Tonitor load with the same sounds after an update. Saving
+silences the audio for a moment.
 
 Sessions are kept in the FM-1's flash: **saving overwrites any projects, presets or samples another firmware left
 there**.

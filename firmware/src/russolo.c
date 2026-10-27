@@ -479,7 +479,8 @@ static const char *rus_mac_name(const rus_design_t *d, uint32_t j)
  * 0.1 RMS (as cal_measure) -- but no more than keeps its loudest click under half of full scale, and never above
  * x1 (dust and crackle are mostly silence: by their usual level alone they would be raised until their clicks
  * broke; at x1 nothing it makes can) */
-static rus_t rus_probe;
+#define rus_probe (*(rus_t *)(void *)&an_probe)   /* (ANIMA's probe: never both at once) */
+typedef char rus_probe_fits[sizeof(rus_t) <= sizeof(an_voice_t) && _Alignof(rus_t) <= _Alignof(an_voice_t) ? 1 : -1];
 static void rus_measure(rus_design_t *d)
 {
     static int32_t win[2067u / 16u + 1u];

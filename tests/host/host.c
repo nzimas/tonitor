@@ -156,6 +156,7 @@ static int32_t fm1_enc_take(uint32_t e)
 static uint8_t host_led[64];
 static void fm1_led_key(uint32_t id, int on) { if (id < 64u) host_led[id] = (uint8_t)!!on; }
 #include "ui.c"
+#include "snaps.c"
 #include "sessions.c"
 #include "setup.c"
 #include "backup.c"
@@ -877,6 +878,26 @@ static void save_btn(uint32_t held_ms)
     fm1_ms += 2000;                           /* past any flash */
     ui_draw();
 }
+/* SHIFT + SAVE pressed and let go: the SESSIONS page (on it: back) */
+static void ses_btn(void)
+{
+    press_phys(KEY_SHIFT, 1);
+    save_btn(0);
+    press_phys(KEY_SHIFT, 0);
+}
+/* SHIFT + SAVE held: GLOBAL SETUP */
+static void setup_btn(void)
+{
+    press_phys(KEY_SHIFT, 1);
+    host_press |= 1u << PANEL_BTN[B_SAVE];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_SAVE];
+    ui_input();
+    fm1_ms += 900;
+    ui_input();
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_SAVE]);
+    ui_input();
+    press_phys(KEY_SHIFT, 0);
+}
 static int same_machine(const char *what, const uint8_t *eng, const int8_t *lv, const int8_t *pn, const int8_t *sd,
                         const int8_t *oc, const fm_patch_t *fp, const an_design_t *ad, const int8_t *rvp,
                         const looper_t *lp)
@@ -1020,7 +1041,7 @@ static int cmd_sessions(const char *dir)
     ui_init();
     sounds_init();
     run_blocks(100, 0);
-    save_btn(0);
+    ses_btn();
     if (ui.ses_page != SP_LIST)
         printf("FAIL sessions: SAVE did not open the list\n"), fail++;
     host_enc[PANEL_ENC[EN_PRESET]] = 1;
@@ -1057,7 +1078,7 @@ static int cmd_sessions(const char *dir)
     ui.lx = 2;
     ui.rvp[0] = 12;
     ui.edit = 1;
-    save_btn(0);
+    ses_btn();
     host_enc[PANEL_ENC[EN_PRESET]] = 8;
     ui_input();
     ui_draw();
@@ -1082,7 +1103,7 @@ static int cmd_sessions(const char *dir)
         printf("FAIL sessions: SAVE held did not save into slot 9\n"), fail++;
     /* none loaded, the list, a full slot (1): SAVE held asks OVERWRITE (NO first); NO keeps it, YES writes over it */
     ses.current = 0;
-    save_btn(0);
+    ses_btn();
     if (ui.ses_page != SP_LIST || ui.ses_ix != 1u || !ses_has(1))
         printf("FAIL sessions: the list does not open on the full slot 1\n"), fail++;
     ui.level[0] = 5;
@@ -1098,7 +1119,7 @@ static int cmd_sessions(const char *dir)
         printf("FAIL sessions: NO wrote over session 1\n"), fail++;
     ses.current = 0;
     ui.level[0] = 5;
-    save_btn(0);
+    ses_btn();
     save_btn(900);
     host_enc[PANEL_ENC[EN_PRESET]] = 1;           /* YES */
     ui_input();
@@ -4131,6 +4152,335 @@ static int cmd_glow(void)
     return fail ? 1 : 0;
 }
 
+/* snapshots: SAVE opens the SNAPSHOTS page, SHIFT + SAVE the SESSIONS page, SHIFT + SAVE held GLOBAL SETUP; a white key
+ * held stores, let go soon recalls, SHIFT + held empties; PRESETS moves the frame and SAVE held stores into it.
+ * Recalled at once: the machine as stored. Recalled over a morph: what glides moves only between the two, the pitch
+ * (scale, root, octave, transposition) changes once, at the middle; a track whose sound changes goes down to silence at
+ * the middle and back; at the end the snapshot exactly. Kept with the session; none in a new one */
+/* REC held (1 s): the chosen track's looper emptied */
+static void host_hold_rec(int unused)
+{
+    (void)unused;
+    host_press |= 1u << PANEL_BTN[B_REC];
+    fm1_in.buttons |= 1u << PANEL_BTN[B_REC];
+    ui_input();
+    fm1_ms += 1100;
+    ui_input();
+    fm1_in.buttons &= ~(1u << PANEL_BTN[B_REC]);
+    ui_input();
+    run_blocks(10, 0);
+}
+/* the whole machine, as the snapshots are to keep it: every setting; every engine's sound on every track; the latched
+ * notes; BRICKLAYER's notes; PLAY ALONG; each looper's loops as their events (not where they lie) */
+typedef struct {
+    uint8_t engine[NLAYER], path[NLAYER], chord_on[NLAYER], chord_form[NLAYER];
+    int8_t oct[NLAYER], lxt[NLAYER], level[NLAYER], pan[NLAYER], send[NLAYER], dsend[NLAYER], flt[NLAYER], gr[NLAYER];
+    int8_t cr[NLAYER], dist[NLAYER], mac[NLAYER][NENG][NMAC], env[NLAYER][NENG][4];
+    uint8_t env_on[NLAYER][NENG];
+    uint32_t seed[NLAYER][NENG], word[NLAYER][NENG];
+    uint8_t kind[NLAYER][NENG];
+    uint32_t latch[NLAYER];
+    uint8_t latch_note[NLAYER][NKEY], latch_form[NLAYER][NKEY];
+    uint32_t gseed[NLAYER];
+    mod_t mod[NLAYER];
+    uint8_t bb_on[NLAYER], bb_run[NLAYER], bl_on[NLAYER], bl_run[NLAYER], bl_n[NLAYER], bl_len[NLAYER], bl_dir[NLAYER], bl_spd[NLAYER];
+    int8_t bb_n[NLAYER], bb_speed[NLAYER], bb_base[NLAYER], bb_unst[NLAYER], bl_rate[NLAYER], bl_harm[NLAYER], bl_unst[NLAYER];
+    int8_t bl_w[NLAYER][BL_MAX], bl_o[NLAYER][BL_MAX];
+    uint8_t ntrk[NLAYER], play[NLAYER], dmode[NLAYER], rate[NLAYER], vary[NLAYER];
+    uint16_t mute[NLAYER];
+    uint32_t tlen[NLAYER][LOOP_TRK], tn[NLAYER][LOOP_TRK];
+    int8_t txb[NLAYER][LOOP_TRK];
+    uint32_t ev[NLAYER][LOOP_N];
+    int8_t rvp[4], dlp[4];
+    uint8_t scale, root, rx_on, rx_mode, rx_mask;
+    int8_t lx, rx_k[4], rx_sk[4], rx_ak[6];
+} machine_t;
+static void machine_get(machine_t *m)
+{
+    uint32_t l, e, k, n;
+    memset(m, 0, sizeof *m);
+    for (l = 0; l < NLAYER; l++) {
+        const looper_t *p = &loop[l];
+        m->engine[l] = ui.engine[l], m->path[l] = ui.path[l], m->chord_on[l] = ui.chord_on[l], m->chord_form[l] = ui.chord_form[l];
+        m->oct[l] = ui.oct[l], m->lxt[l] = ui.lxt[l], m->level[l] = ui.level[l], m->pan[l] = ui.pan[l], m->send[l] = ui.send[l];
+        m->dsend[l] = ui.dsend[l], m->flt[l] = ui.flt[l], m->gr[l] = ui.gr[l], m->cr[l] = ui.cr[l], m->dist[l] = ui.dist[l];
+        memcpy(m->mac[l], ui.mac[l], sizeof m->mac[l]);
+        memcpy(m->env[l], ui.env[l], sizeof m->env[l]);
+        memcpy(m->env_on[l], ui.env_on[l], sizeof m->env_on[l]);
+        for (e = 0; e < NENG; e++)
+            sound_rec(l, e, &m->seed[l][e], &m->word[l][e], &m->kind[l][e]);
+        m->latch[l] = ui.latch[l];
+        for (k = 0; k < NKEY; k++)
+            if ((ui.latch[l] >> k) & 1u)
+                m->latch_note[l][k] = ui.latch_note[l][k], m->latch_form[l][k] = ui.latch_form[l][k];
+        m->gseed[l] = gran[l].seed;
+        m->mod[l] = lay_mod[l];
+        m->bb_on[l] = bb.on[l], m->bb_run[l] = bb.run[l], m->bb_n[l] = bb.n[l], m->bb_speed[l] = bb.speed[l];
+        m->bb_base[l] = bb.base[l], m->bb_unst[l] = bb.unst[l];
+        m->bl_on[l] = bl.on[l], m->bl_run[l] = bl.run[l], m->bl_n[l] = bl.n[l], m->bl_len[l] = bl.len[l];
+        m->bl_dir[l] = bl.dir[l], m->bl_spd[l] = bl.spd[l], m->bl_rate[l] = bl.rate[l], m->bl_harm[l] = bl.harm[l];
+        m->bl_unst[l] = bl.unst[l];
+        memcpy(m->bl_w[l], bl.w[l], bl.n[l]);
+        memcpy(m->bl_o[l], bl.o[l], bl.n[l]);
+        m->ntrk[l] = p->ntrk, m->play[l] = p->play, m->dmode[l] = p->dmode, m->rate[l] = p->rate, m->vary[l] = p->vary;
+        m->mute[l] = p->mute;
+        for (k = 0, n = 0; k < p->ntrk; k++) {
+            m->tlen[l][k] = p->trk[k].len, m->tn[l][k] = p->trk[k].n, m->txb[l][k] = p->trk[k].xb;
+            memcpy(m->ev[l] + n, p->ev + p->trk[k].first, p->trk[k].n * 4u);
+            n += p->trk[k].n;
+        }
+    }
+    memcpy(m->rvp, ui.rvp, 4);
+    memcpy(m->dlp, ui.dlp, 4);
+    m->scale = ui.scale, m->root = ui.root, m->lx = ui.lx;
+    m->rx_on = rx.on, m->rx_mode = rx.mode, m->rx_mask = rx.mask;
+    memcpy(m->rx_k, rx.k, 4);
+    memcpy(m->rx_sk, rx.sk, 4);
+    memcpy(m->rx_ak, rx.ak, 6);
+}
+static machine_t snap_m1, snap_m2, snap_now;
+/* frames for the sounds still to be drawn again, and the loopers to be packed */
+static void snap_settle(void)
+{
+    uint32_t i;
+    for (i = 0; i < 120u; i++) {
+        fm1_ms += 16;
+        ui_input();
+        run_blocks(2, 0);
+    }
+}
+static uint32_t machine_diff(const char *what, const machine_t *a, const machine_t *b)
+{
+    if (!memcmp(a, b, sizeof *a))
+        return 0;
+    {
+        const uint8_t *x = (const uint8_t *)a, *y = (const uint8_t *)b;
+        uint32_t i;
+        for (i = 0; i < sizeof *a && x[i] == y[i]; i++)
+            ;
+        printf("FAIL snaps: %s is not the machine as stored (it differs at byte %u of %u)\n", what, i, (uint32_t)sizeof *a);
+    }
+    return 1;
+}
+static void snap_tap(uint32_t w, uint32_t ms)
+{
+    press_key(w, 1);
+    fm1_ms += ms;
+    ui_input();
+    press_key(w, 0);
+    run_blocks(20, 0);
+}
+/* track l: a loop recorded, of notes w0, w0 + 2 (white keys) */
+static void snap_record(uint32_t l, uint32_t w0)
+{
+    press_btn(LAYER_BTN[l]);
+    press_btn(B_REC);
+    press_key(w0, 1);
+    run_blocks(150, 0);
+    press_key(w0, 0);
+    press_key(w0 + 2u, 1);
+    run_blocks(150, 0);
+    press_key(w0 + 2u, 0);
+    run_blocks(100, 0);
+    press_btn(B_REC);
+    run_blocks(10, 0);
+}
+/* snapshots: SAVE opens the SNAPSHOTS page, SHIFT + SAVE the SESSIONS page, SHIFT + SAVE held GLOBAL SETUP; a white key
+ * held stores, let go soon recalls, SHIFT + held empties; PRESETS moves the frame and SAVE held stores into it. A
+ * snapshot is the whole machine: a loop and its overdub stored apart come back apart, and back together; the latched
+ * notes, BRICKLAYER's notes, every engine's sound, PLAY ALONG; the looper emptied and recorded anew, the snapshots'
+ * loops still there. Recalled over a morph: what glides moves only between the two, the pitch changes once, at the
+ * middle; a track whose sound changes goes down to silence at the middle and back; at the end the snapshot exactly.
+ * Kept with the session; none in a new one */
+static int cmd_snaps(const char *dir)
+{
+    uint32_t fail = 0, l, step, half = 0;
+    char path[512];
+    grain_reset();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    ses_fresh(1);
+    save_btn(0);
+    if (!ui.snap_page || ui.ses_page)
+        printf("FAIL snaps: SAVE does not open the SNAPSHOTS page\n"), fail++;
+    save_btn(0);
+    if (ui.snap_page)
+        printf("FAIL snaps: SAVE again does not leave it\n"), fail++;
+    ses_btn();
+    if (ui.ses_page != SP_LIST || ui.snap_page)
+        printf("FAIL snaps: SHIFT + SAVE does not open the SESSIONS page\n"), fail++;
+    ses_btn();
+    if (ui.ses_page)
+        printf("FAIL snaps: SHIFT + SAVE again does not leave it\n"), fail++;
+    setup_btn();
+    if (!ui.set_page || ui.ses_page)
+        printf("FAIL snaps: SHIFT + SAVE held does not open GLOBAL SETUP\n"), fail++;
+    ui.set_page = 0;
+    setup_poll();
+    /* state 1: a loop on track 1; settings; stored by holding white key 1 */
+    for (l = 0; l < NLAYER; l++) {
+        ui.level[l] = 10;
+        ui.flt[l] = -40;
+        ui.oct[l] = 0;
+        level_pan_apply(l);
+    }
+    ui.scale = 0;
+    ui.root = 0;
+    ui.rvp[3] = 20;
+    snap_record(0, 0);
+    if (loop[0].ntrk != 1u)
+        printf("FAIL snaps: no loop recorded (%u)\n", loop[0].ntrk), fail++;
+    save_btn(0);
+    snap_tap(0, 900);
+    if (!snap_has(0) || snap_current() != 0 || !str_eq(ui.flash_l1, "STORED"))
+        printf("FAIL snaps: holding white key 1 did not store snapshot 1\n"), fail++;
+    machine_get(&snap_m1);
+    fm1_ms += 2000;
+    save_btn(0);                                 /* (out, to play) */
+    /* state 2: an overdub on track 1; a latched note on track 2; BRICKLAYER's notes on track 4; another CALIGULA on track
+     * 3 (not the engine it plays); PLAY ALONG on; track 1 on the next engine; other values and pitch; into 2 by PRESETS
+     * and SAVE held */
+    snap_record(0, 4);
+    if (loop[0].ntrk != 2u)
+        printf("FAIL snaps: no overdub recorded (%u loops)\n", loop[0].ntrk), fail++;
+    press_btn(LAYER_BTN[1]);
+    press_key(5, 1);
+    press_phys(KEY_SHIFT, 1);
+    press_phys(KEY_SHIFT, 0);
+    press_key(5, 0);
+    if (!ui.latch[1])
+        printf("FAIL snaps: no note latched on track 2\n"), fail++;
+    bl_add(3, 2, 0);
+    bl_add(3, 4, 1);
+    new_cal(2, 0xC0FFEEu, PATH_OPEN);
+    rx_set(1);
+    rx.mask = 0x0Cu;
+    for (l = 0; l < NLAYER; l++) {
+        ui.level[l] = 20;
+        ui.flt[l] = 40;
+        ui.oct[l] = 2;
+        level_pan_apply(l);
+    }
+    ui.scale = 4;
+    ui.root = 7;
+    ui.rvp[3] = 80;
+    press_btn(LAYER_BTN[0]);
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;          /* track 1: the next engine */
+    ui_input();
+    run_blocks(100, 0);
+    save_btn(0);
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;
+    ui_input();
+    save_btn(900);
+    if (!snap_has(1) || snap_current() != 1)
+        printf("FAIL snaps: PRESETS and SAVE held did not store snapshot 2\n"), fail++;
+    machine_get(&snap_m2);
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-46-snapshots.ppm", dir);
+    ppm(path);
+    /* recalled at once, each: the machine as stored -- one loop, then the two */
+    ui.morph = 0;
+    snap_tap(0, 50);
+    snap_settle();
+    machine_get(&snap_now);
+    fail += machine_diff("snapshot 1 recalled", &snap_now, &snap_m1);
+    if (loop[0].ntrk != 1u || ui.latch[1] || bl.n[3] || rx.on)
+        printf("FAIL snaps: snapshot 1 has the overdub, the latch, BRICKLAYER's notes or PLAY ALONG (%u loops)\n", loop[0].ntrk), fail++;
+    snap_tap(1, 50);
+    snap_settle();
+    machine_get(&snap_now);
+    fail += machine_diff("snapshot 2 recalled", &snap_now, &snap_m2);
+    /* the looper emptied and a new loop recorded: the snapshots' loops are still there */
+    save_btn(0);
+    press_btn(LAYER_BTN[0]);
+    host_hold_rec(0);
+    snap_settle();
+    if (loop[0].ntrk)
+        printf("FAIL snaps: REC held did not empty the looper\n"), fail++;
+    snap_record(0, 9);
+    snap_settle();
+    save_btn(0);
+    snap_tap(0, 50);
+    snap_settle();
+    machine_get(&snap_now);
+    fail += machine_diff("snapshot 1 after the looper was emptied", &snap_now, &snap_m1);
+    snap_tap(1, 50);
+    snap_settle();
+    machine_get(&snap_now);
+    fail += machine_diff("snapshot 2 after the looper was emptied", &snap_now, &snap_m2);
+    /* recalled over 2 s, from 1: in between, never beyond either; the pitch and the loops once, at the middle; the new
+     * sound through silence */
+    snap_tap(0, 50);
+    snap_settle();
+    host_enc[PANEL_ENC[EN_K1]] = 4;
+    ui_input();
+    if (ui.morph != 4u)
+        printf("FAIL snaps: KNOB 1 does not set the morph time (%u)\n", ui.morph), fail++;
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-47-morph.ppm", dir);
+    ppm(path);
+    fm1_ms += 2000;
+    snap_tap(1, 20);
+    if (snap_morph_target() != 1)
+        printf("FAIL snaps: no morph to snapshot 2\n"), fail++;
+    for (step = 0; step < 50u && snap_morph_target() == 1; step++) {
+        int to1 = ui.scale == snap_m1.scale && ui.root == snap_m1.root && ui.oct[0] == snap_m1.oct[0] && loop[0].ntrk == 1u;
+        int to2 = ui.scale == snap_m2.scale && ui.root == snap_m2.root && ui.oct[0] == snap_m2.oct[0] && loop[0].ntrk == 2u;
+        if (!to1 && !to2)
+            printf("FAIL snaps: the pitch and loops are neither snapshot's on the way (step %u)\n", step), fail++;
+        if (to2)
+            half = half ? half : step;
+        for (l = 0; l < NLAYER; l++)
+            if (ui.level[l] < 10 || ui.level[l] > 20 || ui.flt[l] < -40 || ui.flt[l] > 40)
+                printf("FAIL snaps: track %u beyond both snapshots on the way\n", l + 1), fail++;
+        if (step == 16u && lay_duck[0] < Q15 / 4)
+            printf("FAIL snaps: track 1's new engine comes in without going down\n"), fail++;
+        if (lay_duck[4])
+            printf("FAIL snaps: track 5 (the same sound) goes down\n"), fail++;
+        fm1_ms += 50;
+        ui_input();
+        run_blocks(4, 0);
+    }
+    printf("snaps: the morph in %u steps of 50 ms, the pitch and loops at %u\n", step, half);
+    if (snap_morph_target() >= 0 || step < 30u || half < 15u || half > 25u)
+        printf("FAIL snaps: the morph took %u steps, changed at %u (of 40)\n", step, half), fail++;
+    snap_settle();
+    machine_get(&snap_now);
+    if (machine_diff("the end of the morph", &snap_now, &snap_m2) || snap_current() != 1 || lay_duck[0])
+        printf("FAIL snaps: at the end of the morph, not snapshot 2 exactly\n"), fail++;
+    /* emptied: SHIFT and the key held; snapshot 3 stored and emptied */
+    snap_tap(2, 900);
+    press_phys(KEY_SHIFT, 1);
+    snap_tap(2, 900);
+    press_phys(KEY_SHIFT, 0);
+    if (snap_has(2) || !snap_has(0) || !snap_has(1))
+        printf("FAIL snaps: SHIFT + white key 3 held did not empty snapshot 3 alone\n"), fail++;
+    /* kept with the session: saved, the machine changed, loaded, each snapshot as it was */
+    if (ses_save(1) != SES_OK)
+        printf("FAIL snaps: the session was not saved\n"), fail++;
+    ses_fresh(2);
+    if (snap_has(0) || snap_has(1) || snap_current() >= 0 || loop[0].ntrk)
+        printf("FAIL snaps: a new session has snapshots or loops\n"), fail++;
+    ui.morph = 0;
+    if (ses_load_slot(1) != SES_OK || !snap_has(0) || !snap_has(1) || snap_has(2) || snap_current() >= 0 || ui.morph != 4u)
+        printf("FAIL snaps: the session did not bring its snapshots back\n"), fail++;
+    ui.morph = 0;
+    ui.snap_page = 1;
+    snap_tap(0, 50);
+    snap_settle();
+    machine_get(&snap_now);
+    fail += machine_diff("snapshot 1 from the session", &snap_now, &snap_m1);
+    snap_tap(1, 50);
+    snap_settle();
+    machine_get(&snap_now);
+    fail += machine_diff("snapshot 2 from the session", &snap_now, &snap_m2);
+    ui.snap_page = 0;
+    printf("snaps: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 /* chord mode: the 3rd black key held turns it on (CHO, lit), pressed steps the form; a white key, three notes of the
  * scale; one chord at a time; latched chords; latched notes and chords moved with the loops (SHIFT + track + OCT,
  * SHIFT + OCT); loops record chords; sessions keep them */
@@ -5439,9 +5789,7 @@ static int cmd_setup(void)
     memset(host_flash, 0xFF, sizeof host_flash);
     ses_scan(1);
     setup_load();
-    press_phys(KEY_SHIFT, 1);
-    press_btn(B_SAVE);
-    press_phys(KEY_SHIFT, 0);
+    setup_btn();
     setup_poll();                                     /* (the main loop's pass: the page seen up) */
     ui_draw();
     ppm("build/screens/screen-30-setup.ppm");
@@ -5473,9 +5821,7 @@ static int cmd_setup(void)
     if (!mcfg.send_note)
         printf("FAIL setup: the setting is not kept\n"), fail++;
     /* AUDIO: one part, opened on its row; USB: STEREO -> TRACKS, kept; a record from before it loads, STEREO */
-    press_phys(KEY_SHIFT, 1);
-    press_btn(B_SAVE);
-    press_phys(KEY_SHIFT, 0);
+    setup_btn();
     setup_poll();
     host_enc[PANEL_ENC[EN_PRESET]] = 1;               /* MIDI -> AUDIO */
     ui_input();
@@ -7121,6 +7467,8 @@ int main(int argc, char **argv)
         return cmd_backup();
     if (argc >= 2 && !strcmp(argv[1], "glow"))
         return cmd_glow();
+    if (argc >= 3 && !strcmp(argv[1], "snaps"))
+        return cmd_snaps(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "delay"))
         return cmd_delay(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "playalong"))
