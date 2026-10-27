@@ -134,7 +134,7 @@ def to_html(md, toc):
 
 def page(title, current, body, desc, head=""):
     """every page: the menu down the left (above the content on a narrow screen), the content, the footer"""
-    nav = [("./", "Home"), ("install.html", "Install"), ("manual.html", "Manual"), ("changelog.html", "Changelog"), ("backup.html", "Backup"), ("projects.html", "Other projects"),
+    nav = [("./", "Home"), ("install.html", "Install"), ("manual.html", "Manual"), ("changelog.html", "Changelog"), ("backup.html", "Backup"), ("projects.html", "Other projects"), ("apps.html", "Apps"),
            (REPO, "GitHub")]
     links = "\n      ".join(f'<a href="{h}"' + (' aria-current="page"' if n == current else "") + f">{n}</a>"
                            for h, n in nav)
@@ -218,6 +218,9 @@ def fragments():
         "Other projects by Nuno Zimas", "Other projects", (src / "projects.html").read_text(),
         "Firmware and instruments by Nuno Zimas for the Elektron Model:Cycles and Digitone II, the Ableton Move, "
         "the Akai MPC One and macOS."))
+    (DOCS / "apps.html").write_text(page(
+        "Apps by Nuno Zimas", "Apps", (src / "apps.html").read_text(),
+        "Music apps by Nuno Zimas for phones and tablets: Vascular, a touch instrument for iOS and Android."))
 
 
 # The FM-1's face, in the units of Felucca's browser emulator (hugelton/Felucca, web/emu/index.html, its "wide"
@@ -462,4 +465,4 @@ if __name__ == "__main__":
     manual()
     changelog()
     firmware(Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "build" / "tonitor.fwsc")
-    print("site: docs/index.html, install.html, backup.html, manual.html, changelog.html, projects.html")
+    print("site: docs/index.html, install.html, backup.html, manual.html, changelog.html, projects.html, apps.html")
