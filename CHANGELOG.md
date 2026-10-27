@@ -9,6 +9,9 @@ Added
   filter morphing low-pass, notch, high-pass (24 dB and band-pass too), filter and amplifier envelopes on analog
   curves, a delayed LFO, each card's own offsets and drift. Ten kinds: STRINGS, BRASS, PWM PAD, BASS, SYNC, NOTCH,
   METAL, DRONE, KEYS, SWELL. Macros: CUTOFF, MORPH, RESONANCE, DETUNE.
+- Presets are named by their family and numbered within it, in the order of the slots (BRASS 1, BRASS 2,
+  STRINGS 1). The PRESETS page shows the engine's name alone over the slots ("CALIGULA PRESETS" was wider than the
+  screen), each name in the largest size it fits whole.
 - Sessions (format 25) keep each track's OBRADOR sound; earlier sessions load with a new one. A sound kept as its
   seed keeps its family too, so one chosen with SHIFT + PRESETS comes back the same from a preset or a session.
 

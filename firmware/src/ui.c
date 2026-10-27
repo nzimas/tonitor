@@ -2277,8 +2277,7 @@ static void draw_pre_page(void)
             draw_noyes(ui.pre_yes);
         return;
     }
-    str_cpy(t, ENG_NAME[ui.pre_eng], sizeof t);
-    str_cpy(t + str_len(t), " PRESETS", 9);
+    str_cpy(t, ENG_NAME[ui.pre_eng], sizeof t);   /* (the engine alone: "OBRADOR PRESETS" was wider than the screen) */
     cv_begin(240, 52, C_BLACK);
     cv_text_in(-1, 228, 52, t, C_SES);
     cv_blit(0, 0);
@@ -2290,10 +2289,12 @@ static void draw_pre_page(void)
         char nm[20];
         pre_name(ui.pre_eng, slot, nm, sizeof nm);
         cv_begin(240, 47, bg);                   /* (47: the rows meet, nothing of the screen before between) */
-        n[0] = 'P';
-        fmt_int(n + 1, (int32_t)slot);
-        cv_text_in(6, 84, 47, n, k >= 0 ? C_FULL : sel ? C_BLACK : C_GREY);
-        cv_text_in(92, 142, 47, nm, sel ? C_BLACK : k >= 0 ? C_WHITE : C_GREY);
+        fmt_int(n, (int32_t)slot);
+        cv_text(6, (47 - (int32_t)FONT_S.h) / 2, &FONT_S, n, k >= 0 ? C_FULL : sel ? C_BLACK : C_GREY);
+        {   /* the name, in the largest size it fits whole (182 px: UNDERTOW 12 in the smallest) */
+            const font_t *f = text_w(&FONT_M, nm) <= 182 ? &FONT_M : text_w(&FONT_S, nm) <= 182 ? &FONT_S : &FONT_XS;
+            cv_text(54, (47 - (int32_t)f->h) / 2, f, nm, sel ? C_BLACK : k >= 0 ? C_WHITE : C_GREY);
+        }
         cv_blit(0, 52 + 47 * j);
     }
 }

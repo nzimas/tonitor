@@ -6887,6 +6887,32 @@ static int cmd_obrador(void)
     snd_ready(0, ENG_OB);
     if (memcmp(&ob_buf[0][ob_pub[0]], &keep, sizeof keep))
         printf("FAIL obrador: kept as its seed, the sound does not come back\n"), fail++;
+    {   /* presets: named by family and numbered within it, in slot order */
+        char n1[20], n2[20], n3[20];
+        g = 0;
+        while (ui.engine[0] != ENG_OB && g++ < NENG) {
+            host_enc[PANEL_ENC[EN_PRESET]] = 1;
+            ui_input();
+        }
+        new_sound_of(OBK_BRASS, 0);
+        pre_save(0, ENG_OB, 1);
+        new_sound_of(OBK_STRINGS, 0);
+        pre_save(0, ENG_OB, 2);
+        new_sound_of(OBK_BRASS, 0);
+        pre_save(0, ENG_OB, 3);
+        pre_name(ENG_OB, 1, n1, sizeof n1);
+        pre_name(ENG_OB, 2, n2, sizeof n2);
+        pre_name(ENG_OB, 3, n3, sizeof n3);
+        if (strcmp(n1, "BRASS 1") || strcmp(n2, "STRINGS 1") || strcmp(n3, "BRASS 2"))
+            printf("FAIL obrador: the presets are not numbered by family (%s, %s, %s)\n", n1, n2, n3), fail++;
+        ui.pre_page = SP_LIST;
+        ui.pre_eng = ENG_OB;
+        ui.pre_ix = 3;
+        ui.force = 1;
+        ui_draw();
+        ppm("build/screens/screen-45-presets-numbered.ppm");
+        ui.pre_page = 0;
+    }
     printf("obrador: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }

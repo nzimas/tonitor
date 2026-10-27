@@ -103,7 +103,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **HOME** | a new sound for the chosen track. |
 | **SHIFT + HOME** | a new sound of the same family. |
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3. |
-| **SHIFT + OCT− / OCT+** | every loop of every track one step of the scale down or up ([The loopers](#the-loopers)). |
+| **SHIFT + OCT− / OCT+** | every loop of every track one step of the scale down or up ([Loopers](#loopers)). |
 | **SHIFT + a track's button held + OCT− / OCT+** | that track's loops only. |
 | the white keys | play the chosen track in the scale; the first white key is the root, and the root's keys glow dimly. A held note keeps sounding when you choose another track. The tracks share twelve voices. |
 | the rightmost black key | **SHIFT**. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it ([Latched keys](#latched-keys)). |
@@ -123,15 +123,15 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SELECT** knob | the chosen track's level, OFF to +4.5 dB. |
 | **ALGORITHM** knob | the chosen track's pan. |
 | **KNOB 1** | the chosen track's filter: off in the middle, low-pass to the left, high-pass to the right. |
-| **KNOB 2** | the chosen track's granulator: off in the middle, dark to the left, scattered to the right ([The granulator](#the-granulator)). |
+| **KNOB 2** | the chosen track's granulator: off in the middle, dark to the left, scattered to the right ([Granulator](#granulator)). |
 | **KNOB 3** | the chosen track's crush: off in the middle, fewer bits to the left, a lower sample rate to the right. |
 | **KNOB 4** | the chosen track's reverb send. |
-| **SHIFT + KNOB 3** | the chosen track's distortion ([The distortion](#the-distortion)). |
+| **SHIFT + KNOB 3** | the chosen track's distortion ([Distortion](#distortion)). |
 | **SHIFT + KNOB 4** | the chosen track's delay send. |
 | **SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there ([Sessions](#sessions)). |
 | **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting. |
 | **SHIFT + SAVE** | GLOBAL SETUP: the MIDI settings ([Global setup and MIDI](#global-setup-and-midi)). |
-| **SEQ** | the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back ([The delay](#the-delay), [The reverb](#the-reverb), [Modulation](#modulation), [Play along](#play-along)). |
+| **SEQ** | the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back ([Delay](#delay), [Reverb](#reverb), [Modulation](#modulation), [Play along](#play-along)). |
 | **SHIFT + SEQ** | a new random modulation for the chosen track. |
 | **MASTER** | the output level. |
 | MIDI in (USB and TRS) | notes and CCs for each track ([Global setup and MIDI](#global-setup-and-midi)). |
@@ -171,7 +171,7 @@ it). KNOB 1–4 set **ATTACK** (1 ms – 10 s), **DECAY** (5 ms – 10 s), **SUS
 (5 ms – 20 s). A change applies from the next note, and after that to the notes sounding too. HOME or loading a
 preset brings back the sound's own envelope. Sessions store the envelopes; presets do not.
 
-### PLAY, the sequencers and the looper
+### PLAY, sequencers and looper
 
 A track runs one sequencer at a time: with BALLSY on, BRICKLAYER shows NOT ALLOWED, and the other way round. A
 sequencer waits for **PLAY** on its own page. On every other page PLAY is the looper's, so you can record loops
@@ -274,7 +274,7 @@ Hold a track's button until the screen shows **COPIED / TRACK n** (the button bl
 hold its button until **PASTED / TRACK n**. The track pasted onto gets everything of the copied one, its sounds,
 settings and loops, except its own level and pan; its latched notes are released.
 
-### The loopers
+### Loopers
 
 Each track has a looper of up to **ten loops**, and they run **free**: no tempo, no grid. Each overdub is as long
 as you played it, so the loops drift against each other. A note held from the loop's first moment to its last
@@ -291,7 +291,7 @@ scale (TRANSP +1), up to two octaves either way; the white keys and latched note
 recorded meanwhile plays back as you played it. **SHIFT + a track's button held + OCT+ / OCT−** moves that
 track's loops only (TRANSP T3 +2). Emptying a track's loops resets its own move.
 
-### The screen
+### Screen
 
 From the top: the track number in the track's colour, with the octave, VAR (while the loops VARY) and the battery
 at the top right; the engine; the sound's family, or a short message; **ARMED** or **REC** while the looper
@@ -445,7 +445,8 @@ next step.
 ### Presets
 
 Each engine has **64 presets**. **SHIFT + ARP** opens the PRESETS page of the chosen track's engine; **PRESETS**
-chooses a slot.
+chooses a slot. Each preset is named by its sound's family and numbered within it, in the order of the slots:
+BRASS 1, BRASS 2, STRINGS 1.
 
 - **ARP held** (or SAVE held) saves the track's sound there, asking before overwriting.
 - **ARP** (or SAVE) loads it and goes back to playing.
@@ -465,20 +466,20 @@ there**.
 over USB MIDI; Tonitor build 47 or later) copies every session and preset to a file on the computer and writes
 them back. Use it before trying another firmware and after reinstalling Tonitor.
 
-### The granulator
+### Granulator
 
 Each track's granulator plays grains from the last half second of the track's sound (KNOB 2). Off in the middle;
 to the left, long, overlapping, drifting grains, sometimes frozen; to the right, short grains, scattered,
 reversed and stuttered. Each track's granulator has a character of its own, drawn anew at power-on and when a
 session is loaded. Grains ring on for about two seconds after the notes end.
 
-### The distortion
+### Distortion
 
 **SHIFT + KNOB 3**, 0–100 (0 is off): a two-stage drive after the track's filter, granulator and crush, before its
 sends, so the delay and the reverb receive the distorted sound. Its output is matched to the dry level, so the
 amount changes the tone, not the loudness.
 
-### The delay
+### Delay
 
 A master delay, before the reverb, fed by each track's delay send (**SHIFT + KNOB 4**); half its echoes also go
 into the reverb. The repeats are slightly dark and grainy. **SEQ** once opens its page:
@@ -490,7 +491,7 @@ into the reverb. The repeats are slightly dark and grainy. **SEQ** once opens it
 | **DAMP** | each repeat darker than the one before |
 | **MIX** | the level of the echoes |
 
-### The reverb
+### Reverb
 
 A plate reverb (after Jon Dattorro), fed by each track's reverb send (**KNOB 4**). **SEQ** twice opens its page:
 
@@ -516,7 +517,7 @@ Both are taken before **MASTER**, which sets only the headphones' level. No driv
 the same cable. To hear the FM-1 while a computer records it, use its headphone output: a program's own monitoring
 (Audacity's software playthrough) adds a delay and may break up.
 
-## The engines
+## Engines
 
 ### FM — six operators, DX7 style
 
