@@ -240,7 +240,7 @@ CONTROLS = [
     ([5], "OCT−", "The chosen track's octave down. <b>SHIFT +</b>: every loop one step of the scale down. "
                   "<b>SHIFT + a track button held +</b>: that track's loops only."),
     ([6], "OCT+", "The same, up."),
-    ([7], "the screen", 'See <a href="#the-screen">The screen</a>.'),
+    ([7], "the screen", 'See <a href="#screen">Screen</a>.'),
     ([8], "KNOB 1", "The chosen track's filter (low-pass left, high-pass right)."),
     ([9], "KNOB 2", "The chosen track's granulator."),
     ([10], "KNOB 3", "The chosen track's crush. <b>SHIFT +</b>: its distortion."),
@@ -255,7 +255,7 @@ CONTROLS = [
     ([21], "SEQ", "The DELAY, REVERB and MOD pages in turn. <b>SHIFT +</b>: the chosen track's modulation drawn anew."),
     ([22], "PLAY", "Stop or play the chosen track's loops (on BALLSY's or BRICKLAYER's page, that sequencer). "
                    "<b>Held</b>: the loops on the white keys, to bring each in or take it out. <b>SHIFT +</b>: stop "
-                   'everything, or play everything (<a href="#the-loopers">The loopers</a>).'),
+                   'everything, or play everything (<a href="#loopers">Loopers</a>).'),
     ([23], "REC", "Arm a loop, end it, overdub. <b>Held</b> (1 s): empty the track's loops. <b>SHIFT +</b>: VARY. "
                   "On BRICKLAYER's page: note entry."),
     ([24], "black key 1", 'The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>).'),
@@ -283,8 +283,8 @@ KNOB_PAGES = [
     ("SHIFT held", "", "", "distortion", "delay send"),
     ('EDIT (<a href="#macros">macros</a>)', "macro 1", "macro 2", "macro 3", "macro 4"),
     ('<a href="#envelope">ENVELOPE</a>', "ATTACK", "DECAY", "SUSTAIN", "RELEASE"),
-    ('<a href="#the-delay">DELAY</a> (SEQ)', "TIME", "FEEDBACK", "DAMP", "MIX"),
-    ('<a href="#the-reverb">REVERB</a> (SEQ twice)', "SIZE", "DECAY", "DAMP", "MIX"),
+    ('<a href="#delay">DELAY</a> (SEQ)', "TIME", "FEEDBACK", "DAMP", "MIX"),
+    ('<a href="#reverb">REVERB</a> (SEQ twice)', "SIZE", "DECAY", "DAMP", "MIX"),
     ('<a href="#modulation">MOD</a> (SEQ three times)', "the entry's first row", "second row", "third row", "—"),
     ('<a href="#ballsy">BALLSY</a>', "balls", "speed", "octaves", "instability"),
     ('<a href="#bricklayer">BRICKLAYER</a>', "LENGTH", "RATE", "HARMONY", "VARIATION"),
@@ -366,7 +366,7 @@ def keys_svg():
 
 
 def controls():
-    """the section "The controls": the two drawings and the table of what each number does"""
+    """the section "Controls": the two drawings and the table of what each number does"""
     rows = []
     for nums, name, what in CONTROLS:
         names = name if isinstance(name, list) else [name]
@@ -375,7 +375,7 @@ def controls():
             rows.append(f'<tr id="ctl-{n}" data-n="{n}"><td class="n"><a href="#fig-{"panel" if n < 24 else "keys"}">{n}</a></td>'
                         f"<td><b>{nm}</b></td>{cell}</tr>")
     pages = "\n".join("<tr>" + "".join(f"<td>{x}</td>" for x in r) + "</tr>" for r in KNOB_PAGES)
-    return f"""<h2 id="the-controls">The controls</h2>
+    return f"""<h2 id="controls">Controls</h2>
 <p>The numbers on the drawings are in the table below them; a number links to its row, and a row's number back to its drawing. The names are those printed on the FM-1. Black keys are counted from the left.</p>
 <figure class="fm1-fig" id="fig-panel">
 <div class="fm1-scroll">{panel_svg()}</div>
@@ -401,18 +401,26 @@ def manual():
     md = (ROOT / "README.md").read_text()
     part = md[md.index("\n# Manual\n"):md.index("\n# Building from source\n")]
     part = part.replace("\n# Manual\n", "\n", 1)
-    toc = [(2, "the-controls", "The controls")]
+    toc = [(2, "controls", "Controls")]
     body = controls() + "\n" + to_html(part, toc)
     t = "\n".join(f'<a href="#{s}"' + (' class="sub"' if lv == 3 else "") + f">{html.escape(n)}</a>" for lv, s, n in toc)
     bar = ('<div class="mbar" role="search">\n'
            '<input type="search" id="msearch" placeholder="Search the manual" aria-label="Search the manual" '
            'autocomplete="off" aria-controls="mresults" aria-expanded="false">\n'
-           '<a class="btn small" href="#contents">Contents</a>\n'
-           '<a class="btn small" href="#top">Top</a>\n'
            '<div id="mresults" class="mresults" role="listbox" hidden></div>\n'
            '</div>')
+    # bottom right, once the contents are scrolled past: back to the contents (a list), back to the top (an arrow)
+    icon = lambda d: (f'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" '
+                      f'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>')
+    float_nav = ('<nav class="mfloat" aria-label="Page">\n'
+                 '<a href="#contents" data-tip="Contents" aria-label="Contents">'
+                 + icon('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/>'
+                        '<circle cx="4.5" cy="18" r="1"/>') + '</a>\n'
+                 '<a href="#top" data-tip="Back to top" aria-label="Back to top">'
+                 + icon('<path d="M12 19V5M5 12l7-7 7 7"/>') + '</a>\n'
+                 '</nav>')
     intro = ('<h1 id="top">Manual</h1>\n' + bar + '\n<p>Everything the FM-1 does under Tonitor. New here? Start with '
-             '<a href="#the-controls">The controls</a> and <a href="#playing-it">Playing it</a>; to install, see '
+             '<a href="#controls">Controls</a> and <a href="#playing-it">Playing it</a>; to install, see '
              '<a href="install.html">Install</a>.</p>\n'
              '<h2 id="not-a-groovebox">Not a groovebox</h2>\n'
              '<p class="big">No tempo, no steps, no patterns, no drum kit.</p>\n'
@@ -421,7 +429,7 @@ def manual():
              'them while they play. It suits acousmatic and electroacoustic work as much as live ambient music, '
              'dark ambient above all.</p>\n'
              f'<nav class="toc" id="contents" aria-label="Contents">\n{t}\n</nav>')
-    (DOCS / "manual.html").write_text(page("Tonitor manual", "Manual", '<div class="manual">\n' + intro + "\n" + body + "\n</div>",
+    (DOCS / "manual.html").write_text(page("Tonitor manual", "Manual", '<div class="manual">\n' + intro + "\n" + body + "\n" + float_nav + "\n</div>",
                                            "The Tonitor manual: every control of the FM-1 under Tonitor.",
                                            f'\n<script src="js/manual.js?v={MANUAL_JS_V}" defer></script>'))
 

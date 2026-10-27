@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=907de1bb4c">
-<script src="js/manual.js?v=6b4f4a2af7" defer></script>
+<link rel="stylesheet" href="css/site.css?v=3c3a932858">
+<script src="js/manual.js?v=ff802e8fbe" defer></script>
 </head>
 <body>
 <div class="layout">
@@ -47,41 +47,39 @@
 <h1 id="top">Manual</h1>
 <div class="mbar" role="search">
 <input type="search" id="msearch" placeholder="Search the manual" aria-label="Search the manual" autocomplete="off" aria-controls="mresults" aria-expanded="false">
-<a class="btn small" href="#contents">Contents</a>
-<a class="btn small" href="#top">Top</a>
 <div id="mresults" class="mresults" role="listbox" hidden></div>
 </div>
-<p>Everything the FM-1 does under Tonitor. New here? Start with <a href="#the-controls">The controls</a> and <a href="#playing-it">Playing it</a>; to install, see <a href="install.html">Install</a>.</p>
+<p>Everything the FM-1 does under Tonitor. New here? Start with <a href="#controls">Controls</a> and <a href="#playing-it">Playing it</a>; to install, see <a href="install.html">Install</a>.</p>
 <h2 id="not-a-groovebox">Not a groovebox</h2>
 <p class="big">No tempo, no steps, no patterns, no drum kit.</p>
 <p>Tonitor is for sound heard for itself: texture, grain, movement and slow transformation. You play drones, gestures and textures, layer them, loop them freely out of time with one another, and shape them while they play. It suits acousmatic and electroacoustic work as much as live ambient music, dark ambient above all.</p>
 <nav class="toc" id="contents" aria-label="Contents">
-<a href="#the-controls">The controls</a>
+<a href="#controls">Controls</a>
 <a href="#playing-it">Playing it</a>
 <a href="#generative-paths" class="sub">Generative paths</a>
 <a href="#macros" class="sub">Macros</a>
 <a href="#envelope" class="sub">Envelope</a>
-<a href="#play-the-sequencers-and-the-looper" class="sub">PLAY, the sequencers and the looper</a>
+<a href="#play-sequencers-and-looper" class="sub">PLAY, sequencers and looper</a>
 <a href="#ballsy" class="sub">BALLSY</a>
 <a href="#bricklayer" class="sub">BRICKLAYER</a>
 <a href="#latched-keys" class="sub">Latched keys</a>
 <a href="#chords" class="sub">Chords</a>
 <a href="#direction-and-speed" class="sub">Direction and speed</a>
 <a href="#copying-a-track" class="sub">Copying a track</a>
-<a href="#the-loopers" class="sub">The loopers</a>
-<a href="#the-screen" class="sub">The screen</a>
+<a href="#loopers" class="sub">Loopers</a>
+<a href="#screen" class="sub">Screen</a>
 <a href="#scales" class="sub">Scales</a>
 <a href="#global-setup-and-midi" class="sub">Global setup and MIDI</a>
 <a href="#modulation" class="sub">Modulation</a>
 <a href="#play-along" class="sub">Play along</a>
 <a href="#presets" class="sub">Presets</a>
 <a href="#sessions" class="sub">Sessions</a>
-<a href="#the-granulator" class="sub">The granulator</a>
-<a href="#the-distortion" class="sub">The distortion</a>
-<a href="#the-delay" class="sub">The delay</a>
-<a href="#the-reverb" class="sub">The reverb</a>
+<a href="#granulator" class="sub">Granulator</a>
+<a href="#distortion" class="sub">Distortion</a>
+<a href="#delay" class="sub">Delay</a>
+<a href="#reverb" class="sub">Reverb</a>
 <a href="#usb-audio" class="sub">USB audio</a>
-<a href="#the-engines">The engines</a>
+<a href="#engines">Engines</a>
 <a href="#fm-six-operators-dx7-style" class="sub">FM — six operators, DX7 style</a>
 <a href="#anima-a-lo-fi-synthesizer-played-by-a-simulated-hand" class="sub">ANIMA — a lo-fi synthesizer played by a simulated hand</a>
 <a href="#caligula-an-organism" class="sub">CALIGULA — an organism</a>
@@ -89,8 +87,9 @@
 <a href="#druid-strings-and-resonant-bodies" class="sub">DRUID — strings and resonant bodies</a>
 <a href="#bayarea-a-west-coast-voice" class="sub">BAYAREA — a West Coast voice</a>
 <a href="#hive-a-swarm-of-oscillators" class="sub">HIVE — a swarm of oscillators</a>
+<a href="#obrador-an-analog-polysynth" class="sub">OBRADOR — an analog polysynth</a>
 </nav>
-<h2 id="the-controls">The controls</h2>
+<h2 id="controls">Controls</h2>
 <p>The numbers on the drawings are in the table below them; a number links to its row, and a row's number back to its drawing. The names are those printed on the FM-1. Black keys are counted from the left.</p>
 <figure class="fm1-fig" id="fig-panel">
 <div class="fm1-scroll"><svg class="fm1" viewBox="-70 -170 1085 565" role="img" aria-labelledby="fig-panel">
@@ -204,7 +203,7 @@
 <tr id="ctl-4" data-n="4"><td class="n"><a href="#fig-panel">4</a></td><td><b>ALGORITHM</b></td><td rowspan="1">The chosen track's pan. On the SCALE page: the scale.</td></tr>
 <tr id="ctl-5" data-n="5"><td class="n"><a href="#fig-panel">5</a></td><td><b>OCT−</b></td><td rowspan="1">The chosen track's octave down. <b>SHIFT +</b>: every loop one step of the scale down. <b>SHIFT + a track button held +</b>: that track's loops only.</td></tr>
 <tr id="ctl-6" data-n="6"><td class="n"><a href="#fig-panel">6</a></td><td><b>OCT+</b></td><td rowspan="1">The same, up.</td></tr>
-<tr id="ctl-7" data-n="7"><td class="n"><a href="#fig-panel">7</a></td><td><b>the screen</b></td><td rowspan="1">See <a href="#the-screen">The screen</a>.</td></tr>
+<tr id="ctl-7" data-n="7"><td class="n"><a href="#fig-panel">7</a></td><td><b>the screen</b></td><td rowspan="1">See <a href="#screen">Screen</a>.</td></tr>
 <tr id="ctl-8" data-n="8"><td class="n"><a href="#fig-panel">8</a></td><td><b>KNOB 1</b></td><td rowspan="1">The chosen track's filter (low-pass left, high-pass right).</td></tr>
 <tr id="ctl-9" data-n="9"><td class="n"><a href="#fig-panel">9</a></td><td><b>KNOB 2</b></td><td rowspan="1">The chosen track's granulator.</td></tr>
 <tr id="ctl-10" data-n="10"><td class="n"><a href="#fig-panel">10</a></td><td><b>KNOB 3</b></td><td rowspan="1">The chosen track's crush. <b>SHIFT +</b>: its distortion.</td></tr>
@@ -219,7 +218,7 @@
 <tr id="ctl-19" data-n="19"><td class="n"><a href="#fig-panel">19</a></td><td><b>SAVE</b></td><td rowspan="1">The SESSIONS page. <b>Held</b> (0.8 s): save the session. <b>SHIFT +</b>: GLOBAL SETUP (<a href="#global-setup-and-midi">MIDI</a>).</td></tr>
 <tr id="ctl-20" data-n="20"><td class="n"><a href="#fig-panel">20</a></td><td><b>ARP</b></td><td rowspan="1">The SCALE page. <b>SHIFT +</b>: the engine's <a href="#presets">PRESETS page</a>.</td></tr>
 <tr id="ctl-21" data-n="21"><td class="n"><a href="#fig-panel">21</a></td><td><b>SEQ</b></td><td rowspan="1">The DELAY, REVERB and MOD pages in turn. <b>SHIFT +</b>: the chosen track's modulation drawn anew.</td></tr>
-<tr id="ctl-22" data-n="22"><td class="n"><a href="#fig-panel">22</a></td><td><b>PLAY</b></td><td rowspan="1">Stop or play the chosen track's loops (on BALLSY's or BRICKLAYER's page, that sequencer). <b>Held</b>: the loops on the white keys, to bring each in or take it out. <b>SHIFT +</b>: stop everything, or play everything (<a href="#the-loopers">The loopers</a>).</td></tr>
+<tr id="ctl-22" data-n="22"><td class="n"><a href="#fig-panel">22</a></td><td><b>PLAY</b></td><td rowspan="1">Stop or play the chosen track's loops (on BALLSY's or BRICKLAYER's page, that sequencer). <b>Held</b>: the loops on the white keys, to bring each in or take it out. <b>SHIFT +</b>: stop everything, or play everything (<a href="#loopers">Loopers</a>).</td></tr>
 <tr id="ctl-23" data-n="23"><td class="n"><a href="#fig-panel">23</a></td><td><b>REC</b></td><td rowspan="1">Arm a loop, end it, overdub. <b>Held</b> (1 s): empty the track's loops. <b>SHIFT +</b>: VARY. On BRICKLAYER's page: note entry.</td></tr>
 <tr id="ctl-24" data-n="24"><td class="n"><a href="#fig-keys">24</a></td><td><b>black key 1</b></td><td rowspan="1">The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>).</td></tr>
 <tr id="ctl-25" data-n="25"><td class="n"><a href="#fig-keys">25</a></td><td><b>black key 2</b></td><td rowspan="1">The <b>EXPERIMENTAL</b> path; pressed again, OPEN.</td></tr>
@@ -241,8 +240,8 @@
 <tr><td>SHIFT held</td><td></td><td></td><td>distortion</td><td>delay send</td></tr>
 <tr><td>EDIT (<a href="#macros">macros</a>)</td><td>macro 1</td><td>macro 2</td><td>macro 3</td><td>macro 4</td></tr>
 <tr><td><a href="#envelope">ENVELOPE</a></td><td>ATTACK</td><td>DECAY</td><td>SUSTAIN</td><td>RELEASE</td></tr>
-<tr><td><a href="#the-delay">DELAY</a> (SEQ)</td><td>TIME</td><td>FEEDBACK</td><td>DAMP</td><td>MIX</td></tr>
-<tr><td><a href="#the-reverb">REVERB</a> (SEQ twice)</td><td>SIZE</td><td>DECAY</td><td>DAMP</td><td>MIX</td></tr>
+<tr><td><a href="#delay">DELAY</a> (SEQ)</td><td>TIME</td><td>FEEDBACK</td><td>DAMP</td><td>MIX</td></tr>
+<tr><td><a href="#reverb">REVERB</a> (SEQ twice)</td><td>SIZE</td><td>DECAY</td><td>DAMP</td><td>MIX</td></tr>
 <tr><td><a href="#modulation">MOD</a> (SEQ three times)</td><td>the entry's first row</td><td>second row</td><td>third row</td><td>—</td></tr>
 <tr><td><a href="#ballsy">BALLSY</a></td><td>balls</td><td>speed</td><td>octaves</td><td>instability</td></tr>
 <tr><td><a href="#bricklayer">BRICKLAYER</a></td><td>LENGTH</td><td>RATE</td><td>HARMONY</td><td>VARIATION</td></tr>
@@ -252,12 +251,12 @@
 <table>
 <tr><th>Control</th><th>What it does</th></tr>
 <tr><td><b>FX SEL ENV LFO EDIT GLO</b> (top row)</td><td>choose track <b>1–6</b> (lit: chosen; glowing: sounding). From any page, back to playing. <b>Held</b> (0.8 s): copy the track, or paste the copy onto it (<a href="#copying-a-track">Copying a track</a>).</td></tr>
-<tr><td><b>PRESETS</b> knob</td><td>the chosen track's engine: <b>FM</b>, <b>ANIMA</b>, <b>CALIGULA</b>, <b>RUSSOLO</b>, <b>DRUID</b>, <b>BAYAREA</b>, <b>HIVE</b>. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA.</td></tr>
+<tr><td><b>PRESETS</b> knob</td><td>the chosen track's engine: <b>FM</b>, <b>ANIMA</b>, <b>CALIGULA</b>, <b>RUSSOLO</b>, <b>DRUID</b>, <b>BAYAREA</b>, <b>HIVE</b>, <b>OBRADOR</b>. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA.</td></tr>
 <tr><td><b>SHIFT + PRESETS</b></td><td>a new sound of the previous or next family.</td></tr>
 <tr><td><b>HOME</b></td><td>a new sound for the chosen track.</td></tr>
 <tr><td><b>SHIFT + HOME</b></td><td>a new sound of the same family.</td></tr>
 <tr><td><b>OCT− / OCT+</b></td><td>the chosen track's octave, −3 to +3.</td></tr>
-<tr><td><b>SHIFT + OCT− / OCT+</b></td><td>every loop of every track one step of the scale down or up (<a href="#the-loopers">The loopers</a>).</td></tr>
+<tr><td><b>SHIFT + OCT− / OCT+</b></td><td>every loop of every track one step of the scale down or up (<a href="#loopers">Loopers</a>).</td></tr>
 <tr><td><b>SHIFT + a track's button held + OCT− / OCT+</b></td><td>that track's loops only.</td></tr>
 <tr><td>the white keys</td><td>play the chosen track in the scale; the first white key is the root, and the root's keys glow dimly. A held note keeps sounding when you choose another track. The tracks share twelve voices.</td></tr>
 <tr><td>the rightmost black key</td><td><b>SHIFT</b>. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it (<a href="#latched-keys">Latched keys</a>).</td></tr>
@@ -277,15 +276,15 @@
 <tr><td><b>SELECT</b> knob</td><td>the chosen track's level, OFF to +4.5 dB.</td></tr>
 <tr><td><b>ALGORITHM</b> knob</td><td>the chosen track's pan.</td></tr>
 <tr><td><b>KNOB 1</b></td><td>the chosen track's filter: off in the middle, low-pass to the left, high-pass to the right.</td></tr>
-<tr><td><b>KNOB 2</b></td><td>the chosen track's granulator: off in the middle, dark to the left, scattered to the right (<a href="#the-granulator">The granulator</a>).</td></tr>
+<tr><td><b>KNOB 2</b></td><td>the chosen track's granulator: off in the middle, dark to the left, scattered to the right (<a href="#granulator">Granulator</a>).</td></tr>
 <tr><td><b>KNOB 3</b></td><td>the chosen track's crush: off in the middle, fewer bits to the left, a lower sample rate to the right.</td></tr>
 <tr><td><b>KNOB 4</b></td><td>the chosen track's reverb send.</td></tr>
-<tr><td><b>SHIFT + KNOB 3</b></td><td>the chosen track's distortion (<a href="#the-distortion">The distortion</a>).</td></tr>
+<tr><td><b>SHIFT + KNOB 3</b></td><td>the chosen track's distortion (<a href="#distortion">Distortion</a>).</td></tr>
 <tr><td><b>SHIFT + KNOB 4</b></td><td>the chosen track's delay send.</td></tr>
 <tr><td><b>SAVE</b></td><td>the SESSIONS page: <b>PRESETS</b> chooses a slot, <b>SAVE</b> loads it; on an empty slot, SAVE starts a new, blank session there (<a href="#sessions">Sessions</a>).</td></tr>
 <tr><td><b>SAVE held</b> (0.8 s)</td><td>save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting.</td></tr>
 <tr><td><b>SHIFT + SAVE</b></td><td>GLOBAL SETUP: the MIDI settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
-<tr><td><b>SEQ</b></td><td>the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back (<a href="#the-delay">The delay</a>, <a href="#the-reverb">The reverb</a>, <a href="#modulation">Modulation</a>, <a href="#play-along">Play along</a>).</td></tr>
+<tr><td><b>SEQ</b></td><td>the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back (<a href="#delay">Delay</a>, <a href="#reverb">Reverb</a>, <a href="#modulation">Modulation</a>, <a href="#play-along">Play along</a>).</td></tr>
 <tr><td><b>SHIFT + SEQ</b></td><td>a new random modulation for the chosen track.</td></tr>
 <tr><td><b>MASTER</b></td><td>the output level.</td></tr>
 <tr><td>MIDI in (USB and TRS)</td><td>notes and CCs for each track (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
@@ -308,11 +307,12 @@
 <tr><td><b>DRUID</b></td><td><b>STRUCTURE</b></td><td><b>BRIGHTNESS</b></td><td><b>DAMPING</b></td><td><b>POSITION</b></td></tr>
 <tr><td><b>BAYAREA</b></td><td><b>SHAPE</b></td><td><b>FOLDS</b></td><td><b>FM</b></td><td><b>DECAY</b></td></tr>
 <tr><td><b>HIVE</b></td><td><b>DETUNE</b></td><td><b>MOVEMENT</b></td><td><b>MIX</b> (<b>NOISE</b> on GROUND, AIR)</td><td><b>CUTOFF</b></td></tr>
+<tr><td><b>OBRADOR</b></td><td><b>CUTOFF</b> (four octaves either way)</td><td><b>MORPH</b> (the filter: low-pass, notch, high-pass)</td><td><b>RESONANCE</b></td><td><b>DETUNE</b> (none to three times as wide)</td></tr>
 <tr><td><b>RUSSOLO</b></td><td>the kind's first parameter</td><td>the kind's second parameter</td><td><b>CRUSH</b></td><td><b>RANDOMNESS</b></td></tr>
 </table>
 <h3 id="envelope">Envelope</h3>
 <p>Black key 9 opens the <b>ENVELOPE</b> page with the chosen track's amplitude envelope (<b>AS DRAWN</b> until you change it). KNOB 1–4 set <b>ATTACK</b> (1 ms – 10 s), <b>DECAY</b> (5 ms – 10 s), <b>SUSTAIN</b> (0–100 %) and <b>RELEASE</b> (5 ms – 20 s). A change applies from the next note, and after that to the notes sounding too. HOME or loading a preset brings back the sound's own envelope. Sessions store the envelopes; presets do not.</p>
-<h3 id="play-the-sequencers-and-the-looper">PLAY, the sequencers and the looper</h3>
+<h3 id="play-sequencers-and-looper">PLAY, sequencers and looper</h3>
 <p>A track runs one sequencer at a time: with BALLSY on, BRICKLAYER shows NOT ALLOWED, and the other way round. A sequencer waits for <b>PLAY</b> on its own page. On every other page PLAY is the looper's, so you can record loops over a running sequencer. The looper records only the keys, never the sequencer.</p>
 <h3 id="ballsy">BALLSY</h3>
 <p><b>SHIFT + EDIT</b> turns on BALLSY, a sequencer of bouncing balls, for the chosen track and shows its page (EDIT blinks while it is on). <b>PLAY</b> starts and pauses the balls. <b>Hold EDIT</b> (0.6 s) to hide or show the page; the balls keep playing.</p>
@@ -379,11 +379,11 @@
 <p>The three direction keys exclude each other, as do the two speed keys; a direction and a speed combine. Press the lit key again to go back to forwards or normal speed. Emptying the loops (REC held) resets both.</p>
 <h3 id="copying-a-track">Copying a track</h3>
 <p>Hold a track's button until the screen shows <b>COPIED / TRACK n</b> (the button blinks). Choose another track and hold its button until <b>PASTED / TRACK n</b>. The track pasted onto gets everything of the copied one, its sounds, settings and loops, except its own level and pan; its latched notes are released.</p>
-<h3 id="the-loopers">The loopers</h3>
+<h3 id="loopers">Loopers</h3>
 <p>Each track has a looper of up to <b>ten loops</b>, and they run <b>free</b>: no tempo, no grid. Each overdub is as long as you played it, so the loops drift against each other. A note held from the loop's first moment to its last (still down when REC ends it) is tied over its end: while it still sounds (a drone, a pad) it goes on, one unbroken note; once it has died away (a pluck, a bell) it is struck again at the start of each round. Other notes still held when REC ends the loop are let go at its end, their release ringing on into the next round. Loops share the twelve voices with the keys and the other tracks.</p>
 <p><b>Bringing loops in and out.</b> Hold <b>PLAY</b>: the chosen track's loops appear on the white keys, the first loop on the leftmost, lit while they play. Press a key to take its loop out, or to bring it back in from its start. With the loops stopped, this chooses which loops the next PLAY starts.</p>
 <p><b>Moving the loops along the scale.</b> <b>SHIFT + OCT+ / OCT−</b> moves every loop of every track one step of the scale (TRANSP +1), up to two octaves either way; the white keys and latched notes move with them, and an overdub recorded meanwhile plays back as you played it. <b>SHIFT + a track's button held + OCT+ / OCT−</b> moves that track's loops only (TRANSP T3 +2). Emptying a track's loops resets its own move.</p>
-<h3 id="the-screen">The screen</h3>
+<h3 id="screen">Screen</h3>
 <p>From the top: the track number in the track's colour, with the octave, VAR (while the loops VARY) and the battery at the top right; the engine; the sound's family, or a short message; <b>ARMED</b> or <b>REC</b> while the looper records; the track's level meter, with a mark at its SELECT level; and its pan. KNOB 1–4 show a full-screen dial while they turn.</p>
 <p>Track colours: 1 yellow, 2 cyan, 3 pink, 4 green, 5 orange, 6 lilac.</p>
 <h3 id="scales">Scales</h3>
@@ -481,7 +481,7 @@
 <tr><td><b>ALGORITHM</b></td><td><b>CHANCE</b></td><td>steps left out and struck twice</td></tr>
 </table>
 <h3 id="presets">Presets</h3>
-<p>Each engine has <b>64 presets</b>. <b>SHIFT + ARP</b> opens the PRESETS page of the chosen track's engine; <b>PRESETS</b> chooses a slot.</p>
+<p>Each engine has <b>64 presets</b>. <b>SHIFT + ARP</b> opens the PRESETS page of the chosen track's engine; <b>PRESETS</b> chooses a slot. Each preset is named by its sound's family and numbered within it, in the order of the slots: BRASS 1, BRASS 2, STRINGS 1.</p>
 <ul>
 <li><b>ARP held</b> (or SAVE held) saves the track's sound there, asking before overwriting.</li>
 <li><b>ARP</b> (or SAVE) loads it and goes back to playing.</li>
@@ -491,11 +491,11 @@
 <p>There are 64 session slots; the FM-1 starts with none loaded. A session stores the whole machine: every track's sounds, settings, latched notes and loops, the scale, the delay and the reverb. Sessions saved under an older Tonitor load with the same sounds after an update. Saving silences the audio for a moment.</p>
 <p>Sessions are kept in the FM-1's flash: <b>saving overwrites any projects, presets or samples another firmware left there</b>.</p>
 <p><b>Backing up.</b> The <a href="https://nzimas.github.io/tonitor/backup.html">backup page</a> (desktop Chrome, Edge or Opera, over USB MIDI; Tonitor build 47 or later) copies every session and preset to a file on the computer and writes them back. Use it before trying another firmware and after reinstalling Tonitor.</p>
-<h3 id="the-granulator">The granulator</h3>
+<h3 id="granulator">Granulator</h3>
 <p>Each track's granulator plays grains from the last half second of the track's sound (KNOB 2). Off in the middle; to the left, long, overlapping, drifting grains, sometimes frozen; to the right, short grains, scattered, reversed and stuttered. Each track's granulator has a character of its own, drawn anew at power-on and when a session is loaded. Grains ring on for about two seconds after the notes end.</p>
-<h3 id="the-distortion">The distortion</h3>
+<h3 id="distortion">Distortion</h3>
 <p><b>SHIFT + KNOB 3</b>, 0–100 (0 is off): a two-stage drive after the track's filter, granulator and crush, before its sends, so the delay and the reverb receive the distorted sound. Its output is matched to the dry level, so the amount changes the tone, not the loudness.</p>
-<h3 id="the-delay">The delay</h3>
+<h3 id="delay">Delay</h3>
 <p>A master delay, before the reverb, fed by each track's delay send (<b>SHIFT + KNOB 4</b>); half its echoes also go into the reverb. The repeats are slightly dark and grainy. <b>SEQ</b> once opens its page:</p>
 <table>
 <tr><th>Parameter</th><th></th></tr>
@@ -504,7 +504,7 @@
 <tr><td><b>DAMP</b></td><td>each repeat darker than the one before</td></tr>
 <tr><td><b>MIX</b></td><td>the level of the echoes</td></tr>
 </table>
-<h3 id="the-reverb">The reverb</h3>
+<h3 id="reverb">Reverb</h3>
 <p>A plate reverb (after Jon Dattorro), fed by each track's reverb send (<b>KNOB 4</b>). <b>SEQ</b> twice opens its page:</p>
 <table>
 <tr><th></th><th></th><th>At the start</th></tr>
@@ -521,7 +521,7 @@
 <tr><td><b>TRACKS</b></td><td>6: tracks 1–6, each mono, after its filter, granulator, crush, distortion and level; before its pan and the master delay and reverb</td></tr>
 </table>
 <p>Both are taken before <b>MASTER</b>, which sets only the headphones' level. No driver is needed, and MIDI works over the same cable. To hear the FM-1 while a computer records it, use its headphone output: a program's own monitoring (Audacity's software playthrough) adds a delay and may break up.</p>
-<h2 id="the-engines">The engines</h2>
+<h2 id="engines">Engines</h2>
 <h3 id="fm-six-operators-dx7-style">FM — six operators, DX7 style</h3>
 <p>Six-operator FM after the DX7 (msfa, the core of Dexed). HOME draws a patch from one of these families and levels it to one loudness:</p>
 <table>
@@ -635,6 +635,25 @@
 <tr><td><b>TIDES</b></td><td>oscillators gliding apart and back</td></tr>
 </table>
 <p>CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are for textures rather than melodies.</p>
+<h3 id="obrador-an-analog-polysynth">OBRADOR — an analog polysynth</h3>
+<p>An analog polysynth voice after the Oberheim SEM and the two-voice Oberheims, written for Tonitor with OberVave (an Oberheim-style firmware for the FM-1, by zvenson) as its frame of reference. Per voice: two oscillators (saw, pulse or both, band-limited), the second detuned or an interval away, hard-synced or cross-modulating now and then; in the lush kinds a second voice card, detuned against the first; a drive into the SEM's 12 dB filter, its output morphing from low-pass through notch to high-pass, its resonance soft-limited; a second low-pass stage for 24 dB, or the band-pass; filter and amplifier envelopes on analog curves; an LFO that comes in after a delay; and each card's own small offsets of tune and cutoff with a slow drift.</p>
+<table>
+<tr><th>Kind</th><th></th></tr>
+<tr><td><b>STRINGS</b></td><td>two cards of saws, a slow attack, a delayed vibrato: the string pad</td></tr>
+<tr><td><b>BRASS</b></td><td>the envelope opening the 24 dB low-pass</td></tr>
+<tr><td><b>PWM PAD</b></td><td>two pulses, their widths moving slowly</td></tr>
+<tr><td><b>BASS</b></td><td>the second oscillator an octave down, the 24 dB low-pass, a plucked envelope</td></tr>
+<tr><td><b>SYNC</b></td><td>the second oscillator synced, its pitch swept by the envelope</td></tr>
+<tr><td><b>NOTCH</b></td><td>the filter near its notch, the LFO moving it: a phasing sweep</td></tr>
+<tr><td><b>METAL</b></td><td>cross-modulation at an odd interval through the band-pass: bells, clangs</td></tr>
+<tr><td><b>DRONE</b></td><td>two cards a fifth or an octave apart, the cutoff and the morph moving slowly</td></tr>
+<tr><td><b>KEYS</b></td><td>a struck filter, no sustain</td></tr>
+<tr><td><b>SWELL</b></td><td>the filter opening slowly under a held chord</td></tr>
+</table>
+<nav class="mfloat" aria-label="Page">
+<a href="#contents" data-tip="Contents" aria-label="Contents"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></a>
+<a href="#top" data-tip="Back to top" aria-label="Back to top"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></a>
+</nav>
 </div>
     </main>
     <footer>
@@ -652,6 +671,6 @@
     </footer>
   </div>
 </div>
-<script src="js/menu.js?v=907de1bb4c"></script>
+<script src="js/menu.js?v=3c3a932858"></script>
 </body>
 </html>

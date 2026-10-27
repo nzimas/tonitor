@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=907de1bb4c">
+<link rel="stylesheet" href="css/site.css?v=3c3a932858">
 </head>
 <body>
 <div class="layout">
@@ -43,6 +43,13 @@
   <div class="content">
     <main>
 <h1 id="changelog">Changelog</h1>
+<h2 id="build-63">Build 63</h2>
+<p>Added</p>
+<ul>
+<li>OBRADOR, an eighth engine: an analog polysynth after the Oberheim SEM and the two-voice Oberheims, with OberVave (zvenson/obervave) as its frame of reference. Two band-limited oscillators a voice (saw, pulse; detune, intervals, hard sync, cross-modulation), a second voice card detuned against the first in the lush kinds, the SEM's 12 dB filter morphing low-pass, notch, high-pass (24 dB and band-pass too), filter and amplifier envelopes on analog curves, a delayed LFO, each card's own offsets and drift. Ten kinds: STRINGS, BRASS, PWM PAD, BASS, SYNC, NOTCH, METAL, DRONE, KEYS, SWELL. Macros: CUTOFF, MORPH, RESONANCE, DETUNE.</li>
+<li>Presets are named by their family and numbered within it, in the order of the slots (BRASS 1, BRASS 2, STRINGS 1). The PRESETS page shows the engine's name alone over the slots ("CALIGULA PRESETS" was wider than the screen), each name in the largest size it fits whole.</li>
+<li>Sessions (format 25) keep each track's OBRADOR sound; earlier sessions load with a new one. A sound kept as its seed keeps its family too, so one chosen with SHIFT + PRESETS comes back the same from a preset or a session.</li>
+</ul>
 <h2 id="build-62">Build 62</h2>
 <p>Added</p>
 <ul>
@@ -509,6 +516,6 @@
     </footer>
   </div>
 </div>
-<script src="js/menu.js?v=907de1bb4c"></script>
+<script src="js/menu.js?v=3c3a932858"></script>
 </body>
 </html>

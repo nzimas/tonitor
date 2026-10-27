@@ -134,6 +134,21 @@ main blockquote { border-left: 4px solid var(--l5); margin: 16px 0; padding: 4px
 .mresults .what { display: block; font-size: 15px; color: var(--dim); line-height: 1.45; }
 .mresults mark { background: none; color: var(--fg); font-weight: 700; text-decoration: underline; text-decoration-color: var(--l5); }
 .mresults .none { padding: 10px 14px; color: var(--dim); }
+/* bottom right, once the contents are scrolled past: to the contents, to the top; named beside them on hover */
+.mfloat { position: fixed; right: 20px; bottom: 20px; z-index: 6; display: flex; flex-direction: column; gap: 10px;
+          opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s, visibility 0.2s; }
+.mfloat.show { opacity: 1; visibility: visible; transform: none; }
+.mfloat a { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+            color: var(--dim); background: var(--bg2); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
+.mfloat a:hover, .mfloat a:focus-visible { color: var(--fg); border-color: var(--dim); }
+.mfloat a:focus-visible { outline: 2px solid var(--l2); outline-offset: 2px; }
+.mfloat a::after { content: attr(data-tip); position: absolute; right: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+                   white-space: nowrap; font-size: 14px; font-weight: 700; color: var(--fg); background: var(--bg2);
+                   border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; pointer-events: none;
+                   opacity: 0; transition: opacity 0.15s; }
+.mfloat a:hover::after, .mfloat a:focus-visible::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .mfloat, .mfloat a::after { transition: none; } }
+@media (max-width: 820px) { .mfloat { right: 14px; bottom: 14px; } }
 .manual h2, .manual h3, .manual p, .manual tr, .manual li, .manual figure, .manual nav { scroll-margin-top: 80px; }
 .found { animation: found 2.4s ease-out; }
 @keyframes found { from { background: rgba(255, 140, 0, 0.35); } to { background: transparent; } }

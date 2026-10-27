@@ -98,6 +98,13 @@
     el.addEventListener("focusin", function () { hot(n, true); });
     el.addEventListener("focusout", function () { hot(n, false); });
   });
+  /* the floating Contents and Top buttons: shown once the contents are scrolled past */
+  var float = document.querySelector(".mfloat"), toc = document.getElementById("contents");
+  if (float && toc) {
+    var showFloat = function () { float.classList.toggle("show", toc.getBoundingClientRect().bottom < 0); };
+    addEventListener("scroll", showFloat, { passive: true });
+    showFloat();
+  }
   /* the web font loaded late moves everything: back to the address's anchor once it is in */
   if (location.hash && document.fonts) document.fonts.ready.then(function () {
     var el = document.getElementById(location.hash.slice(1));
