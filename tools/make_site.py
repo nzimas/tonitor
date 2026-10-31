@@ -226,8 +226,8 @@ def fragments():
         '\n<script type="module" src="js/backup.js"></script>'))
     (DOCS / "projects.html").write_text(page(
         "Other projects by Nuno Zimas", "Other projects", (src / "projects.html").read_text(),
-        "Firmware and instruments by Nuno Zimas for the Elektron Model:Cycles and Digitone II, the Ableton Move, "
-        "the Akai MPC One and macOS."))
+        "Firmware and instruments by Nuno Zimas for the M-VAVE FM-1 and SMK-37 Pro, the Novation Circuit Rhythm, "
+        "the Elektron Model:Cycles and Digitone II, the Ableton Move, the Akai MPC One and macOS."))
     (DOCS / "apps.html").write_text(page(
         "Apps by Nuno Zimas", "Apps", (src / "apps.html").read_text(),
         "Music apps by Nuno Zimas for phones and tablets: Vascular, a touch instrument for iOS and Android."))
