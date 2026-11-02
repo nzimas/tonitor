@@ -212,21 +212,29 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
 }
 
 /* ------------------------------------------------------- descriptors --- */
-/* interfaces: 0 audio control, 1 MIDI streaming, 2 audio streaming (FELUCCA_UAC), then CDC's two.
- * bcdDevice: 3.00 MIDI, +0.01 CDC, +0.10 the audio input, +0.20 more with 48 kHz (2.5), +0.08 the audio
- * streaming interface first in the AC collection (SLOOP 2.7.2, UAC_BCD_AS; TONITOR 0.55), +0.04 more than two
- * channels (TONITOR build 62) (hosts cache descriptors per version) */
-#define UAC_BCD_AS (0x08 * FELUCCA_UAC)   /* (+0.04 more than two channels: uac_set_nch) */
-#define CDC_IF (2 + FELUCCA_UAC)
-#define UAC_AS_IF 2u
-#define CFG_LEN (101 + 74 * FELUCCA_CDC + 74 * FELUCCA_UAC + 3 * FELUCCA_UAC_48K)
-#define USB_NIF (2 + FELUCCA_UAC + 2 * FELUCCA_CDC)
+/* interfaces: 0 audio control, 1 MIDI streaming; with FELUCCA_UAC 0 audio control, 1 audio streaming, 2 a second
+ * audio control (MIDI's), 3 MIDI streaming; then CDC's two.
+ * (TONITOR build 69, after Arctic Scream 1.3.1, #3) The audio input's control lists its streaming interface alone
+ * and MIDI has a control of its own. macOS's USB audio driver up to 15 (AppleUSBAudio) takes a MIDI interface out
+ * of the control's list while it keeps the list's old count, then gives up on the missing entry: no audio input
+ * appeared while MIDI worked, whatever the order of the list (0.55 put the audio first). Two controls, each with
+ * its own streaming interface, as an audio + MIDI composite (Linux's f_uac1 + f_midi) has them. The MIDI-only
+ * layout (the update loader's) is unchanged.
+ * bcdDevice: 3.00 MIDI, +0.01 CDC, +0.10 the audio input, +0.20 more with 48 kHz (2.5), +0.40 this layout (0.08
+ * before: the audio first in one control, SLOOP 2.7.2, TONITOR 0.55), +0.04 more than two channels (TONITOR build
+ * 62) (hosts cache descriptors per version) */
+#define UAC_BCD_AS (0x40 * FELUCCA_UAC)   /* (+0.04 more than two channels: uac_set_nch) */
+#define CDC_IF (2 + 2 * FELUCCA_UAC)
+#define UAC_AS_IF 1u
+#define MS_IF (1 + 2 * FELUCCA_UAC)
+#define CFG_LEN (101 + 74 * FELUCCA_CDC + 91 * FELUCCA_UAC + 3 * FELUCCA_UAC_48K)
+#define USB_NIF (2 + 2 * FELUCCA_UAC + 2 * FELUCCA_CDC)
 #if FELUCCA_CDC
 static const uint8_t DEV_DESC[18] = {18, 1, 0x00, 0x02, 0xEF, 0x02, 0x01, 64, 0x09, 0x12, 0x01, 0x00,
                                      0x01 + 0x10 * (FELUCCA_UAC + FELUCCA_UAC_48K) + UAC_BCD_AS, 0x03, 1, 2, 0, 1};   /* misc/IAD */
 static const uint8_t CFG_DESC[] = {
     9, 2, CFG_LEN & 0xFF, CFG_LEN >> 8, USB_NIF, 1, 0, 0x80, 50,
-    8, 0x0B, 0, 2 + FELUCCA_UAC, 1, 1, 0, 0,            /* IAD: audio + MIDI (IF 0-1, 0-2) */
+    8, 0x0B, 0, 2 + 2 * FELUCCA_UAC, 1, 1, 0, 0,        /* IAD: audio + MIDI (IF 0-1, 0-3) */
 #else
 #ifndef FELUCCA_USB_PID
 #define FELUCCA_USB_PID 0x0003   /* (TONITOR: its own, so a computer that has seen Felucca's 0x0001 reads "FM-1
@@ -241,30 +249,11 @@ static const uint8_t CFG_DESC[] = {
 #endif
     9, 4, 0, 0, 0, 1, 1, 0, 0,
 #if FELUCCA_UAC
-    /* AC header 1.00, its collection: the audio streaming interface first, then the MIDI one (SLOOP 2.7.2, after
-     * Felucca 1.5.1, #67; TONITOR 0.55). macOS up to 15 (the kernel's AppleUSBAudio) drops the MIDI streaming
-     * interface from the collection while it walks it with bInCollection's count: MIDI listed first, the walk runs
-     * past the shortened list and gives up before the audio streaming interface, and no audio input appears (MIDI
-     * still works). Listed last, MIDI is dropped at the end. The class spec gives the order no meaning */
-    10, 0x24, 1, 0x00, 0x01, 31, 0, 2, UAC_AS_IF, 1,
+    9, 0x24, 1, 0x00, 0x01, 30, 0, 1, UAC_AS_IF,        /* AC header 1.00: the audio streaming interface alone */
     12, 0x24, 2, 1, 0x03, 0x06, 0, 2, 0x03, 0x00, 0, 0, /* input terminal 1: line, 2 ch (L R; uac_set_nch: 6, the
                                                          * tracks, unplaced) */
     9, 0x24, 3, 2, 0x01, 0x01, 0, 1, 0,                 /* output terminal 2: USB streaming, from 1 */
-#else
-    9, 0x24, 1, 0x00, 0x01, 9, 0, 1, 1,
-#endif
-    9, 4, 1, 0, 2, 1, 3, 0, 0,
-    7, 0x24, 1, 0x00, 0x01, 0x41, 0x00,
-    6, 0x24, 2, 1, 1, 0,
-    6, 0x24, 2, 2, 2, 0,
-    9, 0x24, 3, 1, 3, 1, 2, 1, 0,
-    9, 0x24, 3, 2, 4, 1, 1, 1, 0,
-    9, 5, 0x01, 2, 64, 0, 0, 0, 0,
-    5, 0x25, 1, 1, 1,
-    9, 5, 0x81, 2, 64, 0, 0, 0, 0,
-    5, 0x25, 1, 1, 3,
-#if FELUCCA_UAC
-    9, 4, UAC_AS_IF, 0, 0, 1, 2, 0, 0,                  /* IF2 audio streaming, alt 0: no bandwidth */
+    9, 4, UAC_AS_IF, 0, 0, 1, 2, 0, 0,                  /* IF1 audio streaming, alt 0: no bandwidth */
     9, 4, UAC_AS_IF, 1, 1, 1, 2, 0, 0,                  /* alt 1: the stream */
     7, 0x24, 1, 2, 1, 0x01, 0x00,                       /* AS general: terminal 2, delay 1, PCM */
 #if FELUCCA_UAC_48K
@@ -277,9 +266,21 @@ static const uint8_t CFG_DESC[] = {
     9, 5, 0x84, 0x05, (UA_MAXF * 4u) & 0xFF, (UA_MAXF * 4u) >> 8, 1, 0, 0,   /* EP4 IN isochronous async, 1 ms (stereo's;
                                                                           * uac_set_nch) */
     7, 0x25, 1, 0x01, 0, 0, 0,                          /* CS endpoint: sampling frequency control */
+    9, 4, 2, 0, 0, 1, 1, 0, 0,                          /* IF2: MIDI's own audio control */
 #endif
+    9, 0x24, 1, 0x00, 0x01, 9, 0, 1, MS_IF,
+    9, 4, MS_IF, 0, 2, 1, 3, 0, 0,
+    7, 0x24, 1, 0x00, 0x01, 0x41, 0x00,
+    6, 0x24, 2, 1, 1, 0,
+    6, 0x24, 2, 2, 2, 0,
+    9, 0x24, 3, 1, 3, 1, 2, 1, 0,
+    9, 0x24, 3, 2, 4, 1, 1, 1, 0,
+    9, 5, 0x01, 2, 64, 0, 0, 0, 0,
+    5, 0x25, 1, 1, 1,
+    9, 5, 0x81, 2, 64, 0, 0, 0, 0,
+    5, 0x25, 1, 1, 3,
 #if FELUCCA_CDC
-    8, 0x0B, CDC_IF, 2, 2, 2, 1, 0,                     /* IAD: CDC ACM (IF 2-3, 3-4) */
+    8, 0x0B, CDC_IF, 2, 2, 2, 1, 0,                     /* IAD: CDC ACM (IF CDC_IF, + 1) */
     9, 4, CDC_IF, 0, 1, 2, 2, 1, 0,                     /* communication */
     5, 0x24, 0x00, 0x10, 0x01,                          /* header 1.10 */
     5, 0x24, 0x01, 0x00, CDC_IF + 1,                    /* call management: the data IF */

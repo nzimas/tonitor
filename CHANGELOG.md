@@ -1,5 +1,13 @@
 # Changelog
 
+## Build 69
+
+Fixed
+- USB audio on macOS 12 to 15: the audio input and MIDI now each have their own audio control interface (after
+  Arctic Scream 1.3.1). Before, MIDI was listed under the audio input's control, and the USB audio driver of macOS
+  up to 15 stopped reading before it reached the audio input: MIDI worked but no audio input appeared. The USB
+  version (System Information) reads 3.60, or 3.64 with the six tracks. Not yet tested on those macOS versions.
+
 ## Build 68
 
 Changed
