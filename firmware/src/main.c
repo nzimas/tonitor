@@ -41,6 +41,7 @@ static void tele_half(uint32_t pct, uint32_t late, uint32_t t0)
         tele_maxgap = (uint16_t)(gap > 0xFFFFu ? 0xFFFFu : gap);
     if (late && tele_lates < 127u)
         tele_lates++;
+    cb_lates += late != 0u;
     if ((pct >= 88u || late || gap > 650u) && tele_w - tele_r < 16u) {
         tele_t *g = &tele_log[tele_w % 16u];
         for (k = 0; k < NVOICE; k++)
@@ -332,19 +333,15 @@ static uint32_t bench_ticks[10];
 static volatile int32_t bench_sink;
 static void bench_blocks(void)
 {
-    static int16_t ramtab[AN_TSIZE + 1u];
     static svf_t sv;
     static svf_c sc;
     uint32_t f = irq_save(), t, i, ph = 74565u, inc = 10485760u;
     int32_t acc = 0, x = 1000;
-    for (i = 0; i <= AN_TSIZE; i++)
-        ramtab[i] = AN_WT[i];
     svf_coef(&sc, 1000, IX(0.9));
 #define BENCH(k, body) do { t = fm1_ticks(); for (i = 0; i < 256u; i++) { body; } bench_ticks[k] = fm1_ticks() - t; } while (0)
     BENCH(0, acc += (int32_t)i);
     BENCH(1, { ph += inc; acc += an_rd(&AN_WT[(i % 24u) * AN_LEVELS * (AN_TSIZE + 1u)], ph); });            /* a wavetable read, the flash's */
-    BENCH(2, { ph += inc; const int16_t *d = ramtab; uint32_t j = ph >> 22; int32_t fr = (int32_t)((ph >> 7) & 0x7FFFu);
-               acc += d[j] + (((d[j + 1u] - d[j]) * fr) >> 15); });          /* .. from RAM */
+    /* (2, a wavetable read from a RAM copy: dropped, its 2 KB no longer fit in .bss beside the chip benchmark) */
     BENCH(3, { x = svf_run(&sv, &sc, x + (int32_t)i, 1); acc += x; });      /* a filter step */
     BENCH(4, { acc = mulq15(acc + 3, 23456); });                             /* a Q15 multiply */
     BENCH(5, { acc += tanh_q15((int32_t)(i * 300u) - 40000); });             /* the soft ceiling */
@@ -388,24 +385,53 @@ static void cb_load(char *b, const char *what)       /* "what load avg A% max M%
     b = cb_num(b, (int32_t)cb.mx, 0);
     cb_put(b, "%");
 }
-static void cb_notes(uint32_t n, int on)
+static void cb_notes(uint32_t l, uint32_t n, int on)   /* (n notes on layer l, a scale step apart, from the root) */
 {
-    static const uint8_t K[4] = {12, 14, 16, 19};
     uint32_t i;
     for (i = 0; i < n; i++)
-        chord_press(0, scale_note((int32_t)K[i] - 12, 0), 0, on);
+        chord_press(l, scale_note((int32_t)(2u * i), 0), 0, on);
+}
+static void cb_stop(void)
+{
+    uint32_t l;
+    for (l = 0; l < NLAYER; l++)
+        ev_post(EV_STOP, l, 0, 0);
+}
+static char *cb_tail(char *b)                   /* " v N t T s S l L": voices sounding, trims, sheds, late halves */
+{
+    uint32_t k, nv = 0;
+    for (k = 0; k < NVOICE; k++)
+        nv += vox[k].sounding;
+    b = cb_put(b, " v ");
+    b = cb_num(b, (int32_t)nv, 0);
+    b = cb_put(b, " t ");
+    b = cb_num(b, (int32_t)cb_trims, 0);
+    b = cb_put(b, " s ");
+    b = cb_num(b, (int32_t)cb_sheds, 0);
+    b = cb_put(b, " l ");
+    b = cb_num(b, (int32_t)cb_lates, 0);
+    return b;
 }
 static void cb_tick(void)
 {
-    /* the second run: idle with and without the delay and reverb; then the six tracks one engine (FM) against six
-     * engines, with the same notes; and six engines without the delay and reverb */
-    enum { W_START, IDLE, IDLE_NOFX, SETUP, PLAY, MEAS, DONE };
+    /* the FM-1's run: idle with and without the delay and reverb; on track 1 every family of every engine, a sound
+     * each, one note then four; each engine's dearest family, twelve notes; the track's effects on an FM note;
+     * then the six tracks one engine (FM) against six engines, with the same notes */
+    enum { W_START, IDLE, IDLE_NOFX, F_SET, F_PLAY, F_MEAS, P_SET, P_PLAY, P_MEAS, X_SET, X_PLAY, X_MEAS,
+           M_SETUP, M_PLAY, M_MEAS, DONE };
+    static const uint8_t NK[NENG] = {FF_N, AK_N, CS_N, RK_N, DK_N, BK_N, HK_N, OBK_N};
     static const struct { uint8_t mixed, notes, nofx; const char *what; } C[6] = {
         {0, 1, 0, "six tracks FM, 1 note each"}, {0, 2, 0, "six tracks FM, 2 notes each"},
         {1, 1, 0, "six tracks six engines, 1 note each"}, {1, 1, 1, "six engines, 1 note each, no delay/reverb"},
         {1, 2, 0, "six tracks six engines, 2 notes each"}, {1, 2, 1, "six engines, 2 notes each, no delay/reverb"}};
+    static const char *const XW[7] = {"FX FM 1 note, effects off:", "FX + distortion 60:", "FX + granulator 40:",
+                                      "FX + filter 40:", "FX + crush 40:", "FX + reverb send 60:", "FX + delay send 60:"};
     static char line[110];
-    uint32_t now = fm1_ms, el = now - cb.t, l;
+    static uint8_t dear_k[NENG];
+    static uint16_t dear_c[NENG];
+    static uint8_t notes;
+    char *b;
+    uint32_t now = fm1_ms, el = now - cb.t, l, c;
     if (cb.ph == DONE)
         return;
     if (load_pct) {
@@ -414,10 +440,13 @@ static void cb_tick(void)
         cb.mx = load_pct > cb.mx ? load_pct : cb.mx;
     }
 #define CB_NEXT(p) do { cb.ph = (p); cb.t = now; cb.sum = cb.n = cb.mx = 0; } while (0)
+#define CB_ZERO() do { cb_trims = cb_sheds = cb_lates = 0; } while (0)
     switch (cb.ph) {
     case W_START:
         if (now > 8000u && usb.config) {
-            cb_say("CHIPBENCH start (second run)");
+            cb_say("CHIPBENCH start (FM-1 run)");
+            cb_stop();
+            ui.sel = 0;
             CB_NEXT(IDLE);
         }
         break;
@@ -434,53 +463,197 @@ static void cb_tick(void)
             cb_load(line, "idle, delay and reverb skipped:");
             cb_say(line);
             diag_nofx = 0;
+            cb.e = 0;
             cb.s = 0;
-            CB_NEXT(SETUP);
+            CB_NEXT(F_SET);
         }
         break;
-    case SETUP:
+    case F_SET:                                  /* (a sound of family s of engine e on track 1) */
+        if (el < 500u)
+            break;
+        if (cb.e == ENG_FM && fm_retired(cb.s)) {
+            cb.s++;
+            break;
+        }
+        ui.engine[0] = cb.e;
+        ev_post(EV_ENGINE, 0, 0, cb.e);
+        new_sound_of(cb.s, 0);
+        notes = 1;
+        CB_NEXT(F_PLAY);
+        break;
+    case F_PLAY:
+        if (el > 600u) {
+            CB_ZERO();
+            cb_notes(0, notes, 1);
+            CB_NEXT(F_MEAS);
+        }
+        break;
+    case F_MEAS:
+        if (el < 700u)
+            cb.sum = cb.n = cb.mx = 0;
+        else if (el > 2200u) {
+            b = cb_put(line, ENG_NAME[cb.e]);
+            b = cb_put(b, " ");
+            b = cb_put(b, kind_name(cb.e, cur_kind(0)));
+            b = cb_put(b, notes == 1u ? " 1n voice " : " 4n voice ");
+            c = eng_cost[cb.e & 7u] * 1000u / BLK_TICKS;
+            b = cb_num(b, (int32_t)c, 1);
+            b = cb_put(b, "%");
+            cb_load(b, "");
+            cb_tail(line + str_len(line));
+            cb_say(line);
+            cb_notes(0, notes, 0);
+            cb_stop();
+            if (notes == 1u) {
+                if (c > dear_c[cb.e]) {
+                    dear_c[cb.e] = (uint16_t)c;
+                    dear_k[cb.e] = (uint8_t)cur_kind(0);
+                }
+                notes = 4;
+                CB_NEXT(F_PLAY);
+                cb.t = now - 200u;               /* (the stop's fade, then four) */
+                break;
+            }
+            if (++cb.s >= NK[cb.e]) {
+                cb.s = 0;
+                if (++cb.e >= NENG) {
+                    cb.e = 0;
+                    CB_NEXT(P_SET);
+                    break;
+                }
+            }
+            CB_NEXT(F_SET);
+        }
+        break;
+    case P_SET:                                  /* (each engine's dearest family, twelve notes held) */
+        if (el < 500u)
+            break;
+        ui.engine[0] = cb.e;
+        ev_post(EV_ENGINE, 0, 0, cb.e);
+        new_sound_of(dear_k[cb.e], 0);
+        CB_NEXT(P_PLAY);
+        break;
+    case P_PLAY:
+        if (el > 600u) {
+            CB_ZERO();
+            cb_notes(0, NVOICE, 1);
+            CB_NEXT(P_MEAS);
+        }
+        break;
+    case P_MEAS:
+        if (el < 700u)
+            cb.sum = cb.n = cb.mx = 0;
+        else if (el > 3200u) {
+            b = cb_put(line, ENG_NAME[cb.e]);
+            b = cb_put(b, " ");
+            b = cb_put(b, kind_name(cb.e, cur_kind(0)));
+            cb_load(b, " 12n");
+            cb_tail(line + str_len(line));
+            cb_say(line);
+            cb_notes(0, NVOICE, 0);
+            cb_stop();
+            if (++cb.e >= NENG) {
+                cb.s = 0;
+                CB_NEXT(X_SET);
+                break;
+            }
+            CB_NEXT(P_SET);
+        }
+        break;
+    case X_SET:                                  /* (an FM note, the track's effects added one at a time) */
+        if (el < 500u)
+            break;
+        if (cb.s == 0u) {
+            ui.engine[0] = ENG_FM;
+            ev_post(EV_ENGINE, 0, 0, ENG_FM);
+            new_sound_of(FF_METAL, 0);
+            ui.dist[0] = ui.gr[0] = ui.flt[0] = ui.cr[0] = 0;
+            ui.send[0] = ui.dsend[0] = 0;
+        } else if (cb.s == 1u)
+            ui.dist[0] = 60;
+        else if (cb.s == 2u)
+            ui.gr[0] = 40;
+        else if (cb.s == 3u)
+            ui.flt[0] = 40;
+        else if (cb.s == 4u)
+            ui.cr[0] = 40;
+        else if (cb.s == 5u)
+            ui.send[0] = 60;
+        else
+            ui.dsend[0] = 60;
+        level_pan_apply(0);
+        CB_NEXT(X_PLAY);
+        break;
+    case X_PLAY:
+        if (el > 600u) {
+            cb_notes(0, 1, 1);
+            CB_NEXT(X_MEAS);
+        }
+        break;
+    case X_MEAS:
+        if (el < 700u)
+            cb.sum = cb.n = cb.mx = 0;
+        else if (el > 2200u) {
+            cb_load(line, XW[cb.s]);
+            cb_say(line);
+            cb_notes(0, 1, 0);
+            cb_stop();
+            if (++cb.s >= 7u) {
+                ui.dist[0] = ui.gr[0] = ui.flt[0] = ui.cr[0] = 0;
+                level_pan_apply(0);
+                cb.s = 0;
+                CB_NEXT(M_SETUP);
+                break;
+            }
+            CB_NEXT(X_SET);
+        }
+        break;
+    case M_SETUP:
+        if (el < 500u)
+            break;
         for (l = 0; l < NLAYER; l++) {
-            ev_post(EV_STOP, l, 0, 0);
             ui.engine[l] = C[cb.s].mixed ? CB_ENG[l % 6u] : ENG_FM;
             ev_post(EV_ENGINE, l, 0, ui.engine[l]);
         }
         diag_nofx = C[cb.s].nofx;
-        CB_NEXT(PLAY);
+        CB_NEXT(M_PLAY);
         break;
-    case PLAY:
+    case M_PLAY:
         if (el > 1500u) {
+            CB_ZERO();
             for (l = 0; l < NLAYER; l++) {
                 chord_press(l, scale_note((int32_t)(2u * l), 0), 0, 1);
                 if (C[cb.s].notes > 1u)
                     chord_press(l, scale_note((int32_t)(2u * l) + 4, 0), 0, 1);
             }
-            CB_NEXT(MEAS);
+            CB_NEXT(M_MEAS);
         }
         break;
-    case MEAS:
+    case M_MEAS:
         if (el < 700u)
             cb.sum = cb.n = cb.mx = 0;
         else if (el > 3200u) {
             cb_load(line, C[cb.s].what);
+            cb_tail(line + str_len(line));
             cb_say(line);
             for (l = 0; l < NLAYER; l++) {
                 chord_press(l, scale_note((int32_t)(2u * l), 0), 0, 0);
                 chord_press(l, scale_note((int32_t)(2u * l) + 4, 0), 0, 0);
             }
+            cb_stop();
             if (++cb.s >= 6u) {
                 diag_nofx = 0;
-                for (l = 0; l < NLAYER; l++)
-                    ev_post(EV_STOP, l, 0, 0);
                 cb_say("CHIPBENCH done");
                 CB_NEXT(DONE);
                 break;
             }
-            CB_NEXT(SETUP);
+            CB_NEXT(M_SETUP);
         }
         break;
     default:
         break;
     }
+#undef CB_ZERO
 #undef CB_NEXT
 }
 #endif

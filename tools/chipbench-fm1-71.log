@@ -1,0 +1,250 @@
+listening on FM-1 Tonitor
+    3.8s  CHIPBENCH start (FM-1 run)
+    5.8s  idle, delay and reverb on: load 17.0% max 17%
+    7.8s  idle, delay and reverb skipped: load 17.0% max 17%
+   11.1s  FM METAL 1n voice 3.0% load 32.0% max 33% v 1 t 0 s 0 l 0
+   13.8s  FM METAL 4n voice 3.0% load 37.6% max 42% v 4 t 0 s 0 l 0
+   17.1s  FM DRONE 1n voice 4.9% load 32.5% max 33% v 1 t 0 s 0 l 0
+   19.7s  FM DRONE 4n voice 5.7% load 44.8% max 45% v 4 t 0 s 0 l 0
+   23.0s  FM BRUIT 1n voice 4.8% load 32.0% max 33% v 1 t 0 s 0 l 0
+   25.6s  FM BRUIT 4n voice 5.0% load 41.1% max 42% v 4 t 0 s 0 l 0
+   29.0s  FM IMPACT 1n voice 1.1% load 32.0% max 33% v 1 t 0 s 0 l 0
+   31.6s  FM IMPACT 4n voice 1.0% load 34.0% max 34% v 4 t 0 s 0 l 0
+   34.9s  FM ITERATIF 1n voice 5.0% load 32.0% max 33% v 1 t 0 s 0 l 0
+   37.5s  FM ITERATIF 4n voice 5.1% load 42.0% max 42% v 4 t 0 s 0 l 0
+   40.9s  FM SPECTRE 1n voice 4.8% load 32.5% max 33% v 1 t 0 s 0 l 0
+   43.5s  FM SPECTRE 4n voice 4.9% load 41.9% max 42% v 4 t 0 s 0 l 0
+   46.9s  FM ABYSS 1n voice 5.6% load 32.4% max 33% v 1 t 0 s 0 l 0
+   49.6s  FM ABYSS 4n voice 5.6% load 43.3% max 45% v 4 t 0 s 0 l 0
+   52.9s  FM FRICTION 1n voice 4.9% load 32.0% max 33% v 1 t 0 s 0 l 0
+   55.5s  FM FRICTION 4n voice 5.0% load 41.4% max 42% v 4 t 0 s 0 l 0
+   58.8s  FM CHOIR 1n voice 5.6% load 32.5% max 33% v 1 t 0 s 0 l 0
+   61.4s  FM CHOIR 4n voice 5.6% load 44.1% max 45% v 4 t 0 s 0 l 0
+   64.8s  FM BOWED 1n voice 5.6% load 32.5% max 33% v 1 t 0 s 0 l 0
+   67.4s  FM BOWED 4n voice 5.5% load 44.4% max 45% v 4 t 0 s 0 l 0
+   70.7s  FM HOLLOW 1n voice 5.3% load 32.5% max 33% v 1 t 0 s 0 l 0
+   73.3s  FM HOLLOW 4n voice 5.3% load 43.9% max 44% v 4 t 0 s 0 l 0
+   76.7s  FM BLOOM 1n voice 5.6% load 32.5% max 33% v 1 t 0 s 0 l 0
+   79.3s  FM BLOOM 4n voice 5.4% load 44.0% max 45% v 4 t 0 s 0 l 0
+   82.6s  FM TIDE 1n voice 5.6% load 32.5% max 33% v 1 t 0 s 0 l 0
+   85.2s  FM TIDE 4n voice 5.6% load 45.0% max 45% v 4 t 0 s 0 l 0
+   88.5s  FM SHARDS 1n voice 4.9% load 32.0% max 33% v 1 t 0 s 0 l 0
+   91.2s  FM SHARDS 4n voice 4.8% load 41.9% max 42% v 4 t 0 s 0 l 0
+   94.5s  FM STATIC 1n voice 5.6% load 32.6% max 33% v 1 t 0 s 0 l 0
+   97.1s  FM STATIC 4n voice 5.7% load 44.9% max 45% v 4 t 0 s 0 l 0
+  100.5s  FM WIND 1n voice 5.5% load 32.5% max 33% v 1 t 0 s 0 l 0
+  103.1s  FM WIND 4n voice 5.6% load 44.5% max 45% v 4 t 0 s 0 l 0
+  106.4s  FM PLUCK 1n voice 3.1% load 32.0% max 33% v 1 t 0 s 0 l 0
+  109.0s  FM PLUCK 4n voice 3.1% load 34.5% max 37% v 4 t 0 s 0 l 0
+  112.3s  FM MALLET 1n voice 2.1% load 32.0% max 33% v 1 t 0 s 0 l 0
+  115.0s  FM MALLET 4n voice 1.7% load 34.0% max 35% v 4 t 0 s 0 l 0
+  118.3s  FM WARP 1n voice 4.9% load 32.0% max 33% v 1 t 0 s 0 l 0
+  120.9s  FM WARP 4n voice 4.7% load 41.1% max 42% v 4 t 0 s 0 l 0
+  124.2s  FM GLITCH 1n voice 4.8% load 32.0% max 33% v 1 t 0 s 0 l 0
+  126.9s  FM GLITCH 4n voice 5.0% load 41.4% max 42% v 4 t 0 s 0 l 0
+  130.2s  FM SHAPER 1n voice 5.0% load 32.4% max 33% v 1 t 0 s 0 l 0
+  132.8s  FM SHAPER 4n voice 5.0% load 40.9% max 43% v 4 t 0 s 0 l 0
+  136.1s  FM LADDER 1n voice 4.2% load 32.0% max 33% v 1 t 0 s 0 l 0
+  138.8s  FM LADDER 4n voice 4.1% load 38.9% max 39% v 4 t 0 s 0 l 0
+  142.1s  FM REVERSE 1n voice 5.5% load 32.5% max 33% v 1 t 0 s 0 l 0
+  144.7s  FM REVERSE 4n voice 5.6% load 44.0% max 45% v 4 t 0 s 0 l 0
+  148.1s  FM CREEP 1n voice 5.5% load 32.6% max 33% v 1 t 0 s 0 l 0
+  150.7s  FM CREEP 4n voice 5.4% load 44.0% max 45% v 4 t 0 s 0 l 0
+  154.0s  FM CLANG 1n voice 3.7% load 32.0% max 33% v 1 t 0 s 0 l 0
+  156.6s  FM CLANG 4n voice 4.0% load 39.4% max 42% v 4 t 0 s 0 l 0
+  160.0s  ANIMA HAZE 1n voice 10.7% load 32.7% max 34% v 1 t 0 s 0 l 0
+  162.6s  ANIMA HAZE 4n voice 10.4% load 57.6% max 61% v 4 t 0 s 0 l 0
+  165.9s  ANIMA VOYAGE 1n voice 10.9% load 32.7% max 33% v 1 t 0 s 0 l 0
+  168.5s  ANIMA VOYAGE 4n voice 10.7% load 56.0% max 57% v 4 t 0 s 0 l 0
+  171.8s  ANIMA GLASS 1n voice 10.5% load 32.7% max 33% v 1 t 0 s 0 l 0
+  174.4s  ANIMA GLASS 4n voice 10.1% load 58.5% max 63% v 4 t 0 s 0 l 0
+  177.8s  ANIMA BELLS 1n voice 8.4% load 32.6% max 33% v 1 t 0 s 0 l 0
+  180.4s  ANIMA BELLS 4n voice 8.5% load 55.9% max 56% v 4 t 0 s 0 l 0
+  183.7s  ANIMA GOLDEN 1n voice 12.0% load 33.0% max 34% v 1 t 0 s 0 l 0
+  186.4s  ANIMA GOLDEN 4n voice 11.7% load 58.1% max 59% v 4 t 0 s 0 l 0
+  189.7s  ANIMA BREATH 1n voice 12.3% load 32.7% max 34% v 1 t 0 s 0 l 0
+  192.3s  ANIMA BREATH 4n voice 12.0% load 59.0% max 60% v 4 t 0 s 0 l 0
+  195.6s  ANIMA GRIT 1n voice 10.4% load 32.7% max 34% v 1 t 0 s 0 l 0
+  198.2s  ANIMA GRIT 4n voice 10.4% load 57.1% max 61% v 4 t 0 s 0 l 0
+  201.6s  ANIMA SWARM 1n voice 8.9% load 32.6% max 33% v 1 t 0 s 0 l 0
+  204.2s  ANIMA SWARM 4n voice 9.2% load 59.8% max 61% v 4 t 0 s 0 l 0
+  207.5s  ANIMA TIDE 1n voice 10.3% load 32.6% max 33% v 1 t 0 s 0 l 0
+  210.1s  ANIMA TIDE 4n voice 10.4% load 56.5% max 62% v 4 t 0 s 0 l 0
+  213.5s  ANIMA CHOIR 1n voice 11.5% load 32.9% max 34% v 1 t 0 s 0 l 0
+  216.1s  ANIMA CHOIR 4n voice 11.1% load 56.5% max 57% v 4 t 0 s 0 l 0
+  219.4s  ANIMA SHARDS 1n voice 11.1% load 32.6% max 33% v 1 t 0 s 0 l 0
+  222.0s  ANIMA SHARDS 4n voice 10.4% load 56.0% max 61% v 4 t 0 s 0 l 0
+  225.3s  ANIMA BOWL 1n voice 10.0% load 32.6% max 34% v 1 t 0 s 0 l 0
+  227.9s  ANIMA BOWL 4n voice 10.4% load 55.8% max 59% v 4 t 0 s 0 l 0
+  231.3s  ANIMA DUST 1n voice 9.3% load 32.7% max 33% v 1 t 0 s 0 l 0
+  233.9s  ANIMA DUST 4n voice 9.6% load 60.1% max 61% v 4 t 0 s 0 l 0
+  237.2s  ANIMA MACHINE 1n voice 10.7% load 32.6% max 33% v 1 t 0 s 0 l 0
+  239.8s  ANIMA MACHINE 4n voice 11.2% load 56.9% max 58% v 4 t 0 s 0 l 0
+  243.1s  ANIMA PLUCK 1n voice 7.7% load 32.6% max 33% v 1 t 0 s 0 l 0
+  245.8s  ANIMA PLUCK 4n voice 7.6% load 53.0% max 54% v 4 t 0 s 0 l 0
+  249.1s  ANIMA REED 1n voice 9.6% load 32.7% max 33% v 1 t 0 s 0 l 0
+  251.7s  ANIMA REED 4n voice 9.4% load 60.0% max 61% v 4 t 0 s 0 l 0
+  255.0s  ANIMA FOG 1n voice 12.7% load 33.0% max 34% v 1 t 0 s 0 l 0
+  257.7s  ANIMA FOG 4n voice 11.9% load 58.4% max 59% v 4 t 0 s 0 l 0
+  261.0s  ANIMA ORGAN 1n voice 10.1% load 32.6% max 34% v 1 t 0 s 0 l 0
+  263.6s  ANIMA ORGAN 4n voice 10.3% load 58.1% max 61% v 4 t 0 s 0 l 0
+  266.9s  ANIMA BITS 1n voice 8.5% load 32.6% max 33% v 1 t 0 s 0 l 0
+  269.6s  ANIMA BITS 4n voice 8.4% load 55.4% max 56% v 4 t 0 s 0 l 0
+  272.9s  ANIMA DRIFT 1n voice 11.0% load 32.7% max 33% v 1 t 0 s 0 l 0
+  275.5s  ANIMA DRIFT 4n voice 10.8% load 55.4% max 57% v 4 t 0 s 0 l 0
+  278.8s  ANIMA MURMUR 1n voice 11.1% load 32.6% max 33% v 1 t 0 s 0 l 0
+  281.5s  ANIMA MURMUR 4n voice 10.3% load 57.0% max 61% v 4 t 0 s 0 l 0
+  284.8s  ANIMA HOWL 1n voice 9.9% load 32.6% max 33% v 1 t 0 s 0 l 0
+  287.4s  ANIMA HOWL 4n voice 10.0% load 61.4% max 63% v 4 t 0 s 0 l 0
+  290.7s  CALIGULA SPORE 1n voice 18.2% load 43.7% max 44% v 0 t 0 s 0 l 0
+  293.3s  CALIGULA SPORE 4n voice 17.9% load 43.9% max 44% v 0 t 0 s 0 l 0
+  296.7s  CALIGULA THORN 1n voice 21.8% load 47.3% max 50% v 0 t 0 s 0 l 0
+  299.3s  CALIGULA THORN 4n voice 20.9% load 45.9% max 47% v 0 t 0 s 0 l 0
+  302.6s  CALIGULA HIVE 1n voice 22.6% load 45.7% max 49% v 0 t 0 s 0 l 0
+  305.2s  CALIGULA HIVE 4n voice 21.3% load 45.8% max 53% v 0 t 0 s 0 l 0
+  308.5s  CALIGULA CARRION 1n voice 20.3% load 46.0% max 47% v 0 t 0 s 0 l 0
+  311.2s  CALIGULA CARRION 4n voice 20.2% load 45.8% max 48% v 0 t 0 s 0 l 0
+  314.5s  CALIGULA VEIL 1n voice 21.2% load 45.6% max 48% v 0 t 0 s 0 l 0
+  317.1s  CALIGULA VEIL 4n voice 22.0% load 47.4% max 52% v 0 t 0 s 0 l 0
+  320.5s  CALIGULA RUST 1n voice 23.4% load 49.0% max 49% v 0 t 0 s 0 l 0
+  323.1s  CALIGULA RUST 4n voice 23.2% load 49.0% max 49% v 0 t 0 s 0 l 0
+  326.4s  CALIGULA LITANY 1n voice 18.6% load 44.9% max 45% v 0 t 0 s 0 l 0
+  329.0s  CALIGULA LITANY 4n voice 18.8% load 44.9% max 45% v 0 t 0 s 0 l 0
+  332.4s  CALIGULA UNDERTOW 1n voice 19.2% load 45.0% max 45% v 0 t 0 s 0 l 0
+  335.0s  CALIGULA UNDERTOW 4n voice 20.3% load 45.4% max 49% v 0 t 0 s 0 l 0
+  338.3s  CALIGULA WIRE 1n voice 21.1% load 46.3% max 48% v 0 t 0 s 0 l 0
+  340.9s  CALIGULA WIRE 4n voice 20.9% load 46.0% max 49% v 0 t 0 s 0 l 0
+  344.3s  CALIGULA MOTH 1n voice 22.3% load 47.5% max 49% v 0 t 0 s 0 l 0
+  346.9s  CALIGULA MOTH 4n voice 21.7% load 46.8% max 51% v 0 t 0 s 0 l 0
+  350.2s  RUSSOLO HOLD 1n voice 2.3% load 32.0% max 33% v 0 t 0 s 0 l 0
+  352.8s  RUSSOLO HOLD 4n voice 2.3% load 32.0% max 33% v 0 t 0 s 0 l 0
+  356.2s  RUSSOLO DUST 1n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  358.8s  RUSSOLO DUST 4n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  362.1s  RUSSOLO GATES 1n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  364.7s  RUSSOLO GATES 4n voice 2.3% load 32.1% max 33% v 0 t 0 s 0 l 0
+  368.1s  RUSSOLO CRACKLE 1n voice 2.6% load 32.0% max 33% v 0 t 0 s 0 l 0
+  370.7s  RUSSOLO CRACKLE 4n voice 2.6% load 32.0% max 33% v 0 t 0 s 0 l 0
+  374.0s  RUSSOLO NOR 1n voice 2.5% load 32.0% max 33% v 0 t 0 s 0 l 0
+  376.6s  RUSSOLO NOR 4n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  379.9s  RUSSOLO XOR 1n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  382.6s  RUSSOLO XOR 4n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  385.9s  RUSSOLO RING 1n voice 2.6% load 32.0% max 33% v 0 t 0 s 0 l 0
+  388.5s  RUSSOLO RING 4n voice 2.6% load 32.0% max 33% v 0 t 0 s 0 l 0
+  391.8s  RUSSOLO CASCADE 1n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  394.5s  RUSSOLO CASCADE 4n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  397.8s  RUSSOLO CLANG 1n voice 2.6% load 32.0% max 33% v 0 t 0 s 0 l 0
+  400.4s  RUSSOLO CLANG 4n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  403.7s  RUSSOLO CHUNKS 1n voice 2.1% load 32.0% max 33% v 0 t 0 s 0 l 0
+  406.3s  RUSSOLO CHUNKS 4n voice 2.2% load 32.0% max 33% v 0 t 0 s 0 l 0
+  409.7s  RUSSOLO JUMP 1n voice 2.6% load 32.0% max 33% v 0 t 0 s 0 l 0
+  412.3s  RUSSOLO JUMP 4n voice 2.5% load 32.0% max 33% v 0 t 0 s 0 l 0
+  415.6s  RUSSOLO WANDER 1n voice 3.0% load 32.0% max 33% v 0 t 0 s 0 l 0
+  418.3s  RUSSOLO WANDER 4n voice 2.8% load 32.0% max 33% v 0 t 0 s 0 l 0
+  421.6s  RUSSOLO BEND 1n voice 2.9% load 32.0% max 33% v 0 t 0 s 0 l 0
+  424.2s  RUSSOLO BEND 4n voice 2.9% load 32.0% max 33% v 0 t 0 s 0 l 0
+  427.5s  RUSSOLO QUAD 1n voice 2.8% load 32.0% max 33% v 0 t 0 s 0 l 0
+  430.2s  RUSSOLO QUAD 4n voice 2.4% load 32.0% max 33% v 0 t 0 s 0 l 0
+  433.5s  RUSSOLO BLIPS 1n voice 2.9% load 32.0% max 33% v 0 t 0 s 0 l 0
+  436.1s  RUSSOLO BLIPS 4n voice 2.8% load 32.0% max 33% v 0 t 0 s 0 l 0
+  439.4s  RUSSOLO WALK 1n voice 3.0% load 32.0% max 33% v 0 t 0 s 0 l 0
+  442.1s  RUSSOLO WALK 4n voice 3.0% load 32.0% max 33% v 0 t 0 s 0 l 0
+  445.4s  RUSSOLO CHORD 1n voice 3.1% load 32.0% max 33% v 0 t 0 s 0 l 0
+  448.0s  RUSSOLO CHORD 4n voice 2.7% load 32.0% max 33% v 0 t 0 s 0 l 0
+  451.3s  DRUID PLUCK 1n voice 15.7% load 36.1% max 37% v 1 t 0 s 0 l 0
+  453.9s  DRUID PLUCK 4n voice 15.1% load 69.0% max 69% v 4 t 0 s 0 l 0
+  457.3s  DRUID BOWED 1n voice 13.8% load 34.1% max 35% v 1 t 0 s 0 l 0
+  459.9s  DRUID BOWED 4n voice 13.5% load 63.0% max 63% v 4 t 0 s 0 l 0
+  463.2s  DRUID STRUCK 1n voice 13.3% load 34.0% max 35% v 1 t 0 s 0 l 0
+  465.8s  DRUID STRUCK 4n voice 12.4% load 60.0% max 60% v 4 t 0 s 0 l 0
+  469.2s  DRUID SITAR 1n voice 12.3% load 30.6% max 34% v 0 t 0 s 0 l 0
+  471.8s  DRUID SITAR 4n voice 12.5% load 34.1% max 54% v 0 t 0 s 0 l 0
+  475.1s  DRUID RATTLE 1n voice 13.9% load 34.3% max 35% v 1 t 0 s 0 l 0
+  477.7s  DRUID RATTLE 4n voice 13.5% load 64.0% max 64% v 4 t 0 s 0 l 0
+  481.1s  DRUID HARP 1n voice 27.7% load 59.9% max 61% v 1 t 0 s 0 l 0
+  483.7s  DRUID HARP 4n voice 27.6% load 89.2% max 90% v 4 t 0 s 0 l 1
+  487.0s  DRUID DRONE 1n voice 26.0% load 57.5% max 59% v 1 t 0 s 0 l 0
+  489.6s  DRUID DRONE 4n voice 26.1% load 84.4% max 86% v 4 t 0 s 0 l 0
+  493.0s  DRUID BELL 1n voice 8.8% load 32.1% max 33% v 1 t 0 s 0 l 0
+  495.6s  DRUID BELL 4n voice 9.0% load 58.9% max 59% v 4 t 0 s 0 l 0
+  498.9s  DRUID BOWL 1n voice 11.2% load 32.9% max 34% v 1 t 0 s 0 l 0
+  501.5s  DRUID BOWL 4n voice 11.1% load 59.2% max 61% v 4 t 0 s 0 l 0
+  504.8s  DRUID PLATE 1n voice 8.8% load 32.2% max 33% v 1 t 0 s 0 l 0
+  507.5s  DRUID PLATE 4n voice 7.9% load 54.0% max 54% v 4 t 0 s 0 l 0
+  510.8s  BAYAREA BONGO 1n voice 8.8% load 29.4% max 33% v 0 t 0 s 0 l 0
+  513.4s  BAYAREA BONGO 4n voice 8.7% load 39.1% max 57% v 0 t 0 s 0 l 0
+  516.8s  BAYAREA PLUCK 1n voice 8.6% load 29.0% max 33% v 0 t 0 s 0 l 0
+  519.4s  BAYAREA PLUCK 4n voice 8.6% load 33.8% max 57% v 0 t 0 s 0 l 0
+  522.7s  BAYAREA CHIME 1n voice 10.0% load 31.3% max 33% v 0 t 0 s 0 l 0
+  525.3s  BAYAREA CHIME 4n voice 10.0% load 45.6% max 64% v 0 t 0 s 0 l 0
+  528.6s  BAYAREA FOLDED 1n voice 10.2% load 31.0% max 33% v 0 t 0 s 0 l 0
+  531.2s  BAYAREA FOLDED 4n voice 10.2% load 43.5% max 63% v 0 t 0 s 0 l 0
+  534.6s  BAYAREA SWELL 1n voice 10.8% load 32.6% max 33% v 1 t 0 s 0 l 0
+  537.2s  BAYAREA SWELL 4n voice 10.9% load 60.9% max 64% v 4 t 0 s 0 l 0
+  540.5s  BAYAREA DRONE 1n voice 9.0% load 32.5% max 33% v 1 t 0 s 0 l 0
+  543.1s  BAYAREA DRONE 4n voice 9.2% load 59.8% max 60% v 4 t 0 s 0 l 0
+  546.4s  HIVE SUB 1n voice 14.9% load 35.0% max 35% v 1 t 0 s 0 l 0
+  549.0s  HIVE SUB 4n voice 14.7% load 66.9% max 67% v 4 t 0 s 0 l 0
+  552.4s  HIVE LEAD 1n voice 16.5% load 37.0% max 37% v 1 t 0 s 0 l 0
+  555.0s  HIVE LEAD 4n voice 16.4% load 72.0% max 72% v 4 t 0 s 0 l 0
+  558.3s  HIVE STAB 1n voice 18.4% load 38.5% max 39% v 1 t 0 s 0 l 0
+  560.9s  HIVE STAB 4n voice 17.9% load 77.0% max 77% v 4 t 0 s 0 l 0
+  564.3s  HIVE PAD 1n voice 19.6% load 40.0% max 40% v 1 t 0 s 0 l 0
+  566.9s  HIVE PAD 4n voice 19.2% load 80.8% max 81% v 4 t 0 s 0 l 0
+  570.2s  HIVE DRONE 1n voice 16.2% load 37.0% max 37% v 1 t 0 s 0 l 0
+  572.8s  HIVE DRONE 4n voice 16.1% load 71.0% max 72% v 4 t 0 s 0 l 0
+  576.2s  HIVE WASH 1n voice 20.5% load 40.0% max 41% v 1 t 0 s 0 l 0
+  578.8s  HIVE WASH 4n voice 19.2% load 76.9% max 83% v 4 t 0 s 0 l 0
+  582.1s  HIVE CLUSTER 1n voice 20.9% load 46.0% max 47% v 1 t 0 s 0 l 0
+  584.7s  HIVE CLUSTER 4n voice 20.6% load 82.6% max 86% v 4 t 0 s 0 l 0
+  588.1s  HIVE METAL 1n voice 15.2% load 35.0% max 35% v 1 t 0 s 0 l 0
+  590.7s  HIVE METAL 4n voice 15.2% load 67.9% max 68% v 4 t 0 s 0 l 0
+  594.0s  HIVE SPECTRA 1n voice 15.2% load 35.8% max 36% v 1 t 0 s 0 l 0
+  596.6s  HIVE SPECTRA 4n voice 13.8% load 65.3% max 68% v 4 t 0 s 0 l 0
+  599.9s  HIVE GROUND 1n voice 16.2% load 36.9% max 37% v 1 t 0 s 0 l 0
+  602.6s  HIVE GROUND 4n voice 16.0% load 71.0% max 71% v 4 t 0 s 0 l 0
+  605.9s  HIVE AIR 1n voice 15.6% load 36.0% max 36% v 1 t 0 s 0 l 0
+  608.5s  HIVE AIR 4n voice 15.6% load 64.5% max 69% v 4 t 0 s 0 l 0
+  611.8s  HIVE TIDES 1n voice 15.5% load 35.9% max 36% v 1 t 0 s 0 l 0
+  614.4s  HIVE TIDES 4n voice 15.3% load 68.3% max 69% v 4 t 0 s 0 l 0
+  617.8s  OBRADOR STRINGS 1n voice 11.6% load 32.8% max 33% v 1 t 0 s 0 l 0
+  620.4s  OBRADOR STRINGS 4n voice 11.5% load 57.0% max 59% v 4 t 0 s 0 l 0
+  623.7s  OBRADOR BRASS 1n voice 12.7% load 33.0% max 33% v 1 t 0 s 0 l 0
+  626.3s  OBRADOR BRASS 4n voice 12.5% load 60.0% max 61% v 4 t 0 s 0 l 0
+  629.7s  OBRADOR PWM PAD 1n voice 13.1% load 33.7% max 34% v 1 t 0 s 0 l 0
+  632.3s  OBRADOR PWM PAD 4n voice 13.0% load 62.0% max 62% v 4 t 0 s 0 l 0
+  635.6s  OBRADOR BASS 1n voice 7.8% load 32.1% max 33% v 1 t 0 s 0 l 0
+  638.2s  OBRADOR BASS 4n voice 7.8% load 53.0% max 53% v 4 t 0 s 0 l 0
+  641.5s  OBRADOR SYNC 1n voice 6.8% load 32.8% max 33% v 1 t 0 s 0 l 0
+  644.1s  OBRADOR SYNC 4n voice 6.8% load 49.1% max 50% v 4 t 0 s 0 l 0
+  647.5s  OBRADOR NOTCH 1n voice 6.7% load 32.9% max 33% v 1 t 0 s 0 l 0
+  650.1s  OBRADOR NOTCH 4n voice 6.8% load 49.0% max 50% v 4 t 0 s 0 l 0
+  653.4s  OBRADOR METAL 1n voice 6.6% load 32.1% max 33% v 1 t 0 s 0 l 0
+  656.0s  OBRADOR METAL 4n voice 6.7% load 48.9% max 49% v 4 t 0 s 0 l 0
+  659.3s  OBRADOR DRONE 1n voice 12.4% load 33.0% max 33% v 1 t 0 s 0 l 0
+  662.0s  OBRADOR DRONE 4n voice 12.2% load 59.0% max 60% v 4 t 0 s 0 l 0
+  665.3s  OBRADOR KEYS 1n voice 6.7% load 32.1% max 33% v 1 t 0 s 0 l 0
+  667.9s  OBRADOR KEYS 4n voice 6.8% load 49.0% max 49% v 4 t 0 s 0 l 0
+  671.2s  OBRADOR SWELL 1n voice 11.5% load 32.9% max 33% v 1 t 0 s 0 l 0
+  673.8s  OBRADOR SWELL 4n voice 11.5% load 57.0% max 57% v 4 t 0 s 0 l 0
+  678.3s  FM ABYSS 12n load 74.9% max 78% v 12 t 0 s 0 l 0
+  682.6s  ANIMA FOG 12n load 105.4% max 109% v 9 t 0 s 3 l 261
+  687.0s  CALIGULA RUST 12n load 47.0% max 49% v 0 t 0 s 0 l 0
+  691.3s  RUSSOLO CHORD 12n load 32.0% max 33% v 0 t 0 s 0 l 0
+  695.7s  DRUID HARP 12n load 139.3% max 146% v 3 t 0 s 5 l 263
+  700.0s  BAYAREA SWELL 12n load 107.1% max 113% v 8 t 0 s 4 l 262
+  704.3s  HIVE CLUSTER 12n load 139.8% max 145% v 5 t 0 s 7 l 265
+  708.6s  OBRADOR PWM PAD 12n load 117.1% max 120% v 8 t 0 s 4 l 262
+  711.9s  FX FM 1 note, effects off: load 32.4% max 33%
+  715.3s  FX + distortion 60: load 28.8% max 30%
+  718.6s  FX + granulator 40: load 33.6% max 37%
+  721.9s  FX + filter 40: load 34.8% max 38%
+  725.3s  FX + crush 40: load 35.4% max 39%
+  728.6s  FX + reverb send 60: load 42.6% max 45%
+  731.9s  FX + delay send 60: load 42.7% max 46%
+  737.1s  six tracks FM, 1 note each load 59.4% max 61% v 6 t 0 s 0 l 0
+  742.3s  six tracks FM, 2 notes each load 76.2% max 78% v 12 t 0 s 0 l 0
+  747.6s  six tracks six engines, 1 note each load 86.0% max 96% v 4 t 0 s 0 l 1
+  752.8s  six engines, 1 note each, no delay/reverb load 79.2% max 90% v 4 t 0 s 0 l 0
+  758.0s  six tracks six engines, 2 notes each load 125.8% max 136% v 2 t 0 s 6 l 264
+  763.2s  six engines, 2 notes each, no delay/reverb load 119.9% max 130% v 3 t 0 s 5 l 263
+  763.2s  CHIPBENCH done

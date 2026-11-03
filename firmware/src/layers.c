@@ -255,6 +255,7 @@ static uint32_t blk_clock;
 static uint32_t tele_ev;                 /* this half: the events taken (bit = type), loop notes (bit 20), wraps (21) */
 static uint32_t tele_non;                /* .. notes struck */
 static volatile uint32_t tele_trims;     /* tails the budget let go */
+static volatile uint32_t cb_trims, cb_lates, cb_sheds;   /* (the chip benchmark's own: never reset by the telemetry) */
 #define TELE(b) (tele_ev |= 1u << (b))
 #else
 #define TELE(b) ((void)0)
@@ -2261,6 +2262,9 @@ static int shed_voice(int held)  /* the oldest released voice (held: the oldest 
     }
     if (ok == NVOICE)
         return 0;
+#if TELEMETRY
+    cb_sheds += held;
+#endif
     vox[ok].fade = FADE;                          /* (its key still held: it comes back with the next note) */
     return 1;
 }
@@ -2302,6 +2306,7 @@ static void budget_guard(void)
         if (ok < NVOICE) {
 #if TELEMETRY
             tele_trims++;
+            cb_trims++;
 #endif
             vox[ok].fade = QUICK;
             vox[ok].fade_n = QUICK;
