@@ -269,8 +269,8 @@ CONTROLS = [
                    'everything, or play everything (<a href="#loopers">Loopers</a>).'),
     ([23], "REC", "Arm a loop, end it, overdub. <b>Held</b> (1 s): empty the track's loops. <b>SHIFT +</b>: VARY. "
                   "On BRICKLAYER's page: note entry."),
-    ([24], "black key 1", 'The <b>AMBIENT</b> path; pressed again, OPEN (<a href="#generative-paths">Generative paths</a>). <b>SHIFT +</b>: a new <a href="#scales">scale and root</a> at random.'),
-    ([25], "black key 2", "The <b>EXPERIMENTAL</b> path; pressed again, OPEN."),
+    ([24], "black key 1", 'Pressed: the <b>AMBIENT</b> path; <b>held</b> (0.6 s): the <b>EXPERIMENTAL</b> path; the same again, OPEN (<a href="#generative-paths">Generative paths</a>). <b>SHIFT +</b>: a new <a href="#scales">scale and root</a> at random.'),
+    ([25], "black key 2", '<b>Held</b>: the effects at random until you let go (<a href="#performance-effects">Performance effects</a>). <b>SHIFT +</b>: the PERF FX page.'),
     ([26], "black key 3", '<a href="#chords">Chord mode</a>: <b>held</b> (0.6 s), on or off; pressed, the next chord form.'),
     ([27], "black key 4", '<b>REVERSE</b>: the chosen track\'s loops backwards (<a href="#direction-and-speed">Direction '
                           "and speed</a>). Keys 4 to 8 are BRICKLAYER's own on its page."),
@@ -296,6 +296,7 @@ KNOB_PAGES = [
     ('<a href="#envelope">ENVELOPE</a>', "ATTACK", "DECAY", "SUSTAIN", "RELEASE"),
     ('<a href="#delay">DELAY</a> (SEQ)', "TIME", "FEEDBACK", "DAMP", "MIX"),
     ('<a href="#reverb">REVERB</a> (SEQ twice)', "SIZE", "DECAY", "DAMP", "MIX"),
+    ('<a href="#performance-effects">PERF FX</a> (SHIFT + black key 2)', "MIX", "TRACKS", "TRACK", "MASTER"),
     ('<a href="#modulation">MOD</a> (SEQ three times)', "the entry's first row", "second row", "third row", "—"),
     ('<a href="#ballsy">BALLSY</a>', "balls", "speed", "octaves", "instability"),
     ('<a href="#bricklayer">BRICKLAYER</a>', "LENGTH", "RATE", "HARMONY", "VARIATION"),

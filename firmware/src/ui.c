@@ -57,9 +57,9 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define NKEY 27u
 #define KEY_SHIFT 25u            /* the rightmost black key: pressed, the keys held latch; held, a latched key lets go */
 #define KEY_NONE 0xFFu
-#define KEY_AMB 1u               /* the leftmost black key: the AMBIENT path (again: back to the open path); SHIFT +:
-                                  * a scale and root drawn at random */
-#define KEY_EXP 3u               /* the second: the EXPERIMENTAL path */
+#define KEY_AMB 1u               /* the leftmost black key: pressed, the AMBIENT path; held 0.6 s, the EXPERIMENTAL
+                                  * (the same again: back to the open path); SHIFT +: a scale and root drawn at random */
+#define KEY_PERF 3u              /* the second: held, PERF FX (perf.c); SHIFT +: its page */
 #define KEY_ENV 20u              /* the 3rd black key from the right: the ENVELOPE page, up and down (SHIFT: the
                                  * sound's own envelope again) */
 #define KEY_EDIT 22u             /* the black key before SHIFT: EDIT, on and off (KNOB 1 .. 4: the sound's macros) */
@@ -81,6 +81,8 @@ static struct {
     int8_t oct[NLAYER];
     uint8_t key_layer[NKEY], key_note[NKEY];   /* what a key down holds (KEY_NONE: nothing, it latched or let go) */
     uint8_t path[NLAYER];        /* each layer's generative path (PATH_*): HOME draws on it */
+    uint8_t path_down, path_done;   /* black key 1 down since path_t0 (let go soon: AMBIENT; held: EXPERIMENTAL) */
+    uint32_t path_t0;
     uint8_t edit;                /* EDIT on: KNOB 1 .. 4 turn the chosen layer's sound's macros */
     uint8_t play_down, ovd;      /* PLAY down (since play_t0); held: the overdubs on the white keys */
     uint32_t play_t0;
@@ -173,7 +175,8 @@ static struct {
     int8_t dlp[4];               /* the delay: TIME REPEATS (the feedback) DAMP MIX, 0 .. 100 */
     int8_t dsend[NLAYER];        /* each track's send to the delay, 0 .. 100 (SHIFT + KNOB 4) */
     int8_t dist[NLAYER];         /* each track's distortion, 0 .. 100, 0 off (SHIFT + KNOB 3) */
-    uint8_t rv_page;             /* the REVERB page is up -- or the DELAY page, fx 1 (SEQ; SHIFT + SEQ) */
+    uint8_t rv_page;             /* the REVERB page is up -- or the DELAY page, fx 1 (SEQ), PERF FX, fx 2 (SHIFT +
+                                  * black key 2) */
     uint8_t fx;
     int8_t rv_touched;           /* the row just turned (-1 none), until rv_touch_until */
     uint32_t rv_touch_until;
@@ -399,6 +402,7 @@ static const int8_t RV_DEF[4] = {70, 65, 40, 50};      /* lush, present, not ove
 static const char *const RV_NAME[4] = {"SIZE", "DECAY", "DAMP", "MIX"};
 static const int8_t DL_DEF[4] = {65, 40, 40, 50};      /* 400 ms, a few repeats, a little darker each */
 static const char *const DL_NAME[4] = {"TIME", "REPEATS", "DAMP", "MIX"};   /* (REPEATS: the feedback) */
+#include "perf.c"                        /* (PERF FX: black key 2 held, the effects at random) */
 
 /* a level (in 1/256 of a step) as the ISR's gain, Q14: 1.5 dB a step, log2 of the gain = (lv - unity) x 1.5 / 6.0206 */
 static int32_t level_gain(int32_t lv_q8)
@@ -414,14 +418,14 @@ static void level_pan_apply(uint32_t l)
     ph = (int32_t)((uint32_t)(ui.pan[l] + PAN_MAX) * (0x40000000u / (2u * PAN_MAX)));   /* 0 .. a quarter turn */
     lay_pl[l] = sin_ph((uint32_t)ph + 0x40000000u);
     lay_pr[l] = sin_ph((uint32_t)ph);
-    lay_send[l] = ui.send[l] * 32767 / 100;
-    lay_dsend[l] = ui.dsend[l] * 32767 / 100;
-    lay_dist[l] = ui.dist[l];
+    lay_send[l] = pf_trk(l, PF_SEND, ui.send[l]) * 32767 / 100;   /* (PERF FX: each moved towards its draw) */
+    lay_dsend[l] = pf_trk(l, PF_DSEND, ui.dsend[l]) * 32767 / 100;
+    lay_dist[l] = (int8_t)pf_trk(l, PF_DIST, ui.dist[l]);
     lay_lvl[l] = ui.level[l];
     lay_pan[l] = ui.pan[l];
-    lay_flt[l] = ui.flt[l];
-    lay_gr[l] = ui.gr[l];
-    lay_cr[l] = ui.cr[l];
+    lay_flt[l] = (int8_t)pf_trk(l, PF_FLT, ui.flt[l]);
+    lay_gr[l] = (int8_t)pf_trk(l, PF_GR, ui.gr[l]);
+    lay_cr[l] = (int8_t)pf_trk(l, PF_CR, ui.cr[l]);
 }
 
 enum { SP_LIST = 1, SP_ASK = 2 };
@@ -877,7 +881,9 @@ static void ui_input(void)
             ui.mod_page = 0;
             ui.rx_page = 1;
             rx_defaults();
-        } else if (ui.rv_page && ui.fx)
+        } else if (ui.rv_page && ui.fx == 2u)    /* (from PERF FX: back to playing) */
+            ui.rv_page = 0;
+        else if (ui.rv_page && ui.fx)
             ui.fx = 0;
         else if (ui.rv_page) {
             ui.rv_page = 0;
@@ -1030,18 +1036,18 @@ static void ui_input(void)
         for (j = 0; j < 4u; j++)
             if ((s = knob_take(K[j], sh)) != 0)
                 mod_knob(ui.sel, ui.mod_ix, j, s);
-    } else if (ui.rv_page) {                     /* KNOB 1..4: the reverb, or the delay */
+    } else if (ui.rv_page) {                     /* KNOB 1..4: the reverb, the delay, or PERF FX */
         static const uint8_t K[4] = {EN_K1, EN_K2, EN_K3, EN_K4};
         uint32_t j;
-        int8_t *pv = ui.fx ? ui.dlp : ui.rvp;
+        int8_t *pv = rv_vals();
         for (j = 0; j < 4u; j++) {
             s = knob_take(K[j], sh);
             if (s) {
-                pv[j] = (int8_t)clampi(pv[j] + 2 * s, 0, 100);
-                if (ui.fx)
-                    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
-                else
-                    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+                pv[j] = (int8_t)(ui.fx == 2u && j ? s > 0 : clampi(pv[j] + 2 * s, 0, 100));   /* (its switches: right on) */
+                if (ui.fx == 1u)
+                    dl_apply();
+                else if (!ui.fx)
+                    rv_apply();          /* (PERF FX's: read at the next press) */
                 ui.rv_touched = (int8_t)j;
                 ui.rv_touch_until = fm1_ms + 1500u;
             }
@@ -1458,17 +1464,42 @@ static void ui_input(void)
             say(ui.edit ? "EDIT" : "EDIT OFF", 900);
         }
     }
-    for (k = KEY_AMB; k <= KEY_EXP; k += KEY_EXP - KEY_AMB)
-        if (((ch & keys) >> k & 1u) && k == KEY_AMB && (keys >> KEY_SHIFT) & 1u) {
-            scale_draw();                         /* SHIFT + black key 1: a scale and root at random, as at start */
-            lx_post();                           /* (the loops moved walk the new scale) */
-            ui.sc_peek = 1;                      /* (the SCALE page shown a moment, over any page) */
-            ui.sc_peek_until = fm1_ms + 1500u;
-        } else if ((ch & keys) >> k & 1u) {       /* a path for the layer chosen: its next sounds lean to it */
-            uint32_t pa = k == KEY_AMB ? PATH_AMBIENT : PATH_EXP;
-            ui.path[ui.sel] = (uint8_t)(ui.path[ui.sel] == pa ? PATH_OPEN : pa);
-            say(ui.path[ui.sel] == PATH_AMBIENT ? "AMBIENT" : ui.path[ui.sel] == PATH_EXP ? "EXPERIMENTAL" : "OPEN", 1200);
+    if (((ch & keys) >> KEY_AMB & 1u) && (keys >> KEY_SHIFT) & 1u) {
+        scale_draw();                            /* SHIFT + black key 1: a scale and root at random, as at start */
+        lx_post();                               /* (the loops moved walk the new scale) */
+        ui.sc_peek = 1;                          /* (the SCALE page shown a moment, over any page) */
+        ui.sc_peek_until = fm1_ms + 1500u;
+    } else if ((ch & keys) >> KEY_AMB & 1u) {    /* a path for the layer chosen (its next sounds lean to it): let go
+                                                  * soon AMBIENT, held EXPERIMENTAL */
+        ui.path_down = 1;
+        ui.path_done = 0;
+        ui.path_t0 = fm1_ms;
+    }
+    if (ui.path_down && !ui.path_done && (!(keys >> KEY_AMB & 1u) || (uint32_t)(fm1_ms - ui.path_t0) >= 600u)) {
+        uint32_t pa = (keys >> KEY_AMB & 1u) ? PATH_EXP : PATH_AMBIENT;   /* (still down: held long enough) */
+        ui.path_done = 1;
+        ui.path[ui.sel] = (uint8_t)(ui.path[ui.sel] == pa ? PATH_OPEN : pa);
+        say(ui.path[ui.sel] == PATH_AMBIENT ? "AMBIENT" : ui.path[ui.sel] == PATH_EXP ? "EXPERIMENTAL" : "OPEN", 1200);
+    }
+    if (ui.path_down && !(keys >> KEY_AMB & 1u))
+        ui.path_down = 0;
+    if (((ch & keys) >> KEY_PERF & 1u) && (keys >> KEY_SHIFT) & 1u) {   /* SHIFT + black key 2: the PERF FX page */
+        if (ui.rv_page && ui.fx == 2u)
+            ui.rv_page = 0;
+        else {
+            ui.rv_page = 1;
+            ui.fx = 2;
+            ui.ses_page = ui.snap_page = ui.sc_page = ui.pre_page = ui.set_page = ui.env_page = ui.bb_page = ui.bl_page = 0;
+            ui.mod_page = ui.rx_page = 0;
         }
+        ui.force = 1;
+    } else if ((ch & keys) >> KEY_PERF & 1u)     /* black key 2 held: the effects at random */
+        pf_on(ui.sel, next_seed());
+    if (pf.held && !(keys >> KEY_PERF & 1u)) {   /* .. let go: back to the settings */
+        pf.held = 0;
+        pf.at = fm1_ms;
+    }
+    pf_tick();
     if (ui.snap_page) {                          /* the SNAPSHOTS page: the white keys are the 16 snapshots, no notes */
         for (k = 0; k < NKEY; k++)
             if (((ch & keys) >> k & 1u) && white_ix(k) >= 0 && white_ix(k) < (int32_t)NSNAP) {
@@ -1625,8 +1656,9 @@ static void ui_leds(void)
                                             ((ui.latch[ui.sel] >> k) & 1u)));
     }
     fm1_led_key(14u + KEY_SHIFT, (ui.keys >> KEY_SHIFT) & 1u);
-    fm1_led_key(14u + KEY_AMB, ui.path[ui.sel] == PATH_AMBIENT);
-    fm1_led_key(14u + KEY_EXP, ui.path[ui.sel] == PATH_EXP);
+    fm1_led_key(14u + KEY_AMB, ui.path[ui.sel] == PATH_AMBIENT || (ui.path[ui.sel] == PATH_EXP && (fm1_ms / 250u) & 1u));   /* (lit
+                                                                                  * AMBIENT, blinking EXPERIMENTAL) */
+    fm1_led_key(14u + KEY_PERF, pf.amt || (ui.rv_page && ui.fx == 2u));   /* (lit while it plays, or its page is up) */
     fm1_led_key(14u + KEY_EDIT, bb.on[ui.sel] ? (fm1_ms / 250u) & 1u : ui.edit);   /* (the balls: it blinks) */
     {   /* the loops' direction and speed: shown only while the chosen track's loops play (PLAY lit) -- lit when
          * on, a glow when off; stopped or none, dark (and they do nothing) */
@@ -1646,7 +1678,7 @@ static void ui_leds(void)
         led_dim_key(14u + KEY_DOUBLE, on);
     }
     led_dim_key(14u + KEY_AMB, 1);               /* (the others with a function glow while off; SHIFT does not) */
-    led_dim_key(14u + KEY_EXP, 1);
+    led_dim_key(14u + KEY_PERF, 1);
     led_dim_key(14u + KEY_EDIT, 1);
     led_dim_key(14u + KEY_CHORD, 1);
     led_dim_key(14u + KEY_ENV, 1);
@@ -1795,6 +1827,7 @@ static void draw_pan(void)
 
 /* the REVERB page: a title, then a row a parameter: its name, its value, a bar under them */
 #define C_DELAY RGB(255, 170, 90)
+#define C_PERF RGB(255, 110, 110)
 /* the MOD page (SEQ's third): the chosen track's modulation, an entry at a time (PRESETS): LFO 1, LFO 2, then the
  * slots MOD A .. D. Four rows, KNOB 1 .. 4 each its own; MOD's fourth row shows what the slot does now */
 static void mod_knob(uint32_t l, uint32_t ix, uint32_t j, int32_t s)
@@ -1993,20 +2026,25 @@ static void draw_rx_page(void)
 static void draw_rv_title(void)
 {
     cv_begin(240, 52, C_BLACK);
-    cv_text_c(3, &FONT_L, ui.fx ? "DELAY" : "REVERB", ui.fx ? C_DELAY : C_SEND);
+    if (ui.fx == 2u)                             /* (PERF FX: its letters a little closer, to fit) */
+        cv_text_fit(3, &FONT_L, "PERF FX", C_PERF);
+    else
+        cv_text_c(3, &FONT_L, ui.fx ? "DELAY" : "REVERB", ui.fx ? C_DELAY : C_SEND);
     cv_blit(0, 0);
 }
 static void draw_rv_row(uint32_t j, int touched)
 {
     char v[12];
-    const int8_t *pv = ui.fx ? ui.dlp : ui.rvp;
+    const int8_t *pv = rv_vals();
     uint16_t bg = touched ? C_WHITE : C_BLACK, fg = touched ? C_BLACK : C_WHITE;
     cv_begin(240, 47, bg);
     {
-        const char *name = ui.fx ? DL_NAME[j] : RV_NAME[j];
+        const char *name = ui.fx == 2u ? PF_NAME[j] : ui.fx ? DL_NAME[j] : RV_NAME[j];
         const font_t *f = &FONT_S;               /* (one size for every row of both pages: REPEATS 100 fits it) */
         int32_t y = (37 - (int32_t)FONT_S.h) / 2;
-        if (ui.fx && j == 0u) {                  /* the delay's TIME in seconds, no unit (the font has no
+        if (ui.fx == 2u && j)                    /* (PERF FX's switches) */
+            str_cpy(v, j == PF_ALL ? (pv[j] ? "ALL" : "CUR") : pv[j] ? "ON" : "OFF", sizeof v);
+        else if (ui.fx == 1u && j == 0u) {       /* the delay's TIME in seconds, no unit (the font has no
                                                   * lower case): 0.02 .. 0.99, 1.0 .. 2.0 */
             int32_t cs = (dl_ms(pv[0]) + 5) / 10, n;
             if (cs >= 100) {
@@ -2027,8 +2065,10 @@ static void draw_rv_row(uint32_t j, int touched)
         cv_text(6, y, f, name, fg);
         cv_text(234 - text_w(f, v), y, f, v, fg);
     }
-    cv_rect(6, 38, 228, 6, touched ? C_GREY : RGB(60, 60, 60));
-    cv_rect(6, 38, pv[j] * 228 / 100, 6, touched ? C_BLACK : ui.fx ? C_DELAY : C_SEND);
+    if (ui.fx != 2u || !j) {                     /* (a bar under each value; not under a switch) */
+        cv_rect(6, 38, 228, 6, touched ? C_GREY : RGB(60, 60, 60));
+        cv_rect(6, 38, pv[j] * 228 / 100, 6, touched ? C_BLACK : ui.fx == 2u ? C_PERF : ui.fx ? C_DELAY : C_SEND);
+    }
     cv_blit(0, 52 + 47 * j);
     ui.shown_rvp[j] = pv[j];
 }
@@ -2046,7 +2086,7 @@ static void draw_rv_page(void)
         return;
     }
     for (j = 0; j < 4u; j++)
-        if (ui.shown_rvp[j] != (ui.fx ? ui.dlp : ui.rvp)[j] || (((int32_t)j == t) != ((int32_t)j == ui.shown_touch)))
+        if (ui.shown_rvp[j] != rv_vals()[j] || (((int32_t)j == t) != ((int32_t)j == ui.shown_touch)))
             draw_rv_row(j, (int32_t)j == t);
     ui.shown_touch = (int8_t)t;
 }
@@ -2756,11 +2796,12 @@ static void ui_init(void)
     }
     for (l = 0; l < 4u; l++)
         ui.rvp[l] = RV_DEF[l];
-    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+    rv_apply();
     for (l = 0; l < 4u; l++)
         ui.dlp[l] = DL_DEF[l];
-    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+    dl_apply();
     ui.rv_touched = -1;
+    pf_defaults();
     memset(&bb, 0, sizeof bb);
     for (l = 0; l < NLAYER; l++)
         bb_defaults(l);

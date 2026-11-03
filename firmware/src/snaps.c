@@ -602,8 +602,8 @@ static void snap_lerp(const snap_t *a, const snap_t *b, int32_t u, uint32_t skip
         ui.rvp[k] = (int8_t)snap_mix(a->rvp[k], b->rvp[k], u);
         ui.dlp[k] = (int8_t)snap_mix(a->dlp[k], b->dlp[k], u);
     }
-    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
-    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+    rv_apply();
+    dl_apply();
     for (l = 0; l < NLAYER; l++) {
         const snap_trk_t *ta = &a->t[l], *tb = &b->t[l];
         int32_t lv = ta->level * 256 + (((tb->level - ta->level) * 256 * u) >> 15);

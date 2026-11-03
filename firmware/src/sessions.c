@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 28u           /* 28: where each loop began against the first (after where its events start); 27: the 16 snapshots (snaps.c), the loops they hold, the morph time, PLAY ALONG, at the end; each loop's start; 26: each sound kept as its seed keeps its family too (above its path, as OBRADOR's in 25); 25: OBRADOR (an eighth sound, after HIVE in each track's; eight engines' macros and envelopes); 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 29u           /* 29: the PERF FX page (MIX, TRACKS, TRACK, MASTER), before the snapshots; 28: where each loop began against the first (after where its events start); 27: the 16 snapshots (snaps.c), the loops they hold, the morph time, PLAY ALONG, at the end; each loop's start; 26: each sound kept as its seed keeps its family too (above its path, as OBRADOR's in 25); 25: OBRADOR (an eighth sound, after HIVE in each track's; eight engines' macros and envelopes); 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -495,6 +495,7 @@ static void ses_emit(void)
         r[17] = 0;
         ses_out(r, sizeof r);
     }
+    ses_out(pf.set, sizeof pf.set);                     /* (format 29: the PERF FX page) */
     snap_emit();                                        /* (format 27: the snapshots and their tables) */
 }
 static void ses_head_fill(ses_head_t *h, uint32_t num, uint32_t format, uint32_t len, uint16_t crc)
@@ -848,8 +849,9 @@ static void ses_fresh(uint32_t num)
         ui.rvp[k] = RV_DEF[k];
         ui.dlp[k] = DL_DEF[k];
     }
-    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
-    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+    pf_defaults();
+    rv_apply();
+    dl_apply();
     memset(ui.dsend, 0, sizeof ui.dsend);
     memset(ui.chord_on, 0, sizeof ui.chord_on);
     memset(ui.chord_form, 0, sizeof ui.chord_form);
@@ -1181,7 +1183,7 @@ static int ses_load(uint32_t i)
     ui.sel = (uint8_t)(g[0] < NLAYER ? g[0] : 0);
     for (k = 0; k < 4u; k++)
         ui.rvp[k] = (int8_t)clampi(g[1u + k], 0, 100);
-    rv_param(ui.rvp[0], ui.rvp[1], ui.rvp[2], ui.rvp[3]);
+    rv_apply();
     ui.scale = (uint8_t)(g[5] < NSCALE ? g[5] : 0);  /* (sessions before the scales: C major) */
     ui.root = (uint8_t)(g[6] < 12u ? g[6] : 0);
     ui.lx = (int8_t)(h.format >= 10u ? clampi((int8_t)g[7], -14, 14) : 0);
@@ -1466,6 +1468,7 @@ static int ses_load(uint32_t i)
         }
         ses_events_drain();
     }
+    pf_defaults();                                      /* (the PERF FX page, read at the end from format 29) */
     for (k = 0; k < 4u; k++)                            /* the delay (before format 13: as at start, the sends at 0) */
         ui.dlp[k] = DL_DEF[k];
     memset(ui.dsend, 0, sizeof ui.dsend);
@@ -1477,7 +1480,7 @@ static int ses_load(uint32_t i)
         for (l = 0; l < NLAYER; l++)
             ui.dsend[l] = (int8_t)clampi(ui.dsend[l], 0, 100);
     }
-    dl_param(ui.dlp[0], ui.dlp[1], ui.dlp[2], ui.dlp[3]);
+    dl_apply();
     for (l = 0; l < NLAYER; l++)
         level_pan_apply(l);
     memset(ui.chord_on, 0, sizeof ui.chord_on);         /* chords (before format 14: off, latches single notes) */
@@ -1618,6 +1621,10 @@ static int ses_load(uint32_t i)
         }
         for (k = 0; k < 6u; k++)
             rx.ak[k] = (int8_t)clampi(rx.ak[k], 0, 100);
+        if (h.format >= 29u) {                          /* the PERF FX page (before format 29: as at start) */
+            ses_in(pf.set, sizeof pf.set);
+            pf_check();
+        }
         snap_load();                                    /* the snapshots (before format 27: none) */
     }
     for (l = 0; l < NLAYER; l++) {

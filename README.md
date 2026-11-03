@@ -58,6 +58,8 @@ track in its own colour.
     filter morphing from low-pass through notch to high-pass, analog envelopes and drift.
 - **Generative paths** — lean each track's new sounds towards **AMBIENT** (ethereal, melodic, dark) or
   **EXPERIMENTAL** (edgier, gnarlier, more textured), or leave it **OPEN**.
+- **Performance effects**: hold a key and the filters, granulators, crush, distortion, sends, delay and reverb jump to
+  values drawn at random, following each track's path; let go and they return.
 - **Play along**: other tracks improvise with the one you play (REACT), shadow it (SHADOW) or arpeggiate its
   chords (ARPEGGIO).
 - **Six free loopers**, one per track, with up to ten overdubs each, every loop with its own length.
@@ -107,7 +109,9 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SHIFT + a track's button held + OCT− / OCT+** | that track's loops only. |
 | the white keys | play the chosen track in the scale; the first white key is the root, and the root's keys glow dimly. A held note keeps sounding when you choose another track. The tracks share twelve voices. |
 | the rightmost black key | **SHIFT**. Hold white keys and press SHIFT to latch them; SHIFT + a lit key releases it ([Latched keys](#latched-keys)). |
-| black keys 1 and 2 | the chosen track's generative path: **AMBIENT**, **EXPERIMENTAL**; the lit one again: **OPEN** ([Generative paths](#generative-paths)). |
+| black key 1 | the chosen track's generative path: **pressed**, **AMBIENT**; **held** (0.6 s), **EXPERIMENTAL**; the same again: **OPEN** ([Generative paths](#generative-paths)). Lit on AMBIENT, blinking on EXPERIMENTAL. |
+| black key 2 | **held**: the effects at random, until you let go ([Performance effects](#performance-effects)). |
+| **SHIFT +** black key 2 | the PERF FX page. |
 | **SHIFT +** black key 1 | a new scale and root, drawn at random; the SCALE page shows them for 1.5 s ([Scales](#scales)). |
 | black key 3 | chord mode: **held** (0.6 s), on or off; **pressed**, the next chord form ([Chords](#chords)). |
 | black keys 4, 5, 6 | the chosen track's loops **REVERSE**, **PENDULUM**, **RANDOM**; pressed again, forwards ([Direction and speed](#direction-and-speed)). Only while its loops play. |
@@ -145,9 +149,9 @@ Every track starts on OPEN, and sessions keep each track's path.
 
 | Path | Key | Leans towards |
 | --- | --- | --- |
-| **AMBIENT** | black key 1 | ambient and dark ambient: soft attacks, long tails, darker, often melodic |
-| **EXPERIMENTAL** | black key 2 | electroacoustic and acousmatic: noisier, brighter, more bent, crushed and driven |
-| **OPEN** | neither lit | every family alike |
+| **AMBIENT** | black key 1 pressed (lit) | ambient and dark ambient: soft attacks, long tails, darker, often melodic |
+| **EXPERIMENTAL** | black key 1 held 0.6 s (blinking) | electroacoustic and acousmatic: noisier, brighter, more bent, crushed and driven |
+| **OPEN** | the same again (dark) | every family alike |
 
 ### Macros
 
@@ -575,6 +579,35 @@ A plate reverb (after Jon Dattorro), fed by each track's reverb send (**KNOB 4**
 | **DECAY** | 0.4 s to about 25 s | 65 (about 3.5 s) |
 | **DAMP** | how fast the highs die | 40 |
 | **MIX** | the reverb's level | 50 |
+
+### Performance effects
+
+Hold **black key 2** and the effects move to values drawn at random; let go and they return to your settings.
+Each press draws new values. They glide in and out over 50 ms. Black key 2 is lit while it plays.
+
+What moves:
+
+- each track's filter, granulator, crush, distortion, reverb send and delay send
+- the master reverb (SIZE, DECAY, DAMP, MIX) and delay (TIME, REPEATS, DAMP, MIX)
+
+Each value is drawn or left as it is by chance, so not everything moves at once. The draws follow the
+track's [generative path](#generative-paths): AMBIENT leans to low-pass filters, long dark grains, little crush or
+drive and more reverb; EXPERIMENTAL to crush, drive, scattered grains and short, bending echoes; OPEN to anything.
+The master's draws follow the chosen track's path.
+
+Your settings do not change: the knobs, snapshots and sessions keep them. A knob turned while the key is held
+changes your setting, heard mixed with the random value until you let go.
+
+**SHIFT + black key 2** opens the PERF FX page; SHIFT + black key 2 again, SEQ or a track's button leaves it.
+
+| | | At the start |
+| --- | --- | --- |
+| **MIX** (KNOB 1) | how far each value moves from your setting towards its random value: 0 none, 100 all the way | 50 |
+| **TRACKS** (KNOB 2) | **CUR**: the current track; **ALL**: every track | CUR |
+| **TRACK** (KNOB 3) | the tracks' effects move: **ON** or **OFF** | ON |
+| **MASTER** (KNOB 4) | the master delay and reverb move: **ON** or **OFF** | ON |
+
+Sessions keep the page's values.
 
 ### USB audio
 

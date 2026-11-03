@@ -1,5 +1,19 @@
 # Changelog
 
+## Build 71
+
+Added
+- Performance effects (PERF FX): hold black key 2 and each track's filter, granulator, crush, distortion and
+  sends, and the master delay and reverb, move to values drawn at random; let go and they return to your settings
+  over 50 ms. The draws follow each track's generative path (the master's, the current track's). SHIFT + black
+  key 2 opens the PERF FX page: MIX (how far the values move, 50 at the start), TRACKS (CUR, the current track, or
+  ALL), TRACK and MASTER (ON or OFF). Your settings, snapshots and sessions are not changed by it. Sessions
+  (format 29) keep the page's values.
+
+Changed
+- Both generative paths are on black key 1: pressed, AMBIENT; held 0.6 s, EXPERIMENTAL; the same again, OPEN. The
+  key is lit on AMBIENT and blinks on EXPERIMENTAL.
+
 ## Build 70
 
 Changed

@@ -361,6 +361,14 @@ static void press_key(uint32_t k, int down)
             break;
     press_phys(p, down);
 }
+/* a key held ms, then let go (the main loop reads it on the way) */
+static void hold_phys(uint32_t k, uint32_t ms)
+{
+    press_phys(k, 1);
+    fm1_ms += ms;
+    ui_input();
+    press_phys(k, 0);
+}
 static void press_btn(uint32_t label)
 {
     host_press |= 1u << PANEL_BTN[label];
@@ -2226,7 +2234,7 @@ static int cmd_paths(const char *dir)
     press_phys(KEY_AMB, 1);
     press_phys(KEY_AMB, 0);
     ui_leds();
-    if (ui.path[0] != PATH_AMBIENT || !host_led[14u + KEY_AMB] || host_led[14u + KEY_EXP])
+    if (ui.path[0] != PATH_AMBIENT || !host_led[14u + KEY_AMB] || host_led[14u + KEY_PERF])
         printf("FAIL paths: the AMBIENT key does not choose it, lit\n"), fail++;
     for (i = 0; i < 6u; i++) {
         press_btn(B_HOME);
@@ -2234,8 +2242,7 @@ static int cmd_paths(const char *dir)
         if (fm_buf[0][fm_pub[0]].path != PATH_AMBIENT || FF_W[PATH_AMBIENT][fm_buf[0][fm_pub[0]].family] == 0)
             printf("FAIL paths: HOME does not draw on the path\n"), fail++, i = 6u;
     }
-    press_phys(KEY_EXP, 1);
-    press_phys(KEY_EXP, 0);
+    hold_phys(KEY_AMB, 700);                     /* held: EXPERIMENTAL */
     ui.force = 1;
     ui_draw();
     ppm("build/screens/screen-26-experimental.ppm");
@@ -2246,15 +2253,14 @@ static int cmd_paths(const char *dir)
     press_btn(B_SEL);
     run_blocks(10, 0);
     ui_leds();
-    if (ui.path[0] != PATH_EXP || ui.path[1] != PATH_OPEN || host_led[14u + KEY_AMB] || host_led[14u + KEY_EXP])
+    if (ui.path[0] != PATH_EXP || ui.path[1] != PATH_OPEN || host_led[14u + KEY_AMB] || host_led[14u + KEY_PERF])
         printf("FAIL paths: a path is not the layer's own\n"), fail++;
     press_btn(B_FX);
     press_btn(B_HOME);
     run_blocks(20, 0);
-    press_phys(KEY_EXP, 1);                      /* the lit one again: open */
-    press_phys(KEY_EXP, 0);
+    hold_phys(KEY_AMB, 700);                     /* held again: open */
     ui_leds();
-    if (ui.path[0] != PATH_OPEN || host_led[14u + KEY_EXP])
+    if (ui.path[0] != PATH_OPEN || host_led[14u + KEY_AMB])
         printf("FAIL paths: the lit key again does not go back to the open path\n"), fail++;
     press_phys(KEY_AMB, 1);
     press_phys(KEY_AMB, 0);
@@ -4150,7 +4156,7 @@ static int key_glows(uint32_t k)
 }
 static int cmd_glow(void)
 {
-    static const uint8_t FN[10] = {KEY_AMB, KEY_EXP, KEY_CHORD, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_ENV, KEY_EDIT};
+    static const uint8_t FN[10] = {KEY_AMB, KEY_PERF, KEY_CHORD, KEY_REV, KEY_PEND, KEY_RAND, KEY_HALF, KEY_DOUBLE, KEY_ENV, KEY_EDIT};
     uint32_t fail = 0, k, j;
     uint32_t pass;
     grain_reset();
@@ -7440,8 +7446,131 @@ static int cmd_scaleshift(void)
     return fail ? 1 : 0;
 }
 
+/* PERF FX: black key 2 held moves the effects towards draws, by MIX, leaning to the path; let go, back
+ * exactly; the settings never change; SHIFT + black key 2 its page; a session keeps the page */
+static int perf_moved(uint32_t l)
+{
+    return lay_flt[l] != ui.flt[l] || lay_gr[l] != ui.gr[l] || lay_cr[l] != ui.cr[l] || lay_dist[l] != ui.dist[l] ||
+           lay_send[l] != ui.send[l] * 32767 / 100 || lay_dsend[l] != ui.dsend[l] * 32767 / 100;
+}
+static void perf_glide(void)
+{
+    fm1_ms += 60;
+    ui_input();
+}
+static int cmd_perf(const char *dir)
+{
+    uint32_t fail = 0, i, l, moved = 0, other = 0;
+    int32_t rdec, rmix, dfb, dmix, dt;
+    char path[256];
+    layers_init();
+    ui_init();
+    sounds_init();
+    memset(host_flash, 0xFF, sizeof host_flash);
+    ses_scan(1);
+    run_blocks(10, 0);
+    rdec = rv.decay, rmix = rv.mix, dfb = dl_fb, dmix = dl_mix, dt = dl_t_want;
+    if (pf.set[PF_MIX] != 50 || pf.set[PF_ALL] || !pf.set[PF_TRK] || !pf.set[PF_MST])
+        printf("FAIL perf: the page does not start at MIX 50, the chosen track, both on\n"), fail++;
+    for (i = 0; i < 40u; i++) {
+        int8_t keep[4] = {ui.flt[0], ui.gr[0], ui.cr[0], ui.dist[0]};
+        press_phys(KEY_PERF, 1);
+        perf_glide();
+        if (pf.amt != 256u)
+            printf("FAIL perf: held, it has not glided in (%u)\n", pf.amt), fail++, i = 40u;
+        moved += perf_moved(0) || rv.decay != rdec || rv.mix != rmix || dl_fb != dfb || dl_mix != dmix;
+        for (l = 1; l < NLAYER; l++)
+            other += perf_moved(l);
+        ui_leds();
+        if (!host_led[14u + KEY_PERF])
+            printf("FAIL perf: the key is not lit while it plays\n"), fail++, i = 40u;
+        if (memcmp(keep, (int8_t[4]){ui.flt[0], ui.gr[0], ui.cr[0], ui.dist[0]}, 4))
+            printf("FAIL perf: the settings changed\n"), fail++, i = 40u;
+        press_phys(KEY_PERF, 0);
+        perf_glide();
+        if (pf.amt || perf_moved(0) || rv.decay != rdec || rv.mix != rmix || dl_fb != dfb || dl_mix != dmix || dl_t_want != dt)
+            printf("FAIL perf: let go, the effects are not back as they were\n"), fail++, i = 40u;
+    }
+    if (moved < 38u || other)
+        printf("FAIL perf: %u of 40 presses moved the effects, the other tracks %u times\n", moved, other), fail++;
+    pf.set[PF_MIX] = 100;                        /* the paths: AMBIENT long dark grains, little drive; EXPERIMENTAL
+                                                  * scattered ones, driven */
+    for (i = 0; i < 60u; i++) {
+        ui.path[0] = (uint8_t)(i & 1u ? PATH_EXP : PATH_AMBIENT);
+        press_phys(KEY_PERF, 1);
+        perf_glide();
+        if (i & 1u ? lay_gr[0] < 0 || (lay_dist[0] && lay_dist[0] < 40) : lay_gr[0] > 0 || lay_dist[0] > 20 || lay_send[0] < ui.send[0] * 32767 / 100 - 1)
+            printf("FAIL perf: %s draws gr %d, dist %d\n", i & 1u ? "EXPERIMENTAL" : "AMBIENT", lay_gr[0], lay_dist[0]), fail++, i = 60u;
+        press_phys(KEY_PERF, 0);
+        perf_glide();
+    }
+    ui.path[0] = PATH_OPEN;
+    pf.set[PF_MIX] = 0;                          /* MIX 0: nothing moves */
+    press_phys(KEY_PERF, 1);
+    perf_glide();
+    if (perf_moved(0) || rv.decay != rdec || dl_fb != dfb)
+        printf("FAIL perf: MIX 0 moves the effects\n"), fail++;
+    press_phys(KEY_PERF, 0);
+    perf_glide();
+    pf.set[PF_MIX] = 100;
+    pf.set[PF_ALL] = 1;                          /* ALL: every track */
+    pf.set[PF_MST] = 0;                          /* .. and the master left alone */
+    for (i = other = 0; i < 10u; i++) {
+        press_phys(KEY_PERF, 1);
+        perf_glide();
+        for (l = 1; l < NLAYER; l++)
+            other += perf_moved(l);
+        if (rv.decay != rdec || rv.mix != rmix || dl_fb != dfb || dl_mix != dmix)
+            printf("FAIL perf: MASTER FX off moves the master\n"), fail++, i = 10u;
+        press_phys(KEY_PERF, 0);
+        perf_glide();
+    }
+    if (other < 45u)
+        printf("FAIL perf: ALL moved the other tracks %u times of 50\n", other), fail++;
+    pf.set[PF_TRK] = 0;
+    pf.set[PF_MST] = 1;
+    press_phys(KEY_PERF, 1);
+    perf_glide();
+    for (l = 0; l < NLAYER; l++)
+        if (perf_moved(l))
+            printf("FAIL perf: TRACK FX off moves track %u\n", l + 1u), fail++;
+    press_phys(KEY_PERF, 0);
+    perf_glide();
+    pf_defaults();
+    press_phys(KEY_SHIFT, 1);                    /* SHIFT + black key 2: its page, and nothing played */
+    press_phys(KEY_PERF, 1);
+    press_phys(KEY_PERF, 0);
+    press_phys(KEY_SHIFT, 0);
+    perf_glide();
+    if (!ui.rv_page || ui.fx != 2u || pf.held || pf.amt)
+        printf("FAIL perf: SHIFT + black key 2 does not open its page alone\n"), fail++;
+    host_enc[PANEL_ENC[EN_K1]] = -5;             /* KNOB 1: MIX; KNOB 2: TRACKS */
+    host_enc[PANEL_ENC[EN_K2]] = 1;
+    ui_input();
+    if (pf.set[PF_MIX] != 40 || pf.set[PF_ALL] != 1)
+        printf("FAIL perf: the page's knobs set MIX %d, TRACKS %d\n", pf.set[PF_MIX], pf.set[PF_ALL]), fail++;
+    host_enc[PANEL_ENC[EN_K4]] = -1;
+    ui_input();
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-perf.ppm", dir);
+    ppm(path);
+    ses_save(5);                                 /* a session keeps the page */
+    pf_defaults();
+    ses_load_slot(5);
+    if (pf.set[PF_MIX] != 40 || pf.set[PF_ALL] != 1 || pf.set[PF_MST] != 0)
+        printf("FAIL perf: a session does not keep the page\n"), fail++;
+    press_btn(B_SEQ);                            /* SEQ: back to playing */
+    if (ui.rv_page)
+        printf("FAIL perf: SEQ does not leave its page\n"), fail++;
+    printf("perf: %u of 40 moved, %s\n", moved, fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
+    if (argc >= 3 && !strcmp(argv[1], "perf"))
+        return cmd_perf(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "caligula"))
         return cmd_caligula(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "crush"))
