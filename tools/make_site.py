@@ -413,6 +413,7 @@ def manual():
     md = (ROOT / "README.md").read_text()
     part = md[md.index("\n# Manual\n"):md.index("\n# Building from source\n")]
     part = part.replace("\n# Manual\n", "\n", 1)
+    part = part.replace('src="docs/', 'src="')        # (the README's images, from docs/manual.html)
     toc = [(2, "controls", "Controls")]
     body = controls() + "\n" + to_html(part, toc)
     t = "\n".join(f'<a href="#{s}"' + (' class="sub"' if lv == 3 else "") + f">{html.escape(n)}</a>" for lv, s, n in toc)

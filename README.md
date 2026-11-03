@@ -795,6 +795,91 @@ each card's own small offsets of tune and cutoff with a slow drift.
 | **KEYS** | a struck filter, no sustain |
 | **SWELL** | the filter opening slowly under a held chord |
 
+## Voices and load
+
+The six tracks share two limits: twelve voices, and the time the chip has to compute each block of audio. With a
+few tracks of light sounds neither is reached. With chords on the heavier engines the processing time runs out
+first, usually well before the twelfth voice.
+
+### Voices
+
+FM, ANIMA, DRUID, BAYAREA, HIVE and OBRADOR take one voice per note from the pool of twelve. A note that is
+released keeps its voice until its release has faded. When a note finds no free voice, it takes, in this order:
+
+1. the quietest released note still fading, on any track;
+2. the oldest held note on its own track;
+3. the oldest held note on any track that is not latched;
+4. the oldest held note of all.
+
+The voice taken is faded out over about 9 ms. CALIGULA and RUSSOLO take no voices from the pool: each is one
+organism per track, which costs the same however many notes it plays.
+
+### Processing time
+
+Each note costs a share of the audio block, here called points: 100 points is one block's full time on one of the
+chip's two cores. The chart shows each engine's cost per note, from its lightest family to its heaviest, measured
+on the FM-1 with Tonitor build 71. CALIGULA and RUSSOLO are charged per track.
+
+<img src="docs/assets/engine-load.svg" alt="Cost per note by engine: RUSSOLO 2–3 points per track, FM 1–6, OBRADOR 7–13, ANIMA 8–13, BAYAREA 9–11, DRUID 9–16 (HARP and DRONE 26–28), HIVE 15–21, CALIGULA 18–23 per track" width="760">
+
+| Engine | Points per note | Lighter families | Heavier families | Notes held on one track before notes are shed |
+| --- | --- | --- | --- | --- |
+| **RUSSOLO** | 2–3 per track | all alike | | any number |
+| **FM** | 1–6 | IMPACT, MALLET, METAL, PLUCK, CLANG (1–4) | ABYSS, CHOIR, BOWED, BLOOM, TIDE, STATIC (5.6) | 12 (all the voices) |
+| **OBRADOR** | 7–13 | METAL, KEYS, NOTCH, SYNC (7), BASS (8) | PWM PAD, BRASS, DRONE (12–13) | 8 (PWM PAD) |
+| **ANIMA** | 8–13 | PLUCK, BELLS, BITS (8–9) | FOG, BREATH, GOLDEN (12–13) | 9 (FOG) |
+| **BAYAREA** | 9–11 | PLUCK, BONGO (9) | SWELL (11) | 8 (SWELL) |
+| **DRUID** | 9–16 | BELL, PLATE (9) | PLUCK (16); HARP and DRONE (26–28) | 3 (HARP) |
+| **HIVE** | 15–21 | SUB, METAL, SPECTRA, AIR, TIDES (15–16) | CLUSTER, WASH, PAD (20–21) | 5 (CLUSTER) |
+| **CALIGULA** | 18–23 per track | SPORE, LITANY (18–19) | RUST, HIVE, MOTH (22–23) | any number |
+
+The last column was measured with twelve notes held on one track, the delay and reverb on. A note costs the same
+while its release fades as while it is held. Decaying families (BAYAREA's PLUCK, BONGO, CHIME and FOLDED,
+DRUID's SITAR, FM's IMPACT, PLUCK and MALLET) cost their full amount only while they ring.
+
+Add up the points of everything sounding at once. Up to about **100** the audio keeps up; with all six tracks
+playing, up to about **80**, because each track's mixing and effects take their share too. Some sums, measured:
+
+| What plays | Points | Result |
+| --- | --- | --- |
+| FM ABYSS, 12 notes on one track | 67 | clean, load 75 % |
+| six tracks, one note each on FM, ANIMA, CALIGULA, HIVE, DRUID, BAYAREA | about 80 | clean, load 86 % (peaks 96 %) |
+| DRUID HARP, 4 notes | 111 | at the limit: an occasional late block |
+| six tracks, two notes each on the same six engines | about 135 | overloaded: six notes shed |
+| ANIMA FOG, 12 notes | about 150 | overloaded: three notes shed |
+
+The load here is the share of each block's time the audio takes on the first core, with the second core taking
+part of the voices. The rest of the time goes to the keys, the screen and USB.
+
+### When the load is too high
+
+Before each block, Tonitor estimates its cost. If it will not fit, released notes still fading are let go first,
+the quietest first, then a CALIGULA's ring-out with no key held, each over about 6 ms. A held note is never let
+go at this stage.
+
+If the audio is late anyway, two half-buffers in a row above 85 %, the same order applies, and then the oldest
+held note that has sounded for at least 1.5 s is faded out. A latched note and a note just played are never let
+go. Until enough notes have gone, the output can crackle.
+
+### Planning the tracks
+
+- **Play chords and dense parts on FM, CALIGULA or RUSSOLO.** Twelve FM notes cost less than four DRUID HARP
+  notes. CALIGULA and RUSSOLO cost the same with one note or ten.
+- **Keep HIVE, DRUID's HARP and DRONE, and the heavy ANIMA and OBRADOR families to single notes or two-note
+  intervals,** especially when other tracks are playing. One DRUID HARP or DRONE note costs as much as five FM
+  notes.
+- **Choose the lighter family when it serves the part.** Within ANIMA, OBRADOR and HIVE the heaviest family costs
+  40 % to 100 % more than the lightest (the table above).
+- **Shorten the release on heavy tracks.** A fading note costs as much as a held one, so a long release on a HIVE
+  pad keeps paying for every note played. The ENVELOPE page's RELEASE sets it per track.
+- **Latch only what must stay.** Latched notes are never shed, so under load the other tracks' notes go first.
+- **Count the loopers.** Loop notes use the same voices and the same time as played notes, and several loops on
+  one track sound at once.
+- **The reverb costs about 7 points** while any track sends to it, once for all tracks; the delay costs under 1.
+  A track's filter, granulator, crush and distortion each cost a few points at most.
+- **If the sound crackles,** let go of notes first, then move the densest part to a lighter engine or family, or
+  silence a track you are not listening to.
+
 # Building from source
 
 Once:
