@@ -288,6 +288,14 @@ held when REC ends the loop are let go at its end, their release ringing on into
 the leftmost, lit while they play. Press a key to take its loop out, or to bring it back in from its start. With
 the loops stopped, this chooses which loops the next PLAY starts.
 
+**Where each loop begins.** Each loop keeps the moment its first note was played, counted from the first loop's
+start, and keeps its own length. Where every loop is follows from those two, so the loops always stand against each
+other as they did when you played them, round after round. When **PLAY** starts the loops again, they go on from
+the start of the first loop's round in which the newest loop was recorded: the first loop from its start, the
+newest silent until the place of its first note, and every other loop where it was at that moment. A loop brought
+back in (PLAY held) comes in where it would be had it played on. A loop recorded with the loops stopped begins with
+the first. Sessions and snapshots keep where each loop began.
+
 **Moving the loops along the scale.** **SHIFT + OCT+ / OCT−** moves every loop of every track one step of the
 scale (TRANSP +1), up to two octaves either way; the white keys and latched notes move with them, and an overdub
 recorded meanwhile plays back as you played it. **SHIFT + a track's button held + OCT+ / OCT−** moves that

@@ -541,9 +541,33 @@ static uint32_t nsounding(uint32_t l)
 
 /* the panel's flows: a held note through an engine change and a new sound; held notes on two layers at once;
  * a note's release not cut by the next; the looper; every layer silent once every key is up (no stuck note) */
+/* layer l's loops not where its time line puts them (each as far into its round as the time since its first
+ * note goes past whole rounds; before it, waiting until then), by more than a block or two */
+static uint32_t loops_astray(uint32_t l)
+{
+    const looper_t *p = &loop[l];
+    uint32_t k, n = 0;
+    for (k = 0; k < p->ntrk; k++) {
+        const loop_trk_t *t = &p->trk[k];
+        uint32_t d;
+        if ((p->mute >> k) & 1u)
+            continue;
+        if (t->off > p->tl)
+            d = t->wait > t->off - p->tl ? t->wait - (t->off - p->tl) : t->off - p->tl - t->wait;
+        else {
+            d = t->wait ? t->len : ((uint32_t)t->pos + t->len - (p->tl - t->off) % t->len) % t->len;
+            d = d < t->len - d ? d : t->len - d;
+        }
+        if (d > 2u) {
+            printf("  loop %u: at %d (wait %u), began %u, %u long, time line %u\n", k, t->pos, t->wait, t->off, t->len, p->tl);
+            n++;
+        }
+    }
+    return n;
+}
 static int cmd_flows(void)
 {
-    uint32_t l, fail = 0, i, n;
+    uint32_t l, fail = 0, i, n, off1 = 0;
     layers_init();
     ui_init();
     sounds_init();
@@ -650,6 +674,7 @@ static int cmd_flows(void)
     run_blocks(300, 0);
     if (loop[4].rec != LR_ARMED || !loop[4].play || loop[4].trk[0].pos == 0)
         printf("FAIL flows: REC over a playing loop did not arm (or stopped it)\n"), fail++;
+    off1 = loop[4].tl;                        /* (the time line at the overdub's first note) */
     press_key(12, 1);
     run_blocks(200, 0);
     press_key(12, 0);
@@ -664,6 +689,9 @@ static int cmd_flows(void)
                    loop[4].ntrk, loop[4].trk[1].len, loop[4].trk[1].n), fail++;
         if (loop[4].trk[0].pos != (p0 + 1u) % loop[4].trk[0].len && loop[4].trk[0].pos != (p0 + 2u) % loop[4].trk[0].len)
             printf("FAIL flows: the first loop jumped when the overdub ended\n"), fail++;
+        if (loop[4].trk[0].off || loop[4].trk[1].off < off1 || loop[4].trk[1].off > off1 + 2u)
+            printf("FAIL flows: where the overdub began on the time line not kept (%u, its first note at %u)\n",
+                   loop[4].trk[1].off, off1), fail++;
     }
     for (i = 0; i < 8u; i++) {               /* up to ten loops; the eleventh is refused */
         press_btn(B_REC);
@@ -679,6 +707,8 @@ static int cmd_flows(void)
     if (loop[4].ntrk != 10u || loop[4].rec != LR_IDLE || !str_eq(ui.msg, "10 LOOPS"))
         printf("FAIL flows: not ten loops and no more (%u, rec %d, %s)\n", loop[4].ntrk, loop[4].rec, ui.msg), fail++;
     run_blocks(3000, 0);
+    if ((n = loops_astray(4)) != 0u)
+        printf("FAIL flows: the loops are not where the time line puts them (%u astray)\n", n), fail++;
     press_btn(B_PLAY);                        /* stopped */
     run_blocks(10, 0);
     if (loop[4].play || lgate(4)) {
@@ -691,6 +721,14 @@ static int cmd_flows(void)
         printf("FAIL flows: PLAY did not play the loops again from their starts\n");
         fail++;
     }
+    /* .. the time line from the first loop's round the newest began in: each loop where it stood then, the newest
+     * waiting for its first note's place -- and so on, round after round, every loop in its own length */
+    if (loop[4].tl % loop[4].trk[0].len > 20u || loop[4].tl + 20u < loop[4].trk[9].off - loop[4].trk[9].off % loop[4].trk[0].len ||
+        loop[4].trk[9].wait + 20u < loop[4].trk[9].off % loop[4].trk[0].len || (n = loops_astray(4)) != 0u)
+        printf("FAIL flows: after PLAY the loops are not where they stood (time line %u, %u astray)\n", loop[4].tl, n), fail++;
+    run_blocks(5000, 0);
+    if ((n = loops_astray(4)) != 0u)
+        printf("FAIL flows: the loops drift from where they stood, after PLAY (%u astray)\n", n), fail++;
     fm1_in.buttons |= 1u << PANEL_BTN[B_REC];  /* REC held: emptied */
     press_btn(B_REC);
     fm1_ms += 1100;
@@ -6618,9 +6656,9 @@ static int cmd_overdubs(const char *dir)
     }
     if (heard)
         printf("FAIL overdubs: loop 3, out, still sounds\n"), fail++;
-    play_btn(500, 2);                                 /* back in: from its start, at once */
-    if (loop[0].mute || loop[0].trk[2].pos > 10u)
-        printf("FAIL overdubs: loop 3 does not come back in from its start (pos %u)\n", loop[0].trk[2].pos), fail++;
+    play_btn(500, 2);                                 /* back in: where the time line puts it, at once */
+    if (loop[0].mute || loops_astray(0))
+        printf("FAIL overdubs: loop 3 does not come back in where it stood (pos %u)\n", loop[0].trk[2].pos), fail++;
     play_btn(50, -1);                                 /* PLAY let go soon: stopped */
     if (loop[0].play)
         printf("FAIL overdubs: a short PLAY does not stop the loops\n"), fail++;

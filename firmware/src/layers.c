@@ -17,12 +17,16 @@
  * the change, and plays again, with what is new, the notes still held.
  *
  * Every layer has a looper of up to LOOP_TRK loops, all free and each on its own clock: no tempo, no grid,
- * no two loops in step, not even a layer's own -- each goes round in its own length, so they drift apart.
+ * no two loops in step, not even a layer's own -- each goes round in its own length, so they drift apart. Each
+ * keeps where it began on the layer's time line (from the first loop's start): where each is, now, follows from
+ * that, its length and the time line's time, so they stand against each other always as they did.
  *   REC        arms a new loop (the others go on playing); the first note played on the layer starts it;
  *              every note played is kept, to the block (0.73 ms)
  *   REC again  ends it: the loop is as long as from that first note to now, and it plays at once, for ever
  *              (with the layer's loops stopped, they all start again with it)
- *   PLAY       stops the layer's loops, or plays them again, each from its start
+ *   PLAY       stops the layer's loops, or plays them again: the time line from the start of the first loop's
+ *              round in which the newest loop began -- the first from its start, the newest waiting, silent,
+ *              until its first note's place in that round, the others where they were then
  *   REC held   empties the looper: every loop of the layer
  * A loop's notes play on the layer's voices as the keys' do, and stay the loop's: a key lifted never ends a
  * note the loop is playing, nor the loop a note a key holds. The keys go on playing the layer over its loop. */
@@ -214,6 +218,9 @@ typedef struct {
     uint8_t rgo;                 /* RANDOM: a note has been struck since the last jump */
     int8_t dir;                  /* 1 forwards, -1 backwards (the looper's direction; PENDULUM turns it at the ends) */
     uint32_t snd[4];             /* the notes it sounds now (as recorded, before the transposition) */
+    uint32_t off;                /* where it began on the time line: blocks of loop time from the first loop's start
+                                  * to its first note (24 bits) */
+    uint32_t wait;               /* blocks of loop time it waits, silent, before it begins (after PLAY) */
 } loop_trk_t;
 enum { LD_FWD, LD_REV, LD_PEND, LD_RAND };   /* the direction a looper plays its loops in (RANDOM: forwards, jumping
                                               * to a note drawn at random each time the next is due) */
@@ -227,6 +234,7 @@ typedef struct {
     uint8_t held[16];            /* notes on in the recording, not yet off */
     uint32_t start;              /* the loop clock when the recording began */
     uint32_t lclk;               /* the loop clock: half blocks of loop time, 1 a block at half speed, 2, 4 at double */
+    uint32_t tl;                 /* the time line: blocks of loop time since the first loop's start, while they play */
     uint8_t dmode, rate;         /* LD_*, LS_* (the 4th .. 8th black keys) */
     uint8_t vary;                /* SHIFT + REC: each note it plays at a level and for a length drawn at random */
     uint32_t rnd;                /* RANDOM's draws */
@@ -283,7 +291,34 @@ static void trk_start(const looper_t *p, loop_trk_t *t)
     t->ix = (int16_t)(t->dir > 0 ? 0 : (int32_t)t->n - 1);
     t->wrap = 0;
     t->rgo = 0;
+    t->wait = 0;
     memset(t->snd, 0, sizeof t->snd);
+}
+/* loop t where the time line puts it: before its first note, waiting; then as far into its round as the time
+ * since its first note goes past whole rounds (backwards, as far from its end); RANDOM: from its start */
+static void trk_place(const looper_t *p, loop_trk_t *t)
+{
+    const uint32_t *ev = p->ev + t->first;
+    uint32_t at;
+    int32_t j;
+    trk_start(p, t);
+    if (t->off > p->tl) {
+        t->wait = t->off - p->tl;
+        return;
+    }
+    if (p->dmode == LD_RAND || t->len < 2u)
+        return;
+    at = (p->tl - t->off) % t->len;
+    if (t->dir > 0) {
+        t->pos = (int32_t)at;
+        for (j = 0; j < (int32_t)t->n && (int32_t)LE_T(ev[j]) < t->pos; j++)
+            ;
+    } else {
+        t->pos = (int32_t)(t->len - 1u - at);
+        for (j = (int32_t)t->n - 1; j >= 0 && (int32_t)LE_T(ev[j]) > t->pos; j--)
+            ;
+    }
+    t->ix = (int16_t)j;
 }
 /* the loops' transposition (SHIFT + OCT): every loop moved by steps of the scale, its notes walked up or down the
  * scale's pitch classes (a mask from C); a note off the scale keeps its distance from the scale note below it.
@@ -893,11 +928,28 @@ static void loop_put(looper_t *p, uint32_t on, uint32_t note)
     }
     p->ev[p->nev++] = LE(t, note, on);
 }
-static void loop_rewind(looper_t *p)               /* every loop from its start */
+/* where PLAY takes the time line: the start of the first loop's round in which the newest loop began */
+static uint32_t loop_t0(const looper_t *p)
+{
+    uint32_t k, top = 0, r = p->trk[0].len;
+    for (k = 0; k < p->ntrk; k++)
+        if (p->trk[k].off > top)
+            top = p->trk[k].off;
+    return p->ntrk && r >= 2u ? top - top % r : 0u;
+}
+static void loop_rewind(looper_t *p)               /* every loop again, where the time line puts it */
 {
     uint32_t k;
+    p->tl = loop_t0(p);
     for (k = 0; k < p->ntrk; k++)
-        trk_start(p, &p->trk[k]);
+        trk_place(p, &p->trk[k]);
+}
+/* where a loop recorded now begins on the time line (the loops stopped: where PLAY takes it -- they start again
+ * with it) */
+static uint32_t loop_at(const looper_t *p)
+{
+    uint32_t at = p->play ? p->tl : loop_t0(p);
+    return at < 0xFFFFFFu ? at : 0xFFFFFFu;
 }
 static void loop_cmd(uint32_t l, uint32_t type)
 {
@@ -927,7 +979,7 @@ static void loop_cmd(uint32_t l, uint32_t type)
                     p->ev[b] = x;
                 }
             }
-            trk_start(p, t);
+            trk_start(p, t);                      /* (from its start: the time line has gone round it once) */
             if (!p->play)
                 loop_rewind(p);                   /* stopped: all of them again, with the new one */
             p->mute &= (uint16_t)~(1u << p->ntrk);   /* (a new one plays) */
@@ -963,6 +1015,7 @@ static void loop_cmd(uint32_t l, uint32_t type)
         p->ntrk = 0;
         p->nev = 0;
         p->nheld = 0;
+        p->tl = 0;
         p->rec = LR_IDLE;
         break;
     }
@@ -985,6 +1038,7 @@ static void loop_hear(uint32_t l, uint32_t on, uint32_t note)
         p->rec = LR_REC;
         p->start = p->lclk;
         p->trk[p->ntrk].first = (uint16_t)p->nev;
+        p->trk[p->ntrk].off = loop_at(p);         /* (as far into the first loop as this first note) */
         p->trk[p->ntrk].xb = (int8_t)(lx_steps + lx_tr[l]);   /* (it plays back as played, whatever the others are
                                                               * moved by) */
         p->nheld = 0;
@@ -1001,7 +1055,7 @@ static void trk_off(uint32_t l, loop_trk_t *t)
             note_off(l, lx_map(n, lx_steps + lx_tr[l] - t->xb, lx_mask), SRC_LOOP);
     memset(t->snd, 0, sizeof t->snd);
 }
-/* loop k of layer l in or out (PLAY held, its white key). In while they play: from its start, now. Out: the notes
+/* loop k of layer l in or out (PLAY held, its white key). In while they play: where the time line puts it. Out: the notes
  * it holds now let go (found again from its events up to where it is), the others' left be */
 static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
 {
@@ -1012,7 +1066,7 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
         return;
     if (on && (p->mute & bit)) {
         if (p->play)
-            trk_start(p, t);
+            trk_place(p, t);                      /* (the time line went on while it was out) */
         p->mute &= (uint16_t)~bit;
     } else if (!on && !(p->mute & bit)) {
         if (p->play)
@@ -1029,7 +1083,9 @@ static void loop_trk_set(uint32_t l, uint32_t k, uint32_t on)
 #define PK_N (LOOP_TRK + NTAKE)
 static struct { uint8_t n; uint16_t from[PK_N], len[PK_N]; } lpk;   /* EV_LOOP_PACK: the events kept, in order */
 static volatile uint8_t lpk_ok;  /* .. done (not while a loop records) */
-typedef struct { uint16_t first, n; uint32_t len; int8_t xb; } take_t;
+typedef struct { uint16_t first, n; uint32_t len; int8_t xb; uint8_t off_hi; uint16_t off_lo; } take_t;   /* (off in
+                                                                * what was padding: 12 bytes still, as stored) */
+static uint32_t take_off(const take_t *k) { return (uint32_t)k->off_hi << 16 | k->off_lo; }
 static struct {
     uint8_t ntrk, play;
     uint16_t mute;
@@ -1087,7 +1143,7 @@ static void trk_seek(const looper_t *p, loop_trk_t *t, uint32_t ph)
 }
 static int take_same(const loop_trk_t *t, const take_t *k)
 {
-    return t->first == k->first && t->n == k->n && t->len == k->len && t->xb == k->xb;
+    return t->first == k->first && t->n == k->n && t->len == k->len && t->xb == k->xb && t->off == take_off(k);
 }
 static void loop_takes(uint32_t l)
 {
@@ -1116,6 +1172,7 @@ static void loop_takes(uint32_t l)
             t->n = lts.t[k].n;
             t->len = lts.t[k].len;
             t->xb = lts.t[k].xb;
+            t->off = take_off(&lts.t[k]);
             if (keep < LOOP_TRK && t->len) {      /* placed as it was against the one playing on */
                 const loop_trk_t *r = &p->trk[keep];
                 uint32_t was = (uint32_t)(((uint64_t)lts.ph[keep] * r->len) >> 16);
@@ -1134,6 +1191,8 @@ static void loop_takes(uint32_t l)
     } else if (lts.play && !p->play) {
         for (k = 0; k < p->ntrk; k++)
             trk_seek(p, &p->trk[k], lts.ph[k]);
+        if (p->trk[0].len >= 2u)                  /* (the time line: the first loop's place, in the round it was in) */
+            p->tl = p->tl - p->tl % p->trk[0].len + (uint32_t)p->trk[0].pos;
         p->play = 1;
     }
 }
@@ -1549,13 +1608,17 @@ static void loops_run(void)
             steps = vt[l].acc >> 16;
             vt[l].acc &= 0xFFFFu;
         }
+        p->tl += steps;
         for (k = 0; k < p->ntrk; k++) {
             loop_trk_t *t = &p->trk[k];
             uint32_t s;
             if ((p->mute >> k) & 1u)
-                continue;                         /* (held out: it waits, silent, where it is) */
+                continue;                         /* (held out: silent; placed by the time line when back in) */
             for (s = 0; s < steps; s++)
-                trk_step(l, p, t);
+                if (t->wait)
+                    t->wait--;                    /* (not begun yet: silent, until the time line reaches it) */
+                else
+                    trk_step(l, p, t);
         }
     }
 }

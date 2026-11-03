@@ -21,7 +21,7 @@
 #define SES_SECT 4096u
 #define SES_NSECT ((SES_HI - SES_LO) / SES_SECT)
 #define SES_MAGIC 0x31534341u    /* "ACS1" */
-#define SES_FORMAT 27u           /* 27: the 16 snapshots (snaps.c), the loops they hold, the morph time, PLAY ALONG, at the end; each loop's start; 26: each sound kept as its seed keeps its family too (above its path, as OBRADOR's in 25); 25: OBRADOR (an eighth sound, after HIVE in each track's; eight engines' macros and envelopes); 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
+#define SES_FORMAT 28u           /* 28: where each loop began against the first (after where its events start); 27: the 16 snapshots (snaps.c), the loops they hold, the morph time, PLAY ALONG, at the end; each loop's start; 26: each sound kept as its seed keeps its family too (above its path, as OBRADOR's in 25); 25: OBRADOR (an eighth sound, after HIVE in each track's; eight engines' macros and envelopes); 24: each track's modulation (two LFOs, four slots: mod.c), at the end; 23: whether each track's BALLSY and BRICKLAYER play (PLAY), at the end; 22: HIVE's sound as reworked (twelve kinds; its design larger); 21: HIVE (a seventh sound; seven engines' macros and envelopes); 20: each track's BRICKLAYER (on, its notes, length, rate, harmony, instability), at the end; 19: BAYAREA (a sixth sound; six engines' macros and envelopes); 18: each track's balls (on, how many, speed, octaves, instability), at the end; 17: DRUID (a fifth sound, five engines' macros and envelopes); 16: each track's distortion, at the end; 15: each track's own envelope on each engine, at the end; 14: each track's chord mode and form, and the chords latched, at the end; 13: the delay's parameters and each track's send to it, at the end; 12: each looper's direction and speed (in loop_state); 11: each track's own transposition; 10: the loops' transposition (and each loop's own at its recording); 9: RUSSOLO (a fourth sound, four engines' macros); 8: the granulator's character,
                                   * the latched notes; 7: the loops held out; 6: the macros; 5: the generations; 4: the paths; 3: a CALIGULA design a layer; 2: up to ten loops
                                   * a layer (1: one) */
 #define SES_MAX 73u              /* records in the list (one a sector at most) */
@@ -452,6 +452,8 @@ static void ses_emit(void)
         }
         for (k = 0; k < nt; k++)                        /* (format 27: where each loop's events start) */
             ses_out(&lp->trk[k].first, 2u);
+        for (k = 0; k < nt; k++)                        /* (format 28: where each began against the first) */
+            ses_out(&lp->trk[k].off, 4u);
         for (i = 0; i < n; i++)                         /* t (24 bits), note, on */
             ses_out(&lp->ev[i], 4u);
     }
@@ -1404,6 +1406,7 @@ static int ses_load(uint32_t i)
                 lp->trk[0].len = y.loop_len;
                 lp->trk[0].n = (uint16_t)(n > LOOP_N ? LOOP_N : n);
                 lp->trk[0].xb = 0;
+                lp->trk[0].off = 0;
             } else {
                 ui.cr[l] = (int8_t)clampi((int8_t)(y.loop_len >> 8), -FLT_MAX, FLT_MAX);
                 ui.path[l] = (uint8_t)((y.loop_len >> 16 & 0xFFu) < PATH_N ? y.loop_len >> 16 & 0xFFu : PATH_OPEN);
@@ -1427,6 +1430,13 @@ static int ses_load(uint32_t i)
                     ses_in(&f, 2u);
                     if (k < nt)
                         at[k] = f;
+                }
+                for (k = 0; k < y.loop_len; k++) {      /* (format 28: where each began; before, all at once) */
+                    uint32_t o = 0;
+                    if (h.format >= 28u)
+                        ses_in(&o, 4u);
+                    if (k < nt)
+                        lp->trk[k].off = o < 0xFFFFFFu ? o : 0xFFFFFFu;
                 }
             }
             for (k = 0; k < n; k++)

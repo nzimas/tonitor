@@ -1,5 +1,17 @@
 # Changelog
 
+## Build 70
+
+Changed
+- Loops keep where they began: the moment of their first note, counted from the first loop's start. Every loop
+  keeps its own length, and its position follows from where it began, so the loops stay against each other as they
+  were played, round after round. When PLAY starts a track's loops again, they go on from the start of the first
+  loop's round in which the newest loop was recorded: the first loop from its start, the newest silent until the
+  place of its first note, the others where they were at that moment. Before, every loop started at the same time.
+  A loop brought back in (PLAY held) comes in where it would be had it played on, no longer from its start.
+  Sessions (format 28) and snapshots keep where each loop began; sessions saved before load with every loop
+  starting with the first, as before.
+
 ## Build 69
 
 Fixed

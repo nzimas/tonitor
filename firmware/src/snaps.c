@@ -197,6 +197,8 @@ static int take_intern(uint32_t l, const loop_trk_t *t)
     take_tab[l][i].n = t->n;
     take_tab[l][i].len = t->len;
     take_tab[l][i].xb = t->xb;
+    take_tab[l][i].off_hi = (uint8_t)(t->off >> 16);
+    take_tab[l][i].off_lo = (uint16_t)t->off;
     take_in[l][i] = 1;
     return (int)i;
 }
