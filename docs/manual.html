@@ -71,6 +71,7 @@
 <a href="#screen" class="sub">Screen</a>
 <a href="#scales" class="sub">Scales</a>
 <a href="#global-setup-and-midi" class="sub">Global setup and MIDI</a>
+<a href="#screen-reader" class="sub">Screen reader</a>
 <a href="#modulation" class="sub">Modulation</a>
 <a href="#play-along" class="sub">Play along</a>
 <a href="#presets" class="sub">Presets</a>
@@ -235,7 +236,7 @@
 <tr id="ctl-28" data-n="28"><td class="n"><a href="#fig-keys">28</a></td><td><b>black key 5</b></td><td rowspan="1"><b>PENDULUM</b>: forwards and backwards in turn.</td></tr>
 <tr id="ctl-29" data-n="29"><td class="n"><a href="#fig-keys">29</a></td><td><b>black key 6</b></td><td rowspan="1"><b>RANDOM</b>: the loops' notes in an order drawn at random.</td></tr>
 <tr id="ctl-30" data-n="30"><td class="n"><a href="#fig-keys">30</a></td><td><b>black key 7</b></td><td rowspan="1"><b>HALF SPEED</b>.</td></tr>
-<tr id="ctl-31" data-n="31"><td class="n"><a href="#fig-keys">31</a></td><td><b>black key 8</b></td><td rowspan="1"><b>DOUBLE SPEED</b>.</td></tr>
+<tr id="ctl-31" data-n="31"><td class="n"><a href="#fig-keys">31</a></td><td><b>black key 8</b></td><td rowspan="1"><b>DOUBLE SPEED</b>. <b>SHIFT +</b>: the <a href="#screen-reader">screen reader</a> on or off (not lit).</td></tr>
 <tr id="ctl-32" data-n="32"><td class="n"><a href="#fig-keys">32</a></td><td><b>black key 9</b></td><td rowspan="1">The <a href="#envelope">ENVELOPE</a> page. <b>SHIFT +</b>: <a href="#bricklayer">BRICKLAYER</a> on or off; <b>held</b> (0.6 s) while it is on, its page.</td></tr>
 <tr id="ctl-33" data-n="33"><td class="n"><a href="#fig-keys">33</a></td><td><b>black key 10</b></td><td rowspan="1"><b>EDIT</b>: KNOB 1–4 become the four <a href="#macros">macros</a> (not the EDIT button, T5). <b>SHIFT +</b>: <a href="#ballsy">BALLSY</a> on or off; <b>held</b> (0.6 s) while it is on, its page.</td></tr>
 <tr id="ctl-34" data-n="34"><td class="n"><a href="#fig-keys">34</a></td><td><b>black key 11</b></td><td rowspan="1"><b>SHIFT</b>. White keys held, then SHIFT: they <a href="#latched-keys">latch</a>.</td></tr>
@@ -296,7 +297,8 @@
 <tr><td><b>SAVE</b></td><td>the SNAPSHOTS page; SAVE again leaves it (<a href="#snapshots">Snapshots</a>).</td></tr>
 <tr><td><b>SAVE held</b> (0.8 s)</td><td>save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting; on the SNAPSHOTS page, it stores the current state in the framed snapshot.</td></tr>
 <tr><td><b>SHIFT + SAVE</b></td><td>the SESSIONS page: <b>PRESETS</b> chooses a slot, <b>SAVE</b> loads it; on an empty slot, SAVE starts a new, blank session there. SHIFT + SAVE again leaves it (<a href="#sessions">Sessions</a>).</td></tr>
-<tr><td><b>SHIFT + SAVE held</b> (0.8 s)</td><td>GLOBAL SETUP: the MIDI and AUDIO settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
+<tr><td><b>SHIFT + SAVE held</b> (0.8 s)</td><td>GLOBAL SETUP: the MIDI, AUDIO and SETTINGS settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
+<tr><td><b>SHIFT + black key 8</b></td><td>the screen reader on or off, from any page (<a href="#screen-reader">Screen reader</a>).</td></tr>
 <tr><td><b>SEQ</b></td><td>the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back (<a href="#delay">Delay</a>, <a href="#reverb">Reverb</a>, <a href="#modulation">Modulation</a>, <a href="#play-along">Play along</a>).</td></tr>
 <tr><td><b>SHIFT + SEQ</b></td><td>a new random modulation for the chosen track.</td></tr>
 <tr><td><b>MASTER</b></td><td>the output level.</td></tr>
@@ -387,7 +389,7 @@
 <tr><td>black key 5</td><td><b>PENDULUM</b>: forwards, then backwards, in turn</td></tr>
 <tr><td>black key 6</td><td><b>RANDOM</b>: at each note, a jump to a note of the loop drawn at random</td></tr>
 <tr><td>black key 7</td><td><b>HALF SPEED</b> (the pitch does not change)</td></tr>
-<tr><td>black key 8</td><td><b>DOUBLE SPEED</b></td></tr>
+<tr><td>black key 8</td><td><b>DOUBLE SPEED</b> (with SHIFT: the <a href="#screen-reader">screen reader</a> on or off)</td></tr>
 </table>
 <p>The three direction keys exclude each other, as do the two speed keys; a direction and a speed combine. Press the lit key again to go back to forwards or normal speed. Emptying the loops (REC held) resets both.</p>
 <h3 id="copying-a-track">Copying a track</h3>
@@ -430,8 +432,9 @@
 </table>
 <p>MIDI notes are not quantised to the scale.</p>
 <h3 id="global-setup-and-midi">Global setup and MIDI</h3>
-<p><b>SHIFT + SAVE held</b> (0.8 s) opens <b>GLOBAL SETUP</b>, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions. <b>PRESETS</b> moves through the entries; <b>SAVE</b> opens one, or selects a value and sets it; <b>SHIFT + SAVE</b> cancels or goes back a level. A track button leaves; changes are kept.</p>
+<p><b>SHIFT + SAVE held</b> (0.8 s) opens <b>GLOBAL SETUP</b>, the FM-1's own settings (MIDI, AUDIO and SETTINGS), kept apart from the sessions. <b>PRESETS</b> moves through the entries; <b>SAVE</b> opens one, or selects a value and sets it; <b>SHIFT + SAVE</b> cancels or goes back a level. A track button leaves; changes are kept.</p>
 <p><b>AUDIO</b> has one setting, <b>USB</b>: what the FM-1 sends to a computer as USB audio (<a href="#usb-audio">USB audio</a>). <b>STEREO</b> (at the start): the master, as the headphones hear it. <b>TRACKS</b>: the six tracks, each on its own mono channel. Changed, the FM-1 leaves the USB for a moment and comes back as the new device; the sound on the headphones goes on.</p>
+<p><b>SETTINGS</b> has two: <b>SCREEN READER</b> (ON / OFF, OFF at the start) and <b>SPEECH RATE</b> (1 to 5, 2 at the start) (<a href="#screen-reader">Screen reader</a>).</p>
 <p>MIDI's parts:</p>
 <table>
 <tr><th>Part</th><th>Settings</th><th>At the start</th></tr>
@@ -449,6 +452,11 @@
 <tr><td>16–19</td><td>the four macros</td><td>92</td><td>delay send</td></tr>
 </table>
 <p>With SEND NOTES on, each track sends the notes it plays (keys, loops, sequencers, MIDI) on its OUT channel over USB. There is no MIDI clock, transport or program change.</p>
+<h3 id="screen-reader">Screen reader</h3>
+<p>The FM-1 can speak what its screen shows, for players who cannot see it. The voice is made on the FM-1 itself and comes out of its own output, so no computer or internet connection is needed.</p>
+<p><b>SHIFT + black key 8</b> (the 4th black key from the right) turns it on or off from any page; the key is not lit. It says "screen reader on" and reads the screen, or "screen reader off" and goes quiet. The same setting is in GLOBAL SETUP &gt; SETTINGS &gt; SCREEN READER. It is off at the start, and is kept, like the other GLOBAL SETUP settings.</p>
+<p>When something on the screen changes, it is read once the screen settles (while a knob turns, at least every 0.7 s): the track number, its engine and sound; a knob's parameter and value; messages. On a list, it reads the page's title and the chosen row. Abbreviations are said in full (CHO: "chord"); acronyms (FM, LFO, USB) and words it does not know are spelled out; numbers are read with their signs and units ("−28.5DB": "minus twenty eight point five decibels").</p>
+<p>The music drops 6 dB while it speaks. The voice follows MASTER and is not sent over USB audio. <b>SPEECH RATE</b> (GLOBAL SETUP &gt; SETTINGS) sets its speed, 1 (slowest) to 5 (fastest), 2 at the start; while you set it, the reader already speaks at the new rate. When the reader is off, the audio does no work for it beyond one check.</p>
 <h3 id="modulation">Modulation</h3>
 <p>Each track has two LFOs and four modulation slots. Press <b>SEQ</b> three times for the <b>MOD page</b>: <b>PRESETS</b> chooses the entry, <b>KNOB 1–4</b> set its rows.</p>
 <table>
