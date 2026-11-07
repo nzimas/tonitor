@@ -72,6 +72,7 @@
 <a href="#scales" class="sub">Scales</a>
 <a href="#global-setup-and-midi" class="sub">Global setup and MIDI</a>
 <a href="#screen-reader" class="sub">Screen reader</a>
+<a href="#cpu-load" class="sub">CPU load</a>
 <a href="#modulation" class="sub">Modulation</a>
 <a href="#play-along" class="sub">Play along</a>
 <a href="#presets" class="sub">Presets</a>
@@ -235,7 +236,7 @@
 <tr id="ctl-27" data-n="27"><td class="n"><a href="#fig-keys">27</a></td><td><b>black key 4</b></td><td rowspan="1"><b>REVERSE</b>: the chosen track's loops backwards (<a href="#direction-and-speed">Direction and speed</a>). Keys 4 to 8 are BRICKLAYER's own on its page.</td></tr>
 <tr id="ctl-28" data-n="28"><td class="n"><a href="#fig-keys">28</a></td><td><b>black key 5</b></td><td rowspan="1"><b>PENDULUM</b>: forwards and backwards in turn.</td></tr>
 <tr id="ctl-29" data-n="29"><td class="n"><a href="#fig-keys">29</a></td><td><b>black key 6</b></td><td rowspan="1"><b>RANDOM</b>: the loops' notes in an order drawn at random.</td></tr>
-<tr id="ctl-30" data-n="30"><td class="n"><a href="#fig-keys">30</a></td><td><b>black key 7</b></td><td rowspan="1"><b>HALF SPEED</b>.</td></tr>
+<tr id="ctl-30" data-n="30"><td class="n"><a href="#fig-keys">30</a></td><td><b>black key 7</b></td><td rowspan="1"><b>HALF SPEED</b>. <b>SHIFT +</b>, held: the <a href="#cpu-load">CPU page</a>.</td></tr>
 <tr id="ctl-31" data-n="31"><td class="n"><a href="#fig-keys">31</a></td><td><b>black key 8</b></td><td rowspan="1"><b>DOUBLE SPEED</b>. <b>SHIFT +</b>: the <a href="#screen-reader">screen reader</a> on or off (not lit).</td></tr>
 <tr id="ctl-32" data-n="32"><td class="n"><a href="#fig-keys">32</a></td><td><b>black key 9</b></td><td rowspan="1">The <a href="#envelope">ENVELOPE</a> page. <b>SHIFT +</b>: <a href="#bricklayer">BRICKLAYER</a> on or off; <b>held</b> (0.6 s) while it is on, its page.</td></tr>
 <tr id="ctl-33" data-n="33"><td class="n"><a href="#fig-keys">33</a></td><td><b>black key 10</b></td><td rowspan="1"><b>EDIT</b>: KNOB 1–4 become the four <a href="#macros">macros</a> (not the EDIT button, T5). <b>SHIFT +</b>: <a href="#ballsy">BALLSY</a> on or off; <b>held</b> (0.6 s) while it is on, its page.</td></tr>
@@ -298,6 +299,7 @@
 <tr><td><b>SAVE held</b> (0.8 s)</td><td>save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting; on the SNAPSHOTS page, it stores the current state in the framed snapshot.</td></tr>
 <tr><td><b>SHIFT + SAVE</b></td><td>the SESSIONS page: <b>PRESETS</b> chooses a slot, <b>SAVE</b> loads it; on an empty slot, SAVE starts a new, blank session there. SHIFT + SAVE again leaves it (<a href="#sessions">Sessions</a>).</td></tr>
 <tr><td><b>SHIFT + SAVE held</b> (0.8 s)</td><td>GLOBAL SETUP: the MIDI, AUDIO and SETTINGS settings (<a href="#global-setup-and-midi">Global setup and MIDI</a>).</td></tr>
+<tr><td><b>SHIFT + black key 7 held</b></td><td>the CPU page while held: the load and the heaviest processes (<a href="#cpu-load">CPU load</a>).</td></tr>
 <tr><td><b>SHIFT + black key 8</b></td><td>the screen reader on or off, from any page (<a href="#screen-reader">Screen reader</a>).</td></tr>
 <tr><td><b>SEQ</b></td><td>the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back (<a href="#delay">Delay</a>, <a href="#reverb">Reverb</a>, <a href="#modulation">Modulation</a>, <a href="#play-along">Play along</a>).</td></tr>
 <tr><td><b>SHIFT + SEQ</b></td><td>a new random modulation for the chosen track.</td></tr>
@@ -388,7 +390,7 @@
 <tr><td>black key 4</td><td><b>REVERSE</b>: backwards</td></tr>
 <tr><td>black key 5</td><td><b>PENDULUM</b>: forwards, then backwards, in turn</td></tr>
 <tr><td>black key 6</td><td><b>RANDOM</b>: at each note, a jump to a note of the loop drawn at random</td></tr>
-<tr><td>black key 7</td><td><b>HALF SPEED</b> (the pitch does not change)</td></tr>
+<tr><td>black key 7</td><td><b>HALF SPEED</b> (the pitch does not change; held with SHIFT: the <a href="#cpu-load">CPU page</a>)</td></tr>
 <tr><td>black key 8</td><td><b>DOUBLE SPEED</b> (with SHIFT: the <a href="#screen-reader">screen reader</a> on or off)</td></tr>
 </table>
 <p>The three direction keys exclude each other, as do the two speed keys; a direction and a speed combine. Press the lit key again to go back to forwards or normal speed. Emptying the loops (REC held) resets both.</p>
@@ -457,6 +459,14 @@
 <p><b>SHIFT + black key 8</b> (the 4th black key from the right) turns it on or off from any page; the key is not lit. It says "screen reader on" and reads the screen, or "screen reader off" and goes quiet. The same setting is in GLOBAL SETUP &gt; SETTINGS &gt; SCREEN READER. It is off at the start, and is kept, like the other GLOBAL SETUP settings.</p>
 <p>When something on the screen changes, it is read once the screen settles (while a knob turns, at least every 0.7 s): the track number, its engine and sound; a knob's parameter and value; messages. On a list, it reads the page's title and the chosen row. Abbreviations are said in full (CHO: "chord"); acronyms (FM, LFO, USB) and words it does not know are spelled out; numbers are read with their signs and units ("−28.5DB": "minus twenty eight point five decibels").</p>
 <p>The music drops 6 dB while it speaks. The voice follows MASTER and is not sent over USB audio. <b>SPEECH RATE</b> (GLOBAL SETUP &gt; SETTINGS) sets its speed, 1 (slowest) to 5 (fastest), 2 at the start; while you set it, the reader already speaks at the new rate. When the reader is off, the audio does no work for it beyond one check.</p>
+<h3 id="cpu-load">CPU load</h3>
+<p>How much the FM-1 can play at once depends on the engines and effects in use: ANIMA, HIVE, DRUID and CALIGULA cost more than FM, and the effects add to it. Hold <b>SHIFT + black key 7</b> (the 5th black key from the right) to see the <b>CPU page</b> for as long as the key is held.</p>
+<ul>
+<li><b>CPU</b> and a percentage: the audio load now, the time the FM-1 takes to make each piece of sound against the time it has. Green below 60 %, yellow below 85 %, red above.</li>
+<li>The bar: the load, with a white mark at the highest load of the last 2 seconds (<b>PEAK</b>) and a red mark at 85 %. Above it, the FM-1 lets the quietest tails go, and then notes, to keep the sound going without gaps.</li>
+<li><b>HEAVIEST</b>: the four processes using the most, the heaviest first, each as a share of one core's time: a track's engine (<b>T3 CALIGULA</b>: its voices together), a track's effects (<b>T1 EFFECTS</b>: its envelope, filter, granulator, crush, distortion and sends) or the master <b>DELAY REVERB</b>. The voices are spread over the FM-1's two cores, so the shares can add up to more than the load.</li>
+</ul>
+<p>When the load nears the red mark, the top of the list shows what to change: fewer notes on that track, a lighter engine, or less of its effects.</p>
 <h3 id="modulation">Modulation</h3>
 <p>Each track has two LFOs and four modulation slots. Press <b>SEQ</b> three times for the <b>MOD page</b>: <b>PRESETS</b> chooses the entry, <b>KNOB 1–4</b> set its rows.</p>
 <table>
