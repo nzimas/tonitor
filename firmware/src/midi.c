@@ -12,10 +12,14 @@ typedef struct {
     uint8_t rcv_note, rcv_cc, send_note, send_cc;   /* 0 / 1 */
     uint8_t usb_in, trs_in;      /* the ports listened to */
     uint8_t usb_aud;             /* (GLOBAL SETUP's AUDIO, kept with these) USB audio: 0 STEREO (the mix), 1 TRACKS (six) */
+    uint8_t reader;              /* (GLOBAL SETUP's SETTINGS) the SCREEN READER on (voice.c) .. */
+    uint8_t rate;                /* .. its SPEECH RATE, 0 .. 4 (1 .. 5 shown) */
 } midi_cfg_t;
 #define MIDI_CFG_OLD 19u         /* (the size before USB AUDIO, build 62: such a record still loads) */
-#define MIDI_CFG0 {{1, 2, 3, 4, 5, 6}, 16, {1, 2, 3, 4, 5, 6}, 1, 1, 0, 0, 1, 1, 0}
-_Static_assert(sizeof(midi_cfg_t) == MIDI_CFG_OLD + 1u, "USB AUDIO after the older settings");
+#define MIDI_CFG_AUD 20u         /* (.. and before SETTINGS, build 73) */
+#define MIDI_CFG_RDR 21u         /* (.. and before SPEECH RATE, a test build of 73) */
+#define MIDI_CFG0 {{1, 2, 3, 4, 5, 6}, 16, {1, 2, 3, 4, 5, 6}, 1, 1, 0, 0, 1, 1, 0, 0, 1}
+_Static_assert(sizeof(midi_cfg_t) == MIDI_CFG_AUD + 2u, "SETTINGS after the older settings");
 static midi_cfg_t mcfg = MIDI_CFG0;
 
 static uint16_t midi_held[NLAYER][8];            /* (each track's notes sent on, a bit each: one off each) */

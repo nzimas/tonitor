@@ -2333,8 +2333,9 @@ static int32_t usb_blk[UAC_NBLK * CTL];           /* (the block for USB audio: t
  * interleaved) */
 static void mix_block(int32_t *out)
 {
-    int32_t l_[CTL], r_[CTL], rvin[CTL], dlin[CTL];
+    int32_t l_[CTL], r_[CTL], rvin[CTL], dlin[CTL], vv[CTL];
     uint32_t i, l;
+    int voice;
     uint32_t c0 = COST_NOW();
     an_cache_now = blk_clock + 1u;                /* (ANIMA's wavetables from RAM while the ISR renders) */
     midi_main_drain();                            /* (the main loop's MIDI out: the CCs) */
@@ -2353,6 +2354,10 @@ static void mix_block(int32_t *out)
 #endif
     for (l = 0; l < NLAYER; l++)
         layer_block(l, l_, r_, rvin, dlin);
+    voice = vce.speaking || vce.dk || vo_r != vo_w;   /* (the SCREEN READER's voice, voice.c: nothing to say and
+                                                   * the music not lowered -- off, or quiet -- nothing done) */
+    if (voice)
+        vo_block(vv, CTL);
     for (i = 0; i < CTL; i++) {
         l_[i] += fx_l[i];                         /* the delay's and the reverb's returns (on the last block's sends) */
         r_[i] += fx_r[i];
@@ -2364,6 +2369,10 @@ static void mix_block(int32_t *out)
             usb_blk[UAC_NBLK * i + 2u + l] = ceiling(usb_trk[l][i]);
 #endif
 #endif
+        if (voice) {                              /* (the voice over the music, the music lower: not to USB) */
+            l_[i] = mulq15(l_[i], 32768 - vce.dk) + vv[i];
+            r_[i] = mulq15(r_[i], 32768 - vce.dk) + vv[i];
+        }
         out[2u * i] = ceiling(mulq12(l_[i], master_q12));
         out[2u * i + 1u] = ceiling(mulq12(r_[i], master_q12));
     }

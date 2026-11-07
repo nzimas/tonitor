@@ -19,10 +19,22 @@ static void lcd_spin(uint32_t n)
         ;
 }
 
+/* while a transfer runs, called over and over (the main loop sets it around the screen's drawing: a page takes
+ * ~75 ms to send at 12 MHz, and the sequencers' notes must not wait for it: ui.c seq_tick); 0 none */
+static void (*lcd_idle)(void);
+
 static void lcd_sync(void)          /* finish the running transfer (before touching its buffer) */
 {
     if (!lcd_busy)
         return;
+    if (lcd_idle) {
+        void (*f)(void) = lcd_idle;
+        uint32_t t0 = fm1_ms;
+        lcd_idle = 0;                  /* (not again from within it) */
+        while (!fm1_lcd_done() && (uint32_t)(fm1_ms - t0) < 100u)
+            f();
+        lcd_idle = f;
+    }
     fm1_lcd_wait();
     fm1_lcd_deselect();
     lcd_busy = 0;

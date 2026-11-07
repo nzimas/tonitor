@@ -37,10 +37,10 @@ static struct {
     uint8_t dir[NLAYER], spd[NLAYER];   /* LD_* and LS_*, as a looper's (its page: the 4th .. 8th black keys) */
     int8_t pdir[NLAYER];         /* PENDULUM: which way now */
     uint8_t hist[NLAYER][4];     /* the last steps played (a beat repeat plays them again) */
-    uint32_t due[NLAYER];        /* .. when (fm1_ms) */
+    uint32_t due[NLAYER];        /* the next step's time (fm1_ms), on a grid: each step's time added to the last's */
+    uint8_t due_f[NLAYER];       /* .. and its 1/256 ms (a step's time is seldom whole ms) */
     int8_t rpt[NLAYER];          /* a beat repeat: steps of hist still to play again */
     int32_t pace[NLAYER], paim[NLAYER];   /* INSTABILITY's pace, Q16, and where it heads */
-    uint32_t hold_until[NLAYER];   /* a stop: no step before then */
     uint32_t rush_until[NLAYER];
     struct { uint8_t layer, note, form, vel; uint32_t at, len; uint8_t on; } q[BL_Q];   /* on: 1 to strike, 2 sounding */
     rnd_t r;
@@ -69,12 +69,15 @@ static uint32_t bl_rnd(void)
 }
 static int bl_odds(int32_t q15) { return (int32_t)(bl_rnd() >> 17) < q15; }   /* a chance, Q15 */
 static uint32_t bl_in(uint32_t lo, uint32_t hi) { return lo + (bl_rnd() >> 8) % (hi - lo + 1u); }
-/* a step's time: 0.5 x 32^(rate / 100) steps a second, ms */
-static uint32_t bl_step_ms(uint32_t l)
+/* a step's time: 0.5 x 32^(rate / 100) steps a second, in 1/256 ms (62.5 .. 2000 ms) */
+static uint32_t bl_step_q8(uint32_t l)
 {
     uint32_t sps = (uint32_t)(((uint64_t)32768u * exp2_q16(clampi(bl.rate[l], 0, 100) * 3277)) >> 16);   /* steps a second, Q16 */
-    return sps ? (uint32_t)(65536000u / sps) : 2000u;
+    if (!sps)
+        return 2000u << 8;
+    return (65536000u / sps << 8) + (65536000u % sps << 8) / sps;   /* (32-bit divisions only: sps < 2^21) */
 }
+static uint32_t bl_step_ms(uint32_t l) { return bl_step_q8(l) >> 8; }
 /* is step i of track l one of its notes (and which): n of len spread as evenly as can be */
 static int bl_note_at(uint32_t l, uint32_t i)
 {
@@ -185,13 +188,13 @@ static void bl_tick(void)
 {
     uint32_t now = fm1_ms, l, i;
     for (l = 0; l < NLAYER; l++) {
-        uint32_t sm;
+        uint32_t sm, sq, f;
         int32_t u;
         if (!bl.on[l] || !bl.run[l] || !bl.n[l])
             continue;
         if (bl.len[l] < bl.n[l])
             bl.len[l] = bl.n[l];
-        if ((int32_t)(now - bl.due[l]) < 0 || (int32_t)(now - bl.hold_until[l]) < 0)
+        if ((int32_t)(now - bl.due[l]) < 0)
             continue;
         u = bl.unst[l] * 327;
         /* INSTABILITY's pace: towards a new aim now and then (from half to twice); a stop or a rush */
@@ -200,11 +203,13 @@ static void bl_tick(void)
         if (!u)
             bl.paim[l] = Q16;
         bl.pace[l] += (bl.paim[l] - bl.pace[l]) >> 2;
-        sm = bl_step_ms(l);
-        sm = (sm << 16) / (uint32_t)(bl.pace[l] > 8192 ? bl.pace[l] : 8192);   /* (sm <= 2000: 32 bits) */
+        sq = bl_step_q8(l);                         /* (<= 2000 ms: << 12 fits 32 bits) */
+        if (bl.pace[l] != Q16)
+            sq = (sq << 12) / ((uint32_t)(bl.pace[l] > 8192 ? bl.pace[l] : 8192) >> 4);
         if ((int32_t)(now - bl.rush_until[l]) < 0)
-            sm /= 2u;
-        sm = bl.spd[l] == LS_HALF ? sm * 2u : bl.spd[l] == LS_DOUBLE ? sm / 2u : sm;
+            sq /= 2u;
+        sq = bl.spd[l] == LS_HALF ? sq * 2u : bl.spd[l] == LS_DOUBLE ? sq / 2u : sq;
+        sm = sq >> 8;
         if (bl.rpt[l] > 0)                          /* a beat repeat under way: the last steps again, oldest first */
             bl.last[l] = bl.hist[l][(4 - bl.rpt[l]--) & 3];
         else {
@@ -218,11 +223,20 @@ static void bl_tick(void)
                 bl.rpt[l] = (int8_t)bl_in(2, bl.len[l] < 4u ? bl.len[l] : 4u);
         }
         bl_step(l, sm);
+        /* the next step: a step's time after this one's due time, not after now -- a late pass of the main loop
+         * (the screen being sent) does not push the steps after it later; only a step fallen a whole step behind
+         * (a stall, the end of a stop) sets the grid on from now */
+        if ((int32_t)(now - bl.due[l]) > (int32_t)sm) {
+            bl.due[l] = now;
+            bl.due_f[l] = 0;
+        }
+        f = bl.due_f[l] + sq;
+        bl.due[l] += f >> 8;
+        bl.due_f[l] = (uint8_t)f;
         if (u && bl_odds(u / 20))                   /* a stop, a moment */
-            bl.hold_until[l] = now + sm + bl_in(200, 1200);
+            bl.due[l] += bl_in(200, 1200);
         else if (u && bl_odds(u / 20))
             bl.rush_until[l] = now + bl_in(300, 1200);
-        bl.due[l] = now + sm;
     }
     for (i = 0; i < BL_Q; i++) {
         if (bl.q[i].on == 1u && (int32_t)(now - bl.q[i].at) >= 0) {
@@ -244,6 +258,7 @@ static void bl_set_run(uint32_t l, int run)            /* PLAY: started from its
         bl.pos[l] = bl.last[l] = 0;
         bl.pdir[l] = 1;
         bl.due[l] = fm1_ms;
+        bl.due_f[l] = 0;
         bl.rpt[l] = 0;
         bl.pace[l] = bl.paim[l] = Q16;
     } else

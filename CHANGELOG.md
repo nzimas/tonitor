@@ -1,5 +1,25 @@
 # Changelog
 
+## Build 73
+
+Added
+- Screen reader: the FM-1 speaks what its screen shows, through its own audio output, with a built-in speech
+  synthesizer (no computer or internet needed). It reads what changes on the screen once it settles: the track and
+  its engine and sound, a knob's parameter and value, messages, and on lists the page's title and the chosen row.
+  Words it has no pronunciation for are spelled out. The music drops 6 dB while it speaks; the voice follows MASTER
+  and is not sent over USB audio. Off at the start. Turn it on or off in GLOBAL SETUP > SETTINGS > SCREEN READER,
+  or from any page with SHIFT + black key 8 (the 4th black key from the right; it is not lit), which says "screen
+  reader on" or "screen reader off". SETTINGS > SPEECH RATE sets its speed, 1 (slowest) to 5 (fastest), 2 at the
+  start. Both are kept with GLOBAL SETUP. When off, the audio does no work for it beyond one check.
+
+Changed
+- GLOBAL SETUP has a third section, SETTINGS, below MIDI and AUDIO.
+
+Fixed
+- BRICKLAYER's steps and REACT's arpeggios keep time while the screen is being redrawn, and each step follows the
+  one before by exactly a step's time, so a late pass no longer pushes the following steps later. The sessions'
+  flash is not erased while BALLSY, BRICKLAYER or REACT are running.
+
 ## Build 72
 
 Added

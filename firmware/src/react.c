@@ -99,11 +99,12 @@ typedef struct {
     uint8_t dir, n, len, pos, mut, rank;
     uint8_t e[24];               /* the notes it plays: the chord, from its register up its octaves */
     uint8_t seq[AR_SEQ];         /* its pattern: which of them, in turn (AR_REST: a rest; AR_ANY: any, drawn) */
-    uint16_t mult;               /* its pace against RATE's, Q8 */
+    uint8_t mn, md;              /* its pace against RATE's: mn / md (x1, 2, 1/2, 3/2 ..; a ratio, exact) */
     int8_t oct;
     uint16_t ver;                /* (the chord it plays: rx.a_ver when it took it) */
     uint8_t fresh;               /* (started from silence: its first step takes the chord as it has come by then) */
     uint32_t next_at;
+    uint16_t next_f;             /* .. and its 1/65536 ms: the tracks' steps on one grid, none drifting from another */
 } rx_av_t;
 #define AR_SETTLE 90u            /* a chord taken once it has stood this long (ms), at a track's next step */
 
@@ -936,13 +937,14 @@ static uint32_t ar_base(void)                       /* RATE's step, ms: 2000 .. 
 {
     return (uint32_t)(((uint64_t)2000u * exp2_q16(-(int32_t)AR_RATE * 3277)) >> 16);
 }
-static uint32_t ar_step_ms(uint32_t l)
+static uint32_t ar_step_q16(uint32_t l)              /* a track's step, 1/65536 ms (<= 8000 ms: 32 bits) */
 {
     const rx_av_t *v = &rx.av[l];
-    uint32_t s = ar_base() * 256u / (v->mult ? v->mult : 256u);
+    uint32_t s = 2000u * exp2_q16(-(int32_t)AR_RATE * 3277);   /* (RATE's step, as ar_base, unrounded) */
+    s = v->mn ? s / v->mn * v->md : s;              /* (/ before x: <= 2^29 x 4, no overflow) */
     if (rx.a[l].chr == RC_TEX)
         s *= 4u;                                    /* (a texture: slowly) */
-    return s < 40u ? 40u : s;
+    return s < 40u << 16 ? 40u << 16 : s;
 }
 /* its notes: the chord (sorted, or as played), its lowest moved to the track's register, up RANGE's octaves */
 static void ar_notes(uint32_t l)
@@ -1067,12 +1069,13 @@ static void ar_restart(void)                        /* from silence (or the trac
             rx.av[l].ver = rx.a_ver;
             rx.av[l].fresh = 1;
             rx.av[l].next_at = fm1_ms + 40u;        /* (the chord's other notes, a moment to come) */
+            rx.av[l].next_f = 0;
         }
 }
 /* the tracks' paces, ways and registers, as RELATION, MOTION and RANGE have them: each unlike the others */
 static void ar_form(void)
 {
-    static const uint16_t MULT[8] = {256, 512, 128, 384, 171, 341, 768, 192};   /* x1 2 1/2 3/2 2/3 4/3 3 3/4 */
+    static const uint8_t MN[8] = {1, 2, 1, 3, 2, 4, 3, 3}, MD[8] = {1, 1, 2, 2, 3, 3, 1, 4};   /* x1 2 1/2 3/2 2/3 4/3 3 3/4 */
     static const int8_t OCT[3][6] = {{0, 1, 0, 1, 0, 1}, {0, 1, -1, 1, -1, 0}, {0, 1, -1, 2, -2, 1}};
     uint32_t k, rank = 0, um = 0, ud = 0, nm = 1u + (uint32_t)AR_REL * 7u / 100u, nd = 1u + (uint32_t)AR_MOT * 7u / 100u;
     for (k = rx.guide + 1u; k < rx.guide + 1u + NLAYER; k++) {
@@ -1095,7 +1098,8 @@ static void ar_form(void)
                 d = AD_UP;
         }
         ud |= 1u << d;
-        v->mult = MULT[mi];
+        v->mn = MN[mi];
+        v->md = MD[mi];
         v->dir = (uint8_t)d;
         v->oct = OCT[AR_RNG < 25 ? 0 : AR_RNG < 60 ? 1 : 2][rank % 6u];
         v->rank = (uint8_t)rank;
@@ -1141,10 +1145,14 @@ static void ar_hear(uint32_t note, int on)          /* the guide's chord, as it 
 static void ar_step(uint32_t l)                     /* a step: its note (or a rest, a skip, a note struck twice) */
 {
     rx_av_t *v = &rx.av[l];
-    uint32_t sm = ar_step_ms(l), s, pct = rx.a[l].chr == RC_PLUCK ? 55u : rx.a[l].chr == RC_TEX ? 100u : 85u, vel;
-    if ((int32_t)(fm1_ms - v->next_at) > (int32_t)sm)
+    uint32_t sq = ar_step_q16(l), sm = sq >> 16, f, s, pct = rx.a[l].chr == RC_PLUCK ? 55u : rx.a[l].chr == RC_TEX ? 100u : 85u, vel;
+    if ((int32_t)(fm1_ms - v->next_at) > (int32_t)sm) {
         v->next_at = fm1_ms;                        /* (fallen behind: on from now) */
-    v->next_at += sm;
+        v->next_f = 0;
+    }
+    f = v->next_f + (sq & 0xFFFFu);                 /* (the next step a step's time after this one's due time) */
+    v->next_at += (sq >> 16) + (f >> 16);
+    v->next_f = (uint16_t)f;
     if (v->ver != rx.a_ver && (v->fresh || fm1_ms - rx.a_chg >= AR_SETTLE)) {   /* a new chord, settled: taken now,
                                                                                  * on this step */
         ar_build(l);

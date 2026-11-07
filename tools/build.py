@@ -38,7 +38,7 @@ CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-fu
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
 PRODUCT = "FM-1_700"                # package identity; release builds are FM-1_7XY
-VERSION = "72"
+VERSION = "73"
 
 
 def toolchain():
@@ -81,6 +81,8 @@ def generate():
     GEN.mkdir(parents=True, exist_ok=True)
     for tool, out in (("gen_tables.py", "tonitor_tables.h"), ("gen_font.py", "tonitor_font.h")):
         subprocess.run([sys.executable, str(SRC / "tools" / tool), str(GEN / out)], check=True)
+    subprocess.run([sys.executable, str(SRC / "tools" / "gen_voice.py"), str(SRC / "tools" / "voice_words.txt"),
+                    str(GEN / "voice_dict.h")], check=True, stdout=subprocess.DEVNULL)   # the SCREEN READER's words
 
 
 # ---- update loader (SLOOP's, unchanged)

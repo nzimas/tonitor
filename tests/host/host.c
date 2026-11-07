@@ -80,6 +80,7 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 }
 
 #include "dsp.h"
+#include "voice.c"
 #include "gfx.c"
 #include "logo.c"
 #include "fm.c"
@@ -5826,6 +5827,207 @@ static void host_midi(uint32_t pkt)
     midi_in_q[mi_w % MQ] = pkt;
     mi_w++;
 }
+/* build 73: the SCREEN READER (GLOBAL SETUP > SETTINGS, voice.c): off, nothing said; on, the screen read (the
+ * track, a knob's value as it turns, GLOBAL SETUP's rows), the voice heard and the music under it lower; off again
+ * at once silent; kept across a restart, and a record from before it loads with it off */
+static uint32_t rd_peak;
+static void rd_frames(uint32_t n)                    /* n passes of the main loop, 40 ms each, the audio running */
+{
+    uint32_t i, b;
+    while (n--) {
+        ui_input();
+        ui_draw();
+        reader_tick();
+        for (b = 0; b < 40u * 44100u / 1000u / CTL; b++) {
+            host_pump();
+            for (i = 0; i < 2u * CTL; i++)
+                if ((uint32_t)abs(mix_out[i]) > rd_peak)
+                    rd_peak = (uint32_t)abs(mix_out[i]);
+        }
+    }
+}
+static int rd_said(const char *what)                 /* said since the last look (and forget it) */
+{
+    int r = strstr(sp_said, what) != 0;
+    return r;
+}
+static void rd_forget(void)
+{
+    sp_said_n = 0;
+    sp_said[0] = 0;
+}
+static int cmd_reader(void)
+{
+    uint32_t fail = 0;
+    memset(host_flash, 0xFF, sizeof host_flash);
+    layers_init();
+    ui_init();
+    sounds_init();
+    vo_init();
+    ses_scan(1);
+    setup_load();
+    master_q12 = 4096;
+    if (mcfg.reader)
+        printf("FAIL reader: on by default\n"), fail++;
+    ui.force = 1;
+    rd_forget();
+    rd_peak = 0;
+    rd_frames(20);
+    if (sp_said_n || vo_busy() || rd_peak)
+        printf("FAIL reader: off, yet something was said (%s)\n", sp_said), fail++;
+    mcfg.reader = 1;                                  /* on: the screen read as it is */
+    rd_frames(30);
+    if (!rd_said("TRACK 1") || !rd_said(ENG_NAME[ui.engine[0]]))
+        printf("FAIL reader: the track view is not read (%s)\n", sp_said), fail++;
+    if (rd_peak < 2000u)
+        printf("FAIL reader: the voice is not heard (peak %u)\n", rd_peak), fail++;
+    rd_forget();
+    press_btn(B_SEL);                                 /* track 2 */
+    rd_frames(20);
+    if (!rd_said("TRACK 2"))
+        printf("FAIL reader: another track is not read (%s)\n", sp_said), fail++;
+    rd_forget();
+    host_enc[PANEL_ENC[EN_K4]] = 5;                   /* KNOB 4: the reverb send, its dial */
+    rd_frames(20);
+    if (!sp_said_n)
+        printf("FAIL reader: a knob turned is not read\n"), fail++;
+    printf("reader: KNOB 4 said: %s", sp_said);
+    rd_forget();
+    fm1_ms += 3000;
+    rd_frames(10);
+    rd_forget();
+    setup_btn();                                      /* GLOBAL SETUP .. */
+    setup_poll();
+    rd_frames(10);
+    if (!rd_said("GLOBAL SETUP") || !rd_said("MIDI"))
+        printf("FAIL reader: GLOBAL SETUP is not read (%s)\n", sp_said), fail++;
+    rd_forget();
+    host_enc[PANEL_ENC[EN_PRESET]] = 2;               /* .. SETTINGS */
+    rd_frames(10);
+    ppm("build/screens/screen-79-setup-settings.ppm");
+    if (!rd_said("SETTINGS") || rd_said("AUDIO"))
+        printf("FAIL reader: the row chosen is not what is read (%s)\n", sp_said), fail++;
+    rd_forget();
+    press_btn(B_SAVE);                                /* its row */
+    rd_frames(10);
+    ppm("build/screens/screen-80-setup-reader.ppm");
+    if (!rd_said("SCREEN READER ON"))
+        printf("FAIL reader: SETTINGS' row is not read (%s)\n", sp_said), fail++;
+    printf("reader: SETTINGS said: %s", sp_said);
+    press_btn(B_SAVE);                                /* off: at once silent */
+    host_enc[PANEL_ENC[EN_PRESET]] = -1;
+    ui_input();
+    ui_draw();
+    ppm("build/screens/screen-81-setup-reader-off.ppm");
+    press_btn(B_SAVE);
+    rd_forget();
+    rd_peak = 0;
+    reader_tick();
+    run_blocks(40, 0);
+    rd_frames(10);
+    if (mcfg.reader || sp_said_n || vce.speaking)
+        printf("FAIL reader: off, yet it speaks on (%s)\n", sp_said), fail++;
+    press_btn(B_SAVE);                                /* on again, kept across a restart */
+    host_enc[PANEL_ENC[EN_PRESET]] = 1;
+    ui_input();
+    press_btn(B_SAVE);
+    press_phys(KEY_SHIFT, 1);
+    press_btn(B_SAVE);
+    press_btn(B_SAVE);
+    press_phys(KEY_SHIFT, 0);
+    setup_poll();
+    if (ui.set_page)
+        printf("FAIL reader: GLOBAL SETUP not left\n"), fail++;
+    mcfg.reader = 0;
+    ses_scan(1);
+    setup_load();
+    if (!mcfg.reader)
+        printf("FAIL reader: the setting is not kept\n"), fail++;
+    mcfg.rate = 4;                                    /* SPEECH RATE 5: kept, and spoken at */
+    setup_write();
+    mcfg.rate = 0;
+    ses_scan(1);
+    setup_load();
+    reader_tick();
+    if (mcfg.rate != 4u || vo_pct != VO_RATE[4])
+        printf("FAIL reader: SPEECH RATE not kept or not used (%u, %u%%)\n", mcfg.rate, vo_pct), fail++;
+    for (uint32_t len = 21u; len <= 22u; len++) {     /* (a rate out of range: the default) */
+        ses_head_t *h = (ses_head_t *)ses_chunk;
+        midi_cfg_t c = mcfg;
+        c.rate = 9;
+        memset(ses_chunk, 0, 32u + sizeof c);
+        memcpy(ses_chunk + 32u, &c, len);
+        h->magic = SES_MAGIC;
+        h->num = (uint16_t)SET_NUM;
+        h->format = SET_FORMAT;
+        h->len = 32u + len;
+        h->seq = ++ses.seq;
+        h->body_crc = ses_crc(ses_chunk + 32u, len, 0);
+        h->head_crc = ses_crc(ses_chunk, 30u, 0);
+        ses_write_chunk(SET_NUM, 32u + len);
+        ses_scan(1);
+        setup_load();
+        if (!mcfg.reader || mcfg.rate != 1u)
+            printf("FAIL reader: a %u-byte record loads with reader %u, rate %u\n", len, mcfg.reader, mcfg.rate), fail++;
+    }
+    {   /* a record from before SETTINGS (20 bytes): it loads, the reader off */
+        ses_head_t *h = (ses_head_t *)ses_chunk;
+        memset(ses_chunk, 0, 32u + MIDI_CFG_AUD);
+        memcpy(ses_chunk + 32u, &mcfg, MIDI_CFG_AUD);
+        h->magic = SES_MAGIC;
+        h->num = (uint16_t)SET_NUM;
+        h->format = SET_FORMAT;
+        h->len = 32u + MIDI_CFG_AUD;
+        h->seq = ++ses.seq;
+        h->body_crc = ses_crc(ses_chunk + 32u, MIDI_CFG_AUD, 0);
+        h->head_crc = ses_crc(ses_chunk, 30u, 0);
+        ses_write_chunk(SET_NUM, 32u + MIDI_CFG_AUD);
+        ses_scan(1);
+        setup_load();
+        if (mcfg.reader)
+            printf("FAIL reader: a record from before SETTINGS loads with the reader on\n"), fail++;
+    }
+    {   /* SHIFT + black key 8: off and on from the track view, kept, said; double speed untouched; no light */
+        uint32_t rate0 = loop[ui.sel].rate;
+        mcfg.reader = 1;                              /* (on, as left: the record before turned it off) */
+        setup_write();
+        ui.set_page = 0;
+        ui.force = 1;
+        rd_frames(10);
+        rd_forget();
+        press_phys(KEY_SHIFT, 1);
+        press_phys(KEY_DOUBLE, 1);
+        rd_frames(5);
+        press_phys(KEY_DOUBLE, 0);
+        press_phys(KEY_SHIFT, 0);
+        rd_frames(10);
+        if (mcfg.reader || !rd_said("SCREEN READER OFF"))
+            printf("FAIL reader: SHIFT + black key 8 does not turn it off (%s)\n", sp_said), fail++;
+        mcfg.reader = 1;
+        ses_scan(1);
+        setup_load();
+        if (mcfg.reader)
+            printf("FAIL reader: off with its keys, not kept\n"), fail++;
+        rd_forget();
+        press_phys(KEY_SHIFT, 1);
+        press_phys(KEY_DOUBLE, 1);
+        rd_frames(5);
+        press_phys(KEY_DOUBLE, 0);
+        press_phys(KEY_SHIFT, 0);
+        rd_frames(30);
+        if (!mcfg.reader || !rd_said("SCREEN READER ON") || !rd_said("TRACK"))
+            printf("FAIL reader: SHIFT + black key 8 does not turn it on (%s)\n", sp_said), fail++;
+        printf("reader: turned on with its keys, said: %s", sp_said);
+        if (loop[ui.sel].rate != rate0)
+            printf("FAIL reader: SHIFT + black key 8 changed the loops' speed\n"), fail++;
+        if (host_led[14u + KEY_DOUBLE])
+            printf("FAIL reader: black key 8 lit\n"), fail++;
+    }
+    mcfg.reader = 0;
+    reader_tick();
+    printf("reader: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
 static int cmd_setup(void)
 {
     uint32_t fail = 0, k, found;
@@ -6217,6 +6419,44 @@ static int cmd_bricks(const char *dir)
         printf("bricks: variation 100: notes a second from %u to %u\n", lo, hi);
         if (hi < lo + 3u)
             printf("FAIL bricks: VARIATION does not unsteady it\n"), fail++;
+    }
+    {   /* VARIATION 0: a steady clock, the main loop's passes late by up to 70 ms (the screen being sent) as
+         * they come -- each step on its grid, none pushed later by the one before (65 steps: the first, then 64) */
+        uint32_t t0, q0, j, worst = 0, steps = 0, late, rs = 12345u;
+        host_enc[PANEL_ENC[EN_K4]] = -50;
+        ui_input();
+        for (j = 0; j < 3u; j++) {                    /* (the rate: 50, then 0 and 100) */
+            bl.rate[0] = (int8_t)(j == 0u ? 50 : j == 1u ? 0 : 100);
+            bl_set_run(0, 0);
+            bl_set_run(0, 1);
+            bl_tick();
+            t0 = fm1_ms;
+            q0 = bl_step_q8(0);
+            steps = 0;
+            worst = 0;
+            while (steps < 64u) {
+                uint32_t due = bl.due[0];
+                rs = rs * 1103515245u + 12345u;
+                fm1_ms += 1u + (rs >> 16) % (j == 2u ? 30u : 70u);   /* (late, never a whole step: 62 ms at 100) */
+                if ((int32_t)(fm1_ms - due) >= 0) {
+                    bl_tick();
+                    late = fm1_ms - due;
+                    worst = late > worst ? late : worst;
+                    steps++;
+                }
+            }
+            {
+                uint32_t want = t0 + (uint32_t)(((uint64_t)q0 * 65u) >> 8), got = bl.due[0];
+                int32_t drift = (int32_t)(got - want);
+                printf("bricks: variation 0, rate %d (%u.%02u ms a step), 64 steps, passes late up to %u ms: drift %d ms\n",
+                       bl.rate[0], q0 >> 8, (q0 & 255u) * 100u / 256u, worst, drift);
+                if (drift < -1 || drift > 1)
+                    printf("FAIL bricks: a steady clock drifts with the main loop's lateness (%d ms over 64 steps)\n", drift), fail++;
+            }
+        }
+        bl.rate[0] = 50;
+        bl_release(0);
+        bl_set_run(0, 1);
     }
     {   /* its page: the loop keys its own -- backwards, half speed, at random; the looper untouched; lit */
         uint32_t seq[6], j, back = 1, ms0 = bl_step_ms(0);
@@ -7094,6 +7334,39 @@ static int cmd_playalong(void)
     ui_leds();
     if (rx_page_up() || btn_glows(B_ENV) != (int)layer_sounding(2))
         printf("FAIL playalong: SEQ does not leave the page, or the buttons do not show the tracks sounding again\n"), fail++;
+    {   /* ARPEGGIO's paces against RATE's (x1 2 1/2 3/2 2/3 4/3 3 3/4): their steps on one grid -- over 1000 of
+         * RATE's, md x 1000 steps of a track's mn / md take the same time, under 1 ms apart, at any RATE */
+        static const uint8_t MN[8] = {1, 2, 1, 3, 2, 4, 3, 3}, MD[8] = {1, 1, 2, 2, 3, 3, 1, 4};
+        uint32_t r, i, worst = 0;
+        int8_t was = AR_RATE;
+        uint8_t chr = rx.a[0].chr, mn = rx.av[0].mn, md = rx.av[0].md;
+        rx.a[0].chr = 0;
+        for (r = 0; r <= 100u; r += 10u) {
+            uint64_t base;
+            AR_RATE = (int8_t)r;
+            rx.av[0].mn = rx.av[0].md = 1;
+            base = (uint64_t)ar_step_q16(0) * 1000u;   /* 1000 of RATE's steps, 1/65536 ms */
+            for (i = 0; i < 8u; i++) {
+                uint64_t t;
+                uint32_t d;
+                rx.av[0].mn = MN[i];
+                rx.av[0].md = MD[i];
+                if (ar_step_q16(0) == 40u << 16)
+                    continue;                         /* (held at its quickest, 40 ms: not RATE's pace) */
+                t = (uint64_t)ar_step_q16(0) * 1000u * MN[i];
+                d = (uint32_t)(t > base * MD[i] ? t - base * MD[i] : base * MD[i] - t);
+                worst = d > worst ? d : worst;
+            }
+        }
+        printf("playalong: ARPEGGIO's paces, 1000 of RATE's steps: at most %u.%03u ms apart\n", worst >> 16,
+               (worst & 0xFFFFu) * 1000u >> 16);
+        if (worst >= 1u << 16)
+            printf("FAIL playalong: ARPEGGIO's tracks drift from one another (%u/65536 ms over 1000 steps)\n", worst), fail++;
+        AR_RATE = was;
+        rx.a[0].chr = chr;
+        rx.av[0].mn = mn;
+        rx.av[0].md = md;
+    }
     printf("playalong: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
@@ -7631,6 +7904,8 @@ int main(int argc, char **argv)
         return cmd_mod(argv[2]);
     if (argc >= 2 && !strcmp(argv[1], "setup"))
         return cmd_setup();
+    if (argc >= 2 && !strcmp(argv[1], "reader"))
+        return cmd_reader();
     if (argc >= 3 && !strcmp(argv[1], "cores"))
         return cmd_cores(atoi(argv[2]));
     if (argc >= 3 && !strcmp(argv[1], "hive"))

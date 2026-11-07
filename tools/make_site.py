@@ -277,7 +277,7 @@ CONTROLS = [
     ([28], "black key 5", "<b>PENDULUM</b>: forwards and backwards in turn."),
     ([29], "black key 6", "<b>RANDOM</b>: the loops' notes in an order drawn at random."),
     ([30], "black key 7", "<b>HALF SPEED</b>."),
-    ([31], "black key 8", "<b>DOUBLE SPEED</b>."),
+    ([31], "black key 8", '<b>DOUBLE SPEED</b>. <b>SHIFT +</b>: the <a href="#screen-reader">screen reader</a> on or off (not lit).'),
     ([32], "black key 9", 'The <a href="#envelope">ENVELOPE</a> page. <b>SHIFT +</b>: '
                           '<a href="#bricklayer">BRICKLAYER</a> on or off; <b>held</b> (0.6 s) while it is on, its page.'),
     ([33], "black key 10", '<b>EDIT</b>: KNOB 1–4 become the four <a href="#macros">macros</a> (not the EDIT button, T5). '

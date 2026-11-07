@@ -138,7 +138,8 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SAVE** | the SNAPSHOTS page; SAVE again leaves it ([Snapshots](#snapshots)). |
 | **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting; on the SNAPSHOTS page, it stores the current state in the framed snapshot. |
 | **SHIFT + SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there. SHIFT + SAVE again leaves it ([Sessions](#sessions)). |
-| **SHIFT + SAVE held** (0.8 s) | GLOBAL SETUP: the MIDI and AUDIO settings ([Global setup and MIDI](#global-setup-and-midi)). |
+| **SHIFT + SAVE held** (0.8 s) | GLOBAL SETUP: the MIDI, AUDIO and SETTINGS settings ([Global setup and MIDI](#global-setup-and-midi)). |
+| **SHIFT + black key 8** | the screen reader on or off, from any page ([Screen reader](#screen-reader)). |
 | **SEQ** | the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back ([Delay](#delay), [Reverb](#reverb), [Modulation](#modulation), [Play along](#play-along)). |
 | **SHIFT + SEQ** | a new random modulation for the chosen track. |
 | **MASTER** | the output level. |
@@ -271,7 +272,7 @@ and do nothing. They have no effect on the sound itself:
 | black key 5 | **PENDULUM**: forwards, then backwards, in turn |
 | black key 6 | **RANDOM**: at each note, a jump to a note of the loop drawn at random |
 | black key 7 | **HALF SPEED** (the pitch does not change) |
-| black key 8 | **DOUBLE SPEED** |
+| black key 8 | **DOUBLE SPEED** (with SHIFT: the [screen reader](#screen-reader) on or off) |
 
 The three direction keys exclude each other, as do the two speed keys; a direction and a speed combine. Press the
 lit key again to go back to forwards or normal speed. Emptying the loops (REC held) resets both.
@@ -352,7 +353,7 @@ MIDI notes are not quantised to the scale.
 
 ### Global setup and MIDI
 
-**SHIFT + SAVE held** (0.8 s) opens **GLOBAL SETUP**, the FM-1's own settings (MIDI and AUDIO), kept apart from the sessions.
+**SHIFT + SAVE held** (0.8 s) opens **GLOBAL SETUP**, the FM-1's own settings (MIDI, AUDIO and SETTINGS), kept apart from the sessions.
 **PRESETS** moves through the entries; **SAVE** opens one, or selects a value and sets it; **SHIFT + SAVE** cancels
 or goes back a level. A track button leaves; changes are kept.
 
@@ -360,6 +361,9 @@ or goes back a level. A track button leaves; changes are kept.
 **STEREO** (at the start): the master, as the headphones hear it. **TRACKS**: the six tracks, each on its own mono
 channel. Changed, the FM-1 leaves the USB for a moment and comes back as the new device; the sound on the
 headphones goes on.
+
+**SETTINGS** has two: **SCREEN READER** (ON / OFF, OFF at the start) and **SPEECH RATE** (1 to 5, 2 at the start)
+([Screen reader](#screen-reader)).
 
 MIDI's parts:
 
@@ -382,6 +386,25 @@ and with SEND CC on sends, these CCs on its channel:
 
 With SEND NOTES on, each track sends the notes it plays (keys, loops, sequencers, MIDI) on its OUT channel over
 USB. There is no MIDI clock, transport or program change.
+
+### Screen reader
+
+The FM-1 can speak what its screen shows, for players who cannot see it. The voice is made on the FM-1 itself and
+comes out of its own output, so no computer or internet connection is needed.
+
+**SHIFT + black key 8** (the 4th black key from the right) turns it on or off from any page; the key is not lit.
+It says "screen reader on" and reads the screen, or "screen reader off" and goes quiet. The same setting is in
+GLOBAL SETUP > SETTINGS > SCREEN READER. It is off at the start, and is kept, like the other GLOBAL SETUP settings.
+
+When something on the screen changes, it is read once the screen settles (while a knob turns, at least every
+0.7 s): the track number, its engine and sound; a knob's parameter and value; messages. On a list, it reads the
+page's title and the chosen row. Abbreviations are said in full (CHO: "chord"); acronyms (FM, LFO, USB) and words
+it does not know are spelled out; numbers are read with their signs and units ("−28.5DB": "minus twenty eight point
+five decibels").
+
+The music drops 6 dB while it speaks. The voice follows MASTER and is not sent over USB audio. **SPEECH RATE**
+(GLOBAL SETUP > SETTINGS) sets its speed, 1 (slowest) to 5 (fastest), 2 at the start; while you set it, the reader
+already speaks at the new rate. When the reader is off, the audio does no work for it beyond one check.
 
 ### Modulation
 

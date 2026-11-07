@@ -69,7 +69,8 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define KEY_PEND 10u             /* the 5th: PENDULUM, forwards and backwards in turn */
 #define KEY_RAND 13u             /* the 6th: RANDOM, forwards from a note drawn at random each time the next is due */
 #define KEY_HALF 15u             /* the 7th: half speed (again: normal) */
-#define KEY_DOUBLE 17u           /* the 8th: double speed */
+#define KEY_DOUBLE 17u           /* the 8th: double speed. SHIFT +: the SCREEN READER on or off (anywhere; no light:
+                                  * heard, not seen) */
 #define KEY_NOTE0 53             /* the lowest key, F3 */
 
 static const uint16_t LAYER_COL[NLAYER] = {RGB(255, 214, 0), RGB(0, 214, 255), RGB(255, 92, 210),
@@ -103,6 +104,7 @@ static struct {
     uint16_t flash_col;
     char flash_l1[12], flash_l2[12];
     uint8_t sc_page;             /* the SCALE page is up */
+    uint8_t rd_flip;             /* SHIFT + black key 8: the SCREEN READER to turn on or off (reader_tick) */
     uint8_t sc_peek;             /* .. or shown a moment, until sc_peek_until (SHIFT + black key 1: a new scale) */
     uint32_t sc_peek_until;
     uint8_t scale, root;         /* the keyboard's scale (SCALES) and root (0 = C .. 11 = B) */
@@ -806,9 +808,18 @@ static void mod_knob(uint32_t l, uint32_t ix, uint32_t j, int32_t s);   /* (the 
 static void draw_mod_page(void);
 static int32_t batt_raw;                         /* the battery's divider, smoothed (main.c), 0 .. 1023; 0 none yet */
 
+/* the sequencers' time: their notes as they fall due -- every pass of the main loop, and while the screen is sent
+ * (main.c: lcd_idle), so that a page's ~75 ms on the wire does not hold a note back */
+static void seq_tick(void)
+{
+    bb_tick();                                   /* (the balls: their time, their notes) */
+    bl_tick();                                   /* (BRICKLAYER's steps) */
+    rx_tick();                                   /* (REACT, SHADOW, ARPEGGIO: listening, and the tracks' notes) */
+}
+
 static void ui_input(void)
 {
-    uint32_t rel, press = fm1_input_edges(&rel), keys, ch, k, l;
+    uint32_t rel, press = fm1_input_edges(&rel), keys, ch, dbl, k, l;
     int32_t s;
     int sh;
     {   /* CPU1 retired as it plays (a fault, a stall, a misread): said, once */
@@ -818,9 +829,7 @@ static void ui_input(void)
         was_on = (uint8_t)audio_worker_online;
     }
     morph_poll();                                /* (a snapshot's morph, a step on) */
-    bb_tick();                                   /* (the balls: their time, their notes) */
-    bl_tick();                                   /* (BRICKLAYER's steps) */
-    rx_tick();                                   /* (REACT, SHADOW, ARPEGGIO: listening, and the tracks' notes) */
+    seq_tick();
     if (ui.vary_shown && loop[ui.sel].vary == ui.vary_shown - 1u)
         ui.vary_shown = 0;                       /* (VARY taken by the ISR: shown from the looper again) */
     (void)rel;
@@ -1346,6 +1355,11 @@ static void ui_input(void)
     }
     keys = fm1_in.notes;
     ch = keys ^ ui.keys;
+    dbl = (ch & keys) >> KEY_DOUBLE & 1u;
+    if (dbl && (keys >> KEY_SHIFT & 1u)) {       /* SHIFT + it: the SCREEN READER, not double speed */
+        ui.rd_flip = 1;
+        dbl = 0;
+    }
     if (ui.bl_page && bl.on[ui.sel]) {           /* BRICKLAYER's page: the same keys, its own direction and speed */
         uint32_t l = ui.sel;
         if ((ch & keys) >> KEY_REV & 1u || (ch & keys) >> KEY_PEND & 1u || (ch & keys) >> KEY_RAND & 1u) {
@@ -1353,7 +1367,7 @@ static void ui_input(void)
             bl.dir[l] = (uint8_t)(bl.dir[l] == want ? LD_FWD : want);
             say(bl.dir[l] == LD_REV ? "REVERSE" : bl.dir[l] == LD_PEND ? "PENDULUM" : bl.dir[l] == LD_RAND ? "RANDOM" : "FORWARD", 1200);
         }
-        if ((ch & keys) >> KEY_HALF & 1u || (ch & keys) >> KEY_DOUBLE & 1u) {
+        if ((ch & keys) >> KEY_HALF & 1u || dbl) {
             uint32_t want = (ch & keys) >> KEY_HALF & 1u ? LS_HALF : LS_DOUBLE;
             bl.spd[l] = (uint8_t)(bl.spd[l] == want ? LS_NORMAL : want);
             say(bl.spd[l] == LS_HALF ? "HALF SPEED" : bl.spd[l] == LS_DOUBLE ? "DOUBLE SPEED" : "NORMAL SPEED", 1200);
@@ -1368,7 +1382,7 @@ static void ui_input(void)
             ev_post(EV_LOOP_MODE, ui.sel, 0, want);
             say(want == LD_REV ? "REVERSE" : want == LD_PEND ? "PENDULUM" : want == LD_RAND ? "RANDOM" : "FORWARD", 1200);
         }
-        if ((ch & keys) >> KEY_HALF & 1u || (ch & keys) >> KEY_DOUBLE & 1u) {
+        if ((ch & keys) >> KEY_HALF & 1u || dbl) {
             uint32_t want = (ch & keys) >> KEY_HALF & 1u ? LS_HALF : LS_DOUBLE;
             want = p->rate == want ? LS_NORMAL : want;
             ev_post(EV_LOOP_MODE, ui.sel, 1, want);
@@ -1735,10 +1749,12 @@ static void draw_number(void)
     ui.shown_top = top_key();
     CV_AREA(0, BAND_A, 240, BAND_B - BAND_A, C_BLACK) {
         int32_t x = draw_batt(237, 2 + ((int32_t)FONT_S.h - 10) / 2);
+        cv_note("TRACK");                        /* (the SCREEN READER: the number is the track's) */
         cv_text_c(3, &FONT_XL, d, LAYER_COL[ui.sel]);
         if (ui.oct[ui.sel]) {                    /* the octave, top right, left of the battery: +1, -2 */
             int32_t o = ui.oct[ui.sel];
             char t[3] = {o < 0 ? '-' : '+', (char)('0' + (o < 0 ? -o : o)), 0};
+            cv_note("OCTAVE");
             cv_text(x - text_w(&FONT_S, t), 2, &FONT_S, t, C_WHITE);
         }
         if (ui.vary_shown ? ui.vary_shown - 1u : loop[ui.sel].vary) {   /* VARY: VAR, top right, under them */

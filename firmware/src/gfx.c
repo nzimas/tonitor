@@ -24,12 +24,15 @@ static uint16_t cv_bg;
 
 static inline uint16_t swap16(uint32_t c) { return (uint16_t)(((c >> 8) & 0xFFu) | ((c & 0xFFu) << 8)); }
 
+static struct { uint32_t x, y, w, h; uint16_t bg; uint8_t on; } cva;   /* (CV_AREA's: below) */
 static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
 {
     uint32_t i, n;
     if (w * h > CV_MAX)
         h = CV_MAX / w;
     lcd_sync();                       /* the last transfer may still read the canvas */
+    if (!cva.on)
+        sp_cap_begin();               /* (the SCREEN READER: this band's words, voice.c) */
     cv_w = w;
     cv_h = h;
     cv_bg = bg;
@@ -42,9 +45,10 @@ static void cv_bg_set(uint16_t bg) { cv_bg = bg; }
 /* an area taller than the canvas, drawn a band at a time: CV_AREA(x, y, w, h, bg) { the drawing, in the area's
  * coordinates } -- run once a band (the canvas holds 56 rows), each band sent as it is done. The drawing must not
  * begin or send a canvas itself */
-static struct { uint32_t x, y, w, h; uint16_t bg; } cva;
 static void cv_area_start(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t bg)
 {
+    sp_cap_begin();                   /* (the area's words: one band to the SCREEN READER, from its first pass) */
+    cva.on = 1;
     cva.x = x;
     cva.y = y;
     cva.w = w;
@@ -58,6 +62,8 @@ static int cv_area_left(void)
     uint32_t rows = CV_MAX / cva.w;
     if ((uint32_t)cv_oy >= cva.h) {
         cv_oy = 0;
+        cva.on = 0;
+        sp_cap_commit(cva.x, cva.y);
         return 0;
     }
     cv_begin(cva.w, cva.h - (uint32_t)cv_oy < rows ? cva.h - (uint32_t)cv_oy : rows, cva.bg);
@@ -70,7 +76,12 @@ static void cv_area_next(void)
     cv_oy += (int32_t)cv_h;
 }
 #define CV_AREA(x, y, w, h, bg) for (cv_area_start(x, y, w, h, bg); cv_area_left(); cv_area_next())
-static void cv_blit(uint32_t x, uint32_t y) { lcd_blit(x, y, cv_w, cv_h, cv_px); }
+static void cv_blit(uint32_t x, uint32_t y)
+{
+    if (!cva.on)
+        sp_cap_commit(x, y);
+    lcd_blit(x, y, cv_w, cv_h, cv_px);
+}
 
 static void cv_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c)
 {
@@ -122,7 +133,7 @@ static int32_t text_w(const font_t *f, const char *s)
 }
 
 /* text at (x, y) (top left), colour c over the canvas background; returns the end x */
-static int32_t cv_text(int32_t x, int32_t y, const font_t *f, const char *s, uint16_t c)
+static int32_t cv_text_px(int32_t x, int32_t y, const font_t *f, const char *s, uint16_t c)
 {
     uint16_t ramp[16];
     int32_t r = c >> 11, g = (c >> 5) & 63, b = c & 31, a;
@@ -160,6 +171,23 @@ static int32_t cv_text(int32_t x, int32_t y, const font_t *f, const char *s, uin
     }
     return x;
 }
+/* (the SCREEN READER: words drawn where they show -- in the canvas, or in the area, once, from its first pass) */
+static void cv_cap(int32_t y, const font_t *f, const char *s, uint16_t c)
+{
+    if ((!cva.on || cv_oy == 0) && y < (int32_t)(cva.on ? cva.h : cv_h) && y + (int32_t)f->h > 0)
+        sp_cap_text(s, c);
+}
+static int32_t cv_text(int32_t x, int32_t y, const font_t *f, const char *s, uint16_t c)
+{
+    cv_cap(y, f, s, c);
+    return cv_text_px(x, y, f, s, c);
+}
+/* words for the SCREEN READER that aren't drawn (TRACK before the track's number) */
+static void cv_note(const char *s)
+{
+    if (!cva.on || cv_oy == 0)
+        sp_cap_text(s, C_WHITE);
+}
 /* centred, and squeezed to the canvas's width (a few pixels less between the letters) if it is wider */
 static void cv_text_fit(int32_t y, const font_t *f, const char *s, uint16_t c)
 {
@@ -169,9 +197,10 @@ static void cv_text_fit(int32_t y, const font_t *f, const char *s, uint16_t c)
     if (squeeze > 6)
         squeeze = 6;
     x = ((int32_t)cv_w - (w - squeeze * (n - 1))) / 2;
+    cv_cap(y, f, s, c);
     for (; *s; s++) {
         char one[2] = {*s, 0};
-        x = cv_text(x, y, f, one, c) - squeeze;
+        x = cv_text_px(x, y, f, one, c) - squeeze;
     }
 }
 /* centred in the canvas's width */

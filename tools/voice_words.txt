@@ -1,0 +1,425 @@
+# TONITOR's SCREEN READER: the words it can say, in ARPAbet (CMU dictionary style: stress 0, 1, 2 on the vowels).
+# One a line: the word as the screen shows it (letters only, any case), a TAB, its phonemes. A word the screen
+# abbreviates is said in full (CHO: chord). A word not here is spelt, letter by letter: FM, LFO, USB need none.
+# tools/gen_voice.py packs them into voice_dict.h; tests/host/voice_demo.c -c speaks every one.
+#
+# numbers and signs
+zero	Z IH1 R OW0
+one	W AH1 N
+two	T UW1
+three	TH R IY1
+four	F AO1 R
+five	F AY1 V
+six	S IH1 K S
+seven	S EH1 V AH0 N
+eight	EY1 T
+nine	N AY1 N
+ten	T EH1 N
+eleven	IH0 L EH1 V AH0 N
+twelve	T W EH1 L V
+thirteen	TH ER1 T IY1 N
+fourteen	F AO1 R T IY1 N
+fifteen	F IH1 F T IY1 N
+sixteen	S IH1 K S T IY1 N
+seventeen	S EH1 V AH0 N T IY1 N
+eighteen	EY1 T IY1 N
+nineteen	N AY1 N T IY1 N
+twenty	T W EH1 N T IY0
+thirty	TH ER1 D IY0
+forty	F AO1 R T IY0
+fifty	F IH1 F T IY0
+sixty	S IH1 K S T IY0
+seventy	S EH1 V AH0 N T IY0
+eighty	EY1 T IY0
+ninety	N AY1 N T IY0
+hundred	HH AH1 N D R AH0 D
+thousand	TH AW1 Z AH0 N D
+minus	M AY1 N AH0 S
+plus	P L AH1 S
+point	P OY1 N T
+percent	P ER0 S EH1 N T
+sharp	SH AA1 R P
+# units (after a number: 12MS, 1.2S, -6DB, 4.5KHZ)
+milliseconds	M IH1 L IH0 S EH2 K AH0 N D Z
+seconds	S EH1 K AH0 N D Z
+decibels	D EH1 S AH0 B EH2 L Z
+db	D EH1 S AH0 B EH2 L Z
+hertz	HH ER1 T S
+hz	HH ER1 T S
+kilohertz	K IH1 L AH0 HH ER2 T S
+khz	K IH1 L AH0 HH ER2 T S
+# letters, for spelling
+a	EY1
+b	B IY1
+c	S IY1
+d	D IY1
+e	IY1
+f	EH1 F
+g	JH IY1
+h	EY1 CH
+i	AY1
+j	JH EY1
+k	K EY1
+l	EH1 L
+m	EH1 M
+n	EH1 N
+o	OW1
+p	P IY1
+q	K Y UW1
+r	AA1 R
+s	EH1 S
+t	T IY1
+u	Y UW1
+v	V IY1
+w	D AH1 B AH0 L Y UW0
+x	EH1 K S
+y	W AY1
+z	Z IY1
+# the screen's abbreviations, said in full
+alg	AE1 L G ER0 IH2 DH AH0 M
+chan	CH AE1 N AH0 L
+cho	K AO1 R D
+ctl	K AH0 N T R OW1 L
+cur	K ER1 AH0 N T
+dn	D AW1 N
+fx	IH0 F EH1 K T S
+inv	IH2 N V ER1 T
+oct	AA1 K T IH0 V
+opn	OW1 P AH0 N
+sel	S AH0 L EH1 K T
+su	S AH1 S
+th	TH
+transp	T R AE0 N S P OW1 Z
+var	V EH1 R IY0
+vol	V AA1 L Y UW0 M
+# the screen's words
+abyss	AH0 B IH1 S
+air	EH1 R
+all	AO1 L
+allowed	AH0 L AW1 D
+ambient	AE1 M B IY0 AH0 N T
+amount	AH0 M AW1 N T
+anima	AE1 N IH0 M AH0
+answers	AE1 N S ER0 Z
+armed	AA1 R M D
+arpeggio	AA2 R P EH1 JH IY0 OW0
+as	AE1 Z
+attack	AH0 T AE1 K
+audio	AA1 D IY0 OW2
+auto	AO1 T OW0
+back	B AE1 K
+ball	B AO1 L
+balls	B AO1 L Z
+ballsy	B AO1 L Z IY0
+bass	B EY1 S
+bayarea	B EY1 EH2 R IY0 AH0
+bell	B EH1 L
+bells	B EH1 L Z
+bend	B EH1 N D
+bin	B IH1 N
+bits	B IH1 T S
+blips	B L IH1 P S
+bloom	B L UW1 M
+blues	B L UW1 Z
+bongo	B AA1 NG G OW0
+bowed	B OW1 D
+bowl	B OW1 L
+brass	B R AE1 S
+breath	B R EH1 TH
+bricklayer	B R IH1 K L EY2 ER0
+bricks	B R IH1 K S
+brightness	B R AY1 T N AH0 S
+bruit	B R W IY1
+build	B IH1 L D
+busy	B IH1 Z IY0
+caligula	K AH0 L IH1 G Y AH0 L AH0
+carrion	K EH1 R IY0 AH0 N
+cascade	K AE0 S K EY1 D
+chance	CH AE1 N S
+change	CH EY1 N JH
+channel	CH AE1 N AH0 L
+check	CH EH1 K
+chime	CH AY1 M
+choir	K W AY1 ER0
+chord	K AO1 R D
+chords	K AO1 R D Z
+chosen	CH OW1 Z AH0 N
+chunks	CH AH1 NG K S
+clang	K L AE1 NG
+clock	K L AA1 K
+cluster	K L AH1 S T ER0
+complexity	K AH0 M P L EH1 K S AH0 T IY0
+confirm	K AH0 N F ER1 M
+connect	K AH0 N EH1 K T
+continuity	K AA2 N T AH0 N UW1 AH0 T IY0
+contrasts	K AA1 N T R AE2 S T S
+copied	K AA1 P IY0 D
+core	K AO1 R
+crackle	K R AE1 K AH0 L
+crash	K R AE1 SH
+creep	K R IY1 P
+crush	K R AH1 SH
+cutoff	K AH1 T AO2 F
+damp	D AE1 M P
+damping	D AE1 M P IH0 NG
+dark	D AA1 R K
+decay	D IH0 K EY1
+delay	D IH0 L EY1
+density	D EH1 N S AH0 T IY0
+depth	D EH1 P TH
+detune	D IY0 T UW1 N
+distortion	D IH0 S T AO1 R SH AH0 N
+dominant	D AA1 M AH0 N AH0 N T
+dorian	D AO1 R IY0 AH0 N
+double	D AH1 B AH0 L
+drawn	D R AO1 N
+drift	D R IH1 F T
+drive	D R AY1 V
+drone	D R OW1 N
+druid	D R UW1 IH0 D
+dry	D R AY1
+dust	D AH1 S T
+echoes	EH1 K OW0 Z
+edit	EH1 D AH0 T
+emptied	EH1 M P T IY0 D
+empty	EH1 M P T IY0
+enigmatic	EH2 N IH0 G M AE1 T IH0 K
+envelope	EH1 N V AH0 L OW2 P
+experimental	IH0 K S P EH2 R AH0 M EH1 N T AH0 L
+fade	F EY1 D
+failed	F EY1 L D
+family	F AE1 M AH0 L IY0
+feedback	F IY1 D B AE2 K
+felucca	F AH0 L UW1 K AH0
+filter	F IH1 L T ER0
+flash	F L AE1 SH
+fog	F AA1 G
+folded	F OW1 L D IH0 D
+folds	F OW1 L D Z
+follows	F AA1 L OW0 Z
+formant	F AO1 R M AH0 N T
+forward	F AO1 R W ER0 D
+fourths	F AO1 R TH S
+free	F R IY1
+friction	F R IH1 K SH AH0 N
+from	F R AH1 M
+full	F UH1 L
+gate	G EY1 T
+gates	G EY1 T S
+glass	G L AE1 S
+glisse	G L IY0 S EY1
+glitch	G L IH1 CH
+global	G L OW1 B AH0 L
+golden	G OW1 L D AH0 N
+grain	G R EY1 N
+grains	G R EY1 N Z
+grit	G R IH1 T
+ground	G R AW1 N D
+guide	G AY1 D
+half	HH AE1 F
+harmonic	HH AA0 R M AA1 N IH0 K
+harmony	HH AA1 R M AH0 N IY0
+harp	HH AA1 R P
+haze	HH EY1 Z
+hirajoshi	HH IH2 R AH0 JH OW1 SH IY0
+hiss	HH IH1 S
+hive	HH AY1 V
+hold	HH OW1 L D
+hollow	HH AA1 L OW0
+howl	HH AW1 L
+hungar	HH AH1 NG G EH1 R
+ian	IY0 AH0 N
+impact	IH1 M P AE0 K T
+in	IH1 N
+inharmonic	IH2 N HH AA0 R M AA1 N IH0 K
+instability	IH2 N S T AH0 B IH1 L AH0 T IY0
+install	IH2 N S T AO1 L
+iteratif	IH0 T EH2 R AH0 T IY1 F
+iwato	IY0 W AA1 T OW0
+japanese	JH AE2 P AH0 N IY1 Z
+jump	JH AH1 M P
+jumps	JH AH1 M P S
+key	K IY1
+keys	K IY1 Z
+ladder	L AE1 D ER0
+last	L AE1 S T
+lead	L IY1 D
+length	L EH1 NG K TH
+level	L EH1 V AH0 L
+litany	L IH1 T AH0 N IY0
+loaded	L OW1 D IH0 D
+loader	L OW1 D ER0
+loading	L OW1 D IH0 NG
+locrian	L OW1 K R IY0 AH0 N
+loop	L UW1 P
+looper	L UW1 P ER0
+loops	L UW1 P S
+lydian	L IH1 D IY0 AH0 N
+machine	M AH0 SH IY1 N
+major	M EY1 JH ER0
+mallet	M AE1 L AH0 T
+master	M AE1 S T ER0
+melodic	M AH0 L AA1 D IH0 K
+metal	M EH1 T AH0 L
+midi	M IH1 D IY0
+minor	M AY1 N ER0
+mix	M IH1 K S
+mixo	M IH1 K S OW0
+mod	M AA1 D
+mode	M OW1 D
+morph	M AO1 R F
+moth	M AO1 TH
+motion	M OW1 SH AH0 N
+movement	M UW1 V M AH0 N T
+murmur	M ER1 M ER0
+mutate	M Y UW1 T EY2 T
+natural	N AE1 CH ER0 AH0 L
+new	N UW1
+no	N OW1
+noise	N OY1 Z
+nor	N AO1 R
+normal	N AO1 R M AH0 L
+not	N AA1 T
+notch	N AA1 CH
+note	N OW1 T
+notes	N OW1 T S
+nothing	N AH1 TH IH0 NG
+now	N AW1
+obrador	OW1 B R AH0 D AO2 R
+octa	AA1 K T AH0
+octave	AA1 K T IH0 V
+of	AH1 V
+off	AO1 F
+ok	OW2 K EY1
+on	AA1 N
+once	W AH1 N S
+open	OW1 P AH0 N
+organ	AO1 R G AH0 N
+out	AW1 T
+overwrite	OW1 V ER0 R AY2 T
+package	P AE1 K IH0 JH
+pad	P AE1 D
+pan	P AE1 N
+pasted	P EY1 S T IH0 D
+pasting	P EY1 S T IH0 NG
+pelog	P EH1 L AA0 G
+pendulum	P EH1 N JH AH0 L AH0 M
+penta	P EH1 N T AH0
+perf	P ER1 F
+phrygian	F R IH1 JH IY0 AH0 N
+plate	P L EY1 T
+play	P L EY1
+playing	P L EY1 IH0 NG
+pluck	P L AH1 K
+ports	P AO1 R T S
+position	P AH0 Z IH1 SH AH0 N
+presets	P R IY1 S EH2 T S
+prome	P R OW0 M IY1
+quad	K W AA1 D
+random	R AE1 N D AH0 M
+randomness	R AE1 N D AH0 M N AH0 S
+range	R EY1 N JH
+rate	R EY1 T
+ratio	R EY1 SH IY0 OW2
+rattle	R AE1 T AH0 L
+react	R IY0 AE1 K T
+reader	R IY1 D ER0
+rec	R EH1 K
+receive	R IH0 S IY1 V
+reed	R IY1 D
+relation	R IH0 L EY1 SH AH0 N
+release	R IH0 L IY1 S
+repeats	R IH0 P IY1 T S
+rescue	R EH1 S K Y UW0
+resonance	R EH1 Z AH0 N AH0 N S
+resonator	R EH1 Z AH0 N EY2 T ER0
+restart	R IY0 S T AA1 R T
+restored	R IH0 S T AO1 R D
+rests	R EH1 S T S
+reverb	R IY1 V ER0 B
+reverse	R IH0 V ER1 S
+ring	R IH1 NG
+rubber	R AH1 B ER0
+run	R AH1 N
+russolo	R UW0 S OW1 L OW0
+rust	R AH1 S T
+same	S EY1 M
+saturation	S AE2 CH ER0 EY1 SH AH0 N
+save	S EY1 V
+saved	S EY1 V D
+saving	S EY1 V IH0 NG
+saw	S AO1
+scale	S K EY1 L
+scatter	S K AE1 T ER0
+screen	S K R IY1 N
+send	S EH1 N D
+sessions	S EH1 SH AH0 N Z
+settings	S EH1 T IH0 NG Z
+setup	S EH1 T AH2 P
+shadow	SH AE1 D OW0
+shape	SH EY1 P
+shaper	SH EY1 P ER0
+shards	SH AA1 R D Z
+silence	S AY1 L AH0 N S
+sine	S AY1 N
+sitar	S IH0 T AA1 R
+size	S AY1 Z
+snapshots	S N AE1 P SH AA2 T S
+spectra	S P EH1 K T R AH0
+spectre	S P EH1 K T ER0
+speed	S P IY1 D
+spore	S P AO1 R
+spread	S P R EH1 D
+square	S K W EH1 R
+stab	S T AE1 B
+static	S T AE1 T IH0 K
+step	S T EH1 P
+steps	S T EH1 P S
+stereo	S T EH1 R IY0 OW2
+stop	S T AA1 P
+stopped	S T AA1 P T
+stored	S T AO1 R D
+strings	S T R IH1 NG Z
+struck	S T R AH1 K
+structure	S T R AH1 K CH ER0
+sub	S AH1 B
+sus	S AH1 S
+sustain	S AH0 S T EY1 N
+swarm	S W AO1 R M
+swell	S W EH1 L
+sync	S IH1 NG K
+theus	TH IY0 AH0 S
+thorn	TH AO1 R N
+tide	T AY1 D
+tides	T AY1 D Z
+time	T AY1 M
+to	T UW1
+tone	T OW1 N
+tonic	T AA1 N IH0 K
+touches	T AH1 CH IH0 Z
+track	T R AE1 K
+tracks	T R AE1 K S
+transpose	T R AE0 N S P OW1 Z
+tri	T R AY1
+triad	T R AY1 AE0 D
+undertow	AH1 N D ER0 T OW2
+unknown	AH0 N N OW1 N
+up	AH1 P
+update	AH0 P D EY1 T
+variation	V EH2 R IY0 EY1 SH AH0 N
+vary	V EH1 R IY0
+veil	V EY1 L
+velocity	V AH0 L AA1 S AH0 T IY0
+voyage	V OY1 IH0 JH
+walk	W AO1 K
+wander	W AA1 N D ER0
+warp	W AO1 R P
+wash	W AA1 SH
+waveform	W EY1 V F AO2 R M
+whole	HH OW1 L
+width	W IH1 D TH
+wind	W IH1 N D
+window	W IH1 N D OW0
+wire	W AY1 ER0
+xor	EH1 K S AO1 R
+yes	Y EH1 S

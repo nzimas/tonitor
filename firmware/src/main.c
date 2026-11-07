@@ -670,6 +670,7 @@ static void fm1_main(void)
     if (flash_ok)
         ota_boot_cleanup();                          /* a staging area left by an update */
     ses_scan(flash_ok);                              /* the sessions in flash */
+    vo_init();                                       /* (the SCREEN READER's voice, silent: voice.c) */
     setup_load();                                    /* GLOBAL SETUP's settings (MIDI) */
 #if TELEMETRY
     bench_blocks();
@@ -748,7 +749,10 @@ static void fm1_main(void)
         setup_poll();                                /* (GLOBAL SETUP left: its changes written) */
         midi_poll();                                 /* (the tracks' CCs sent as they change) */
         ui_leds();
+        lcd_idle = seq_tick;                         /* (the sequencers' notes kept on time while the screen is sent) */
         ui_draw();
+        lcd_idle = 0;
+        reader_tick();                               /* (the SCREEN READER: what changed on the screen, spoken) */
 #if TELEMETRY
         cb_tick();
         {
@@ -806,9 +810,10 @@ static void fm1_main(void)
         }
 #endif
         {   /* nothing sounding, no key down, no loop going: the sessions' flash may be blanked a sector */
-            uint32_t l, quiet = !ui.keys && !ui.save_down;
+            uint32_t l, quiet = !ui.keys && !ui.save_down && !rx.on;
             for (l = 0; l < NLAYER && quiet; l++)
-                quiet = !layer_sounding(l) && !loop[l].play && loop[l].rec != LR_REC;
+                quiet = !layer_sounding(l) && !loop[l].play && loop[l].rec != LR_REC && !bl.run[l] && !bb.run[l];   /* (an
+                                                         * erase stalls the main loop: not under the sequencers' notes) */
             ses_idle((int)quiet);
         }
         while ((uint32_t)(fm1_ms - m) < 15u)        /* ~60 frames a second at most */
