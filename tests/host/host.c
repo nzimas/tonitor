@@ -6028,6 +6028,69 @@ static int cmd_reader(void)
     printf("reader: %s\n", fail ? "FAILED" : "ok");
     return fail ? 1 : 0;
 }
+/* build 74: the CPU page, SHIFT + black key 7 held: shown while held, gone when let go; half speed untouched; the
+ * load, its peak and the room per engine drawn (a screenshot) */
+static int cmd_cpu(const char *dir)
+{
+    uint32_t fail = 0, rate0;
+    char path[256];
+    memset(host_flash, 0xFF, sizeof host_flash);
+    layers_init();
+    ui_init();
+    sounds_init();
+    ui.force = 1;
+    ui_input();
+    ui_draw();
+    rate0 = loop[ui.sel].rate;
+    press_phys(KEY_SHIFT, 1);
+    press_phys(KEY_HALF, 1);
+    ui_input();
+    load_pct = 47;
+    load_pk = 63;
+    lay[1].engine = ENG_ANIMA;                        /* (costs as on the FM-1, not the host's model) */
+    lay[2].engine = ENG_CAL;
+    memset(vr_lay, 0xFF, sizeof vr_lay);
+    vr_lay[0] = 1, vr_ticks[0] = BLK_TICKS * 9u / 100u;
+    vr_lay[1] = 1, vr_ticks[1] = BLK_TICKS * 10u / 100u;
+    or_ticks[2] = BLK_TICKS * 22u / 100u;
+    lb_ticks[0] = BLK_TICKS * 6u / 100u;
+    lb_ticks[1] = BLK_TICKS * 3u / 100u;
+    fx_ticks = BLK_TICKS * 12u / 100u;
+    ui.force = 1;
+    ui_draw();
+    if (!ui.cpu_page || ui.shown_page != 16u)
+        printf("FAIL cpu: SHIFT + black key 7 does not show the CPU page\n"), fail++;
+    snprintf(path, sizeof path, "%s/screen-82-cpu.ppm", dir);
+    ppm(path);
+    load_pct = 104;                                   /* (over the edge: squeezed, NO ROOM) */
+    load_pk = 110;
+    ui.force = 1;
+    ui_draw();
+    snprintf(path, sizeof path, "%s/screen-83-cpu-full.ppm", dir);
+    ppm(path);
+    press_phys(KEY_SHIFT, 0);                         /* SHIFT let go, the key still held: it stays */
+    ui_input();
+    ui_draw();
+    if (!ui.cpu_page)
+        printf("FAIL cpu: the page goes before the key is let go\n"), fail++;
+    press_phys(KEY_HALF, 0);
+    ui_input();
+    ui_draw();
+    if (ui.cpu_page || ui.shown_page == 16u)
+        printf("FAIL cpu: the page stays after the key is let go\n"), fail++;
+    if (loop[ui.sel].rate != rate0)
+        printf("FAIL cpu: SHIFT + black key 7 changed the loops' speed\n"), fail++;
+    press_phys(KEY_HALF, 1);                          /* without SHIFT: no page */
+    ui_input();
+    ui_draw();
+    press_phys(KEY_HALF, 0);
+    ui_input();
+    if (ui.shown_page == 16u)
+        printf("FAIL cpu: black key 7 alone shows the CPU page\n"), fail++;
+    load_pct = load_pk = 0;
+    printf("cpu: %s\n", fail ? "FAILED" : "ok");
+    return fail ? 1 : 0;
+}
 static int cmd_setup(void)
 {
     uint32_t fail = 0, k, found;
@@ -7906,6 +7969,8 @@ int main(int argc, char **argv)
         return cmd_setup();
     if (argc >= 2 && !strcmp(argv[1], "reader"))
         return cmd_reader();
+    if (argc >= 3 && !strcmp(argv[1], "cpu"))
+        return cmd_cpu(argv[2]);
     if (argc >= 3 && !strcmp(argv[1], "cores"))
         return cmd_cores(atoi(argv[2]));
     if (argc >= 3 && !strcmp(argv[1], "hive"))

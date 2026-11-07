@@ -39,6 +39,7 @@ build/host famseed
 build/host scaleshift
 build/host perf build/screens
 build/host reader
+build/host cpu build/screens
 build/host playalong
 build/host delay build/screens
 build/host glow

@@ -98,6 +98,8 @@ void fm1_alnk0_irq(void)         /* via isr_alnk0 (hal/fm1_isr.S) */
             else if ((dbg.over & 3u) == 3u && !shed_req)
                 shed_req = 1;                    /* two near the edge in a row: a tail goes */
             load_pct = (uint8_t)(pc > 255u ? 255u : pc);
+            if (load_pct > load_pk)
+                load_pk = load_pct;          /* (the CPU page's PEAK: ui.c) */
         }
 #if TELEMETRY
         tele_half(load_pct, fm1_audio_free_half() != half, t0);

@@ -1766,6 +1766,7 @@ static void events_take(void)        /* audio ISR, at a block start */
 /* ---------------------------------------------------------- the mix --- */
 static volatile uint8_t shed_req;
 static volatile uint8_t load_pct;   /* the render's share of a half buffer, the last one (main.c) */
+static volatile uint8_t load_pk;    /* .. the highest since the CPU page last read it (ui.c) */
 static int32_t master_q12 = 2048;                /* the MASTER knob (main loop), Q12 */
 
 static int layer_sounding(uint32_t l)
@@ -1813,6 +1814,8 @@ static int32_t vr_buf[NVOICE][CTL] POOL __attribute__((aligned(32)));   /* each 
 static int32_t or_buf[NLAYER][CTL] POOL __attribute__((aligned(32)));   /* each layer's organism's */
 static int32_t fx_dl[CTL], fx_rv[CTL], fx_l[CTL], fx_r[CTL];   /* the effects: the last block's sends, their returns */
 static uint32_t vr_ticks[NVOICE], or_ticks[NLAYER], fx_ticks;
+static uint32_t lb_ticks[NLAYER];   /* each layer's own work after its voices: envelope, filter, granulator, crush,
+                                    * distortion, sends (mix_block; the CPU page, ui.c) */
 static uint8_t vr_alive[NVOICE], vr_lay[NVOICE], or_live[NLAYER];   /* (vr_lay: the layer it was rendered for) */
 static uint8_t vr_core[NVOICE], or_core[NLAYER], fx_core;   /* CPU1's share */
 
@@ -2352,8 +2355,11 @@ static void mix_block(int32_t *out)
 #if defined(FELUCCA_UAC) && FELUCCA_UAC && UAC_NBLK > 2u
     memset(usb_trk, 0, sizeof usb_trk);           /* (a silent track: silence) */
 #endif
-    for (l = 0; l < NLAYER; l++)
+    for (l = 0; l < NLAYER; l++) {
+        uint32_t c = COST_NOW();
         layer_block(l, l_, r_, rvin, dlin);
+        lb_ticks[l] = COST_NOW() - c;
+    }
     voice = vce.speaking || vce.dk || vo_r != vo_w;   /* (the SCREEN READER's voice, voice.c: nothing to say and
                                                    * the music not lowered -- off, or quiet -- nothing done) */
     if (voice)

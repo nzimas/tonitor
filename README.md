@@ -139,6 +139,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | **SAVE held** (0.8 s) | save the session. With none loaded, it offers the first empty slot; on the SESSIONS page, it saves into the slot shown and asks before overwriting; on the SNAPSHOTS page, it stores the current state in the framed snapshot. |
 | **SHIFT + SAVE** | the SESSIONS page: **PRESETS** chooses a slot, **SAVE** loads it; on an empty slot, SAVE starts a new, blank session there. SHIFT + SAVE again leaves it ([Sessions](#sessions)). |
 | **SHIFT + SAVE held** (0.8 s) | GLOBAL SETUP: the MIDI, AUDIO and SETTINGS settings ([Global setup and MIDI](#global-setup-and-midi)). |
+| **SHIFT + black key 7 held** | the CPU page while held: the load and the heaviest processes ([CPU load](#cpu-load)). |
 | **SHIFT + black key 8** | the screen reader on or off, from any page ([Screen reader](#screen-reader)). |
 | **SEQ** | the DELAY, REVERB, MOD and PLAY ALONG pages in turn, then back ([Delay](#delay), [Reverb](#reverb), [Modulation](#modulation), [Play along](#play-along)). |
 | **SHIFT + SEQ** | a new random modulation for the chosen track. |
@@ -271,7 +272,7 @@ and do nothing. They have no effect on the sound itself:
 | black key 4 | **REVERSE**: backwards |
 | black key 5 | **PENDULUM**: forwards, then backwards, in turn |
 | black key 6 | **RANDOM**: at each note, a jump to a note of the loop drawn at random |
-| black key 7 | **HALF SPEED** (the pitch does not change) |
+| black key 7 | **HALF SPEED** (the pitch does not change; held with SHIFT: the [CPU page](#cpu-load)) |
 | black key 8 | **DOUBLE SPEED** (with SHIFT: the [screen reader](#screen-reader) on or off) |
 
 The three direction keys exclude each other, as do the two speed keys; a direction and a speed combine. Press the
@@ -405,6 +406,24 @@ five decibels").
 The music drops 6 dB while it speaks. The voice follows MASTER and is not sent over USB audio. **SPEECH RATE**
 (GLOBAL SETUP > SETTINGS) sets its speed, 1 (slowest) to 5 (fastest), 2 at the start; while you set it, the reader
 already speaks at the new rate. When the reader is off, the audio does no work for it beyond one check.
+
+### CPU load
+
+How much the FM-1 can play at once depends on the engines and effects in use: ANIMA, HIVE, DRUID and CALIGULA cost
+more than FM, and the effects add to it. Hold **SHIFT + black key 7** (the 5th black key from the right) to see the
+**CPU page** for as long as the key is held.
+
+- **CPU** and a percentage: the audio load now, the time the FM-1 takes to make each piece of sound against the
+  time it has. Green below 60 %, yellow below 85 %, red above.
+- The bar: the load, with a white mark at the highest load of the last 2 seconds (**PEAK**) and a red mark at
+  85 %. Above it, the FM-1 lets the quietest tails go, and then notes, to keep the sound going without gaps.
+- **HEAVIEST**: the four processes using the most, the heaviest first, each as a share of one core's time: a
+  track's engine (**T3 CALIGULA**: its voices together), a track's effects (**T1 EFFECTS**: its envelope, filter,
+  granulator, crush, distortion and sends) or the master **DELAY REVERB**. The voices are spread over the FM-1's two
+  cores, so the shares can add up to more than the load.
+
+When the load nears the red mark, the top of the list shows what to change: fewer notes on that track, a lighter
+engine, or less of its effects.
 
 ### Modulation
 

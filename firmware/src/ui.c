@@ -68,7 +68,7 @@ static const uint8_t LAYER_BTN[NLAYER] = {B_FX, B_SEL, B_ENV, B_LFO, B_EDIT, B_G
 #define KEY_REV 8u               /* the 4th black key: the chosen track's loops backwards (again: forwards) */
 #define KEY_PEND 10u             /* the 5th: PENDULUM, forwards and backwards in turn */
 #define KEY_RAND 13u             /* the 6th: RANDOM, forwards from a note drawn at random each time the next is due */
-#define KEY_HALF 15u             /* the 7th: half speed (again: normal) */
+#define KEY_HALF 15u             /* the 7th: half speed (again: normal). SHIFT + it, held: the CPU page */
 #define KEY_DOUBLE 17u           /* the 8th: double speed. SHIFT +: the SCREEN READER on or off (anywhere; no light:
                                   * heard, not seen) */
 #define KEY_NOTE0 53             /* the lowest key, F3 */
@@ -104,6 +104,10 @@ static struct {
     uint16_t flash_col;
     char flash_l1[12], flash_l2[12];
     uint8_t sc_page;             /* the SCALE page is up */
+    uint8_t cpu_page, cpu_was;   /* SHIFT + black key 7 held: the CPU page (draw_cpu_page) */
+    uint8_t cpu_wi, cpu_win[4];  /* .. the load's highest in each of the last four half seconds */
+    uint16_t cpu_c[2u * NLAYER + 1u];   /* .. each process's cost, smoothed: per mille of a block x 16 (draw_cpu_page) */
+    uint32_t cpu_t, cpu_shown, cpu_avg;   /* (when a half second began; drawn; the load, smoothed, Q8) */
     uint8_t rd_flip;             /* SHIFT + black key 8: the SCREEN READER to turn on or off (reader_tick) */
     uint8_t sc_peek;             /* .. or shown a moment, until sc_peek_until (SHIFT + black key 1: a new scale) */
     uint32_t sc_peek_until;
@@ -819,7 +823,7 @@ static void seq_tick(void)
 
 static void ui_input(void)
 {
-    uint32_t rel, press = fm1_input_edges(&rel), keys, ch, dbl, k, l;
+    uint32_t rel, press = fm1_input_edges(&rel), keys, ch, dbl, half, k, l;
     int32_t s;
     int sh;
     {   /* CPU1 retired as it plays (a fault, a stall, a misread): said, once */
@@ -1355,6 +1359,13 @@ static void ui_input(void)
     }
     keys = fm1_in.notes;
     ch = keys ^ ui.keys;
+    half = (ch & keys) >> KEY_HALF & 1u;
+    if (half && (keys >> KEY_SHIFT & 1u)) {      /* SHIFT + it: the CPU page while it is held, not half speed */
+        ui.cpu_page = 1;
+        half = 0;
+    }
+    if (ui.cpu_page && !(keys >> KEY_HALF & 1u))
+        ui.cpu_page = 0;
     dbl = (ch & keys) >> KEY_DOUBLE & 1u;
     if (dbl && (keys >> KEY_SHIFT & 1u)) {       /* SHIFT + it: the SCREEN READER, not double speed */
         ui.rd_flip = 1;
@@ -1367,8 +1378,8 @@ static void ui_input(void)
             bl.dir[l] = (uint8_t)(bl.dir[l] == want ? LD_FWD : want);
             say(bl.dir[l] == LD_REV ? "REVERSE" : bl.dir[l] == LD_PEND ? "PENDULUM" : bl.dir[l] == LD_RAND ? "RANDOM" : "FORWARD", 1200);
         }
-        if ((ch & keys) >> KEY_HALF & 1u || dbl) {
-            uint32_t want = (ch & keys) >> KEY_HALF & 1u ? LS_HALF : LS_DOUBLE;
+        if (half || dbl) {
+            uint32_t want = half ? LS_HALF : LS_DOUBLE;
             bl.spd[l] = (uint8_t)(bl.spd[l] == want ? LS_NORMAL : want);
             say(bl.spd[l] == LS_HALF ? "HALF SPEED" : bl.spd[l] == LS_DOUBLE ? "DOUBLE SPEED" : "NORMAL SPEED", 1200);
         }
@@ -1382,8 +1393,8 @@ static void ui_input(void)
             ev_post(EV_LOOP_MODE, ui.sel, 0, want);
             say(want == LD_REV ? "REVERSE" : want == LD_PEND ? "PENDULUM" : want == LD_RAND ? "RANDOM" : "FORWARD", 1200);
         }
-        if ((ch & keys) >> KEY_HALF & 1u || dbl) {
-            uint32_t want = (ch & keys) >> KEY_HALF & 1u ? LS_HALF : LS_DOUBLE;
+        if (half || dbl) {
+            uint32_t want = half ? LS_HALF : LS_DOUBLE;
             want = p->rate == want ? LS_NORMAL : want;
             ev_post(EV_LOOP_MODE, ui.sel, 1, want);
             say(want == LS_HALF ? "HALF SPEED" : want == LS_DOUBLE ? "DOUBLE SPEED" : "NORMAL SPEED", 1200);
@@ -2230,6 +2241,100 @@ static void draw_sc_page(void)
     ui.shown_sc_touch = (int8_t)t;
 }
 
+/* the CPU page (SHIFT + black key 7, while held): the audio's load now (smoothed) and its highest in the last 2 s,
+ * a bar with the edge marked (85 %: past it, a tail or a note is let go), and the four heaviest processes now, the
+ * heaviest first: a track's engine (its voices, or its organism), a track's effects (layers.c layer_block: its
+ * envelope, filter, granulator, crush, distortion, sends) or the delay and reverb -- each as a share of a block's
+ * time on one core (the voices are dealt over both cores, so the shares can add up to more than the load) */
+#define CPU_EDGE 85u
+#define CPU_NP (2u * NLAYER + 1u)        /* (the processes: each track's engine, each track's effects, the delay and reverb) */
+static uint32_t cpu_now(uint32_t p)      /* a process's cost in the last block, per mille of a block */
+{
+    uint32_t t = 0, k;
+    if (p < NLAYER) {
+        for (k = 0; k < NVOICE; k++)
+            t += vr_lay[k] == p ? vr_ticks[k] : 0u;
+        t += eng_organism(lay[p].engine) ? or_ticks[p] : 0u;
+    } else
+        t = p < 2u * NLAYER ? lb_ticks[p - NLAYER] : fx_ticks;
+    t = t * 1000u / BLK_TICKS;
+    return t > 4000u ? 4000u : t;
+}
+static void draw_cpu_page(void)
+{
+    uint32_t now = fm1_ms, pk = load_pk, avg, i, j, np = 0;
+    uint8_t ord[CPU_NP];
+    uint16_t col;
+    char t[24];
+    if (ui.force) {                              /* (opened: the load as it is, not climbing from 0) */
+        ui.cpu_avg = (uint32_t)load_pct * 256u;
+        memset(ui.cpu_win, 0, sizeof ui.cpu_win);
+        for (i = 0; i < CPU_NP; i++)
+            ui.cpu_c[i] = (uint16_t)(cpu_now(i) * 16u);
+        ui.cpu_t = now;
+    }
+    if ((uint32_t)(now - ui.cpu_t) >= 500u) {    /* (a half second's highest kept, four of them) */
+        ui.cpu_t = now;
+        ui.cpu_win[ui.cpu_wi++ & 3u] = load_pk;
+        load_pk = 0;
+    }
+    ui.cpu_avg = (ui.cpu_avg * 7u + (uint32_t)load_pct * 256u) / 8u;
+    for (i = 0; i < CPU_NP; i++)                 /* (each, smoothed over some passes) */
+        ui.cpu_c[i] = (uint16_t)(((uint32_t)ui.cpu_c[i] * 7u + cpu_now(i) * 16u) / 8u);
+    for (i = 0; i < 4u; i++)
+        pk = ui.cpu_win[i] > pk ? ui.cpu_win[i] : pk;
+    if (!ui.force && (uint32_t)(now - ui.cpu_shown) < 250u)
+        return;
+    ui.cpu_shown = now;
+    avg = (ui.cpu_avg + 128u) >> 8;
+    avg = avg > 999u ? 999u : avg;
+    pk = pk < avg ? avg : pk > 999u ? 999u : pk;
+    col = pk < 60u ? C_OK : pk < CPU_EDGE ? RGB(255, 200, 0) : C_BAD;
+    cv_begin(240, 50, C_BLACK);
+    str_cpy(t, "CPU ", 5);
+    fmt_int(t + 4, (int32_t)avg);
+    str_cpy(t + str_len(t), "%", 2);
+    cv_text_fit(2, &FONT_L, t, col);             /* (CPU 100%: squeezed to the width) */
+    cv_blit(0, 0);
+    cv_begin(240, 50, C_BLACK);
+    cv_rect(20, 6, 200, 12, RGB(50, 50, 50));
+    cv_rect(20, 6, (int32_t)(avg > 100u ? 100u : avg) * 2, 12, col);
+    cv_rect(20 + (int32_t)CPU_EDGE * 2, 2, 2, 20, C_BAD);                       /* (the edge) */
+    cv_rect(19 + (int32_t)(pk > 100u ? 100u : pk) * 2, 4, 3, 16, C_WHITE);      /* (the highest) */
+    str_cpy(t, "PEAK ", 6);
+    fmt_int(t + 5, (int32_t)pk);
+    cv_text_c(26, &FONT_XS, t, RGB(175, 175, 175));
+    cv_blit(0, 50);
+    for (i = 0; i < CPU_NP; i++) {               /* the heaviest first (1 % and more) */
+        if (ui.cpu_c[i] < 160u)
+            continue;
+        for (j = np++; j > 0 && ui.cpu_c[ord[j - 1u]] < ui.cpu_c[i]; j--)
+            ord[j] = ord[j - 1u];
+        ord[j] = (uint8_t)i;
+    }
+    CV_AREA(0, 100, 240, 140, C_BLACK) {
+        if (np) {                                /* (the shares in %: the sign once, over them) */
+            cv_text(6, 0, &FONT_XS, "HEAVIEST", RGB(175, 175, 175));
+            cv_text(234 - text_w(&FONT_S, "%"), ((int32_t)FONT_XS.h - (int32_t)FONT_S.h) / 2, &FONT_S, "%", RGB(175, 175, 175));
+        } else
+            cv_text_c(0, &FONT_XS, "NOTHING RUNNING", RGB(175, 175, 175));
+        for (i = 0; i < np && i < 4u; i++) {
+            uint32_t p = ord[i], v = (ui.cpu_c[p] + 80u) / 160u;
+            int32_t y = 28 + (int32_t)i * 27;
+            if (p < 2u * NLAYER) {
+                t[0] = 'T';
+                t[1] = (char)('1' + p % NLAYER);
+                t[2] = ' ';
+                str_cpy(t + 3, p < NLAYER ? ENG_NAME[lay[p].engine] : "EFFECTS", sizeof t - 3u);
+            } else
+                str_cpy(t, "DELAY REVERB", sizeof t);
+            cv_text(6, y, &FONT_XS, t, p < NLAYER ? LAYER_COL[p] : C_WHITE);
+            fmt_int(t, (int32_t)v);
+            cv_text(234 - text_w(&FONT_XS, t), y, &FONT_XS, t, C_WHITE);
+        }
+    }
+}
+
 /* a layer's knob as a dial over the whole screen, drawn band by band (the canvas holds 112 rows): its name and
  * the layer's number; a dial from 7 o'clock to 5, the way it is turned in the layer's colour, a white pointer;
  * under it what it does. The filter and the granulator are off at 12 o'clock and go either way; the send
@@ -2655,6 +2760,21 @@ static void ui_draw(void)
     }
     if (ui.sc_peek) {                            /* (shown: back to the page as it was) */
         ui.sc_peek = 0;
+        ui.shown_page = 0xFF;
+        ui.force = 1;
+    }
+    if (ui.cpu_page) {                           /* the CPU page, while SHIFT + black key 7 are held */
+        if (ui.shown_page != 16)
+            ui.force = 1;
+        draw_cpu_page();
+        ui.shown_page = 16;
+        ui.shown_ses = 0;
+        ui.force = 0;
+        ui.cpu_was = 1;
+        return;
+    }
+    if (ui.cpu_was) {                            /* (let go: back to the page as it was) */
+        ui.cpu_was = 0;
         ui.shown_page = 0xFF;
         ui.force = 1;
     }
