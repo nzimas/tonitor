@@ -1,5 +1,13 @@
 # Changelog
 
+## Build 72
+
+Added
+- FM-1 units with the UC25HQ80 flash chip (JEDEC ID B36014), found in units sold from autumn 2026, are supported:
+  Tonitor saves sessions to their flash and installs on them. Before, the chip was taken for an unknown one:
+  sessions were not saved and the update loader refused to install. Not yet tested on such a unit; on units with
+  the earlier P25Q80 chip nothing changes.
+
 ## Build 71
 
 Added

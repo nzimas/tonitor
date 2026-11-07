@@ -664,7 +664,7 @@ static void fm1_main(void)
     uint32_t healthy_since, t_both = 0, batt_at = 0;
     {
         uint32_t f = irq_save();
-        flash_ok = FL_FAR(fl_jedec_ram)() == 0x856014u;   /* the expected 1 MiB part */
+        flash_ok = FL_JEDEC_OK(FL_FAR(fl_jedec_ram)());   /* a known 1 MiB part (fm1_flash_id.h) */
         irq_restore(f);
     }
     if (flash_ok)

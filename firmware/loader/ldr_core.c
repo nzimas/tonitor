@@ -24,8 +24,8 @@
  * Hooks from the platform (loader.c, tests/ldr_test.c):
  *   ldr_fread(off, p, n)  ldr_erase(off)  ldr_prog(off, p, n)   flash, 0 = ok
  *   ldr_record_clear()    forget the RAM update record
- *   ldr_flash_known()     the flash chip is the 1 MiB part SLOOP's storage expects (else nothing is
- *                         written: the update records go and the old firmware starts again)
+ *   ldr_flash_known()     the flash chip is one of the 1 MiB parts SLOOP's storage expects (fm1_flash_id.h;
+ *                         else nothing is written: the update records go and the old firmware starts again)
  *   ldr_progress(done, total)
  * plus the ota.c hooks (frames, time, idle). */
 #define LDR_APP_LO 0x4000u

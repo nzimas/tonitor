@@ -14,6 +14,8 @@ tests/check_target_ir.sh
 clang -O2 -std=gnu99 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-unused-function -Werror \
     -Ifirmware/src -Ibuild/gen tests/host/host.c -o build/host
 build/host check
+clang -O2 -std=gnu99 -Wall -Wextra -Werror -Ifirmware/hal tests/host/flash_id.c -o build/flash_id
+build/flash_id
 clang -O2 -std=gnu99 -w -Ifirmware/src -Ibuild/gen tests/golden/golden.c -o build/golden
 for g in 0 1 2 3 4 5 6; do
     build/golden $g | diff -q - tests/golden/gen$g.txt >/dev/null || { echo "FAIL golden: generation $g no longer draws its sounds again"; exit 1; }

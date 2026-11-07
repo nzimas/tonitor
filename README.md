@@ -79,6 +79,8 @@ MIDI with SysEx), and follow it. It finds the FM-1, checks what it runs, writes 
 result. Nothing is uploaded anywhere: the page talks to the FM-1 directly.
 
 It installs over whatever the FM-1 runs now — M-VAVE's own firmware, another alternative firmware or an earlier Tonitor.
+It runs on FM-1 units with either flash chip: the P25Q80 of earlier units and the UC25HQ80 of units sold from
+autumn 2026 (from build 72; not yet tested on a unit with the UC25HQ80).
 Do not unplug the FM-1 while it writes.
 
 To build and install from source instead, see [Building from source](#building-from-source).
