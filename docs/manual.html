@@ -209,7 +209,7 @@
 <tr><th>No.</th><th>Control</th><th>Under Tonitor</th></tr>
 <tr id="ctl-1" data-n="1"><td class="n"><a href="#fig-panel">1</a></td><td><b>MASTER</b></td><td rowspan="1">The output level.</td></tr>
 <tr id="ctl-2" data-n="2"><td class="n"><a href="#fig-panel">2</a></td><td><b>SELECT</b></td><td rowspan="1">The chosen track's level. On the SCALE page (ARP): the root.</td></tr>
-<tr id="ctl-3" data-n="3"><td class="n"><a href="#fig-panel">3</a></td><td><b>PRESETS</b></td><td rowspan="1">The chosen track's engine. <b>SHIFT +</b>: a new sound of the family before or after. On the SESSIONS, PRESETS, MOD and GLOBAL SETUP pages: the slot or entry.</td></tr>
+<tr id="ctl-3" data-n="3"><td class="n"><a href="#fig-panel">3</a></td><td><b>PRESETS</b></td><td rowspan="1">The chosen track's engine. <b>SHIFT +</b>: a new sound of the family before or after, in alphabetical order. On the SESSIONS, PRESETS, MOD and GLOBAL SETUP pages: the slot or entry.</td></tr>
 <tr id="ctl-4" data-n="4"><td class="n"><a href="#fig-panel">4</a></td><td><b>ALGORITHM</b></td><td rowspan="1">The chosen track's pan. On the SCALE page: the scale.</td></tr>
 <tr id="ctl-5" data-n="5"><td class="n"><a href="#fig-panel">5</a></td><td><b>OCT−</b></td><td rowspan="1">The chosen track's octave down. <b>SHIFT +</b>: every loop one step of the scale down. <b>SHIFT + a track button held +</b>: that track's loops only.</td></tr>
 <tr id="ctl-6" data-n="6"><td class="n"><a href="#fig-panel">6</a></td><td><b>OCT+</b></td><td rowspan="1">The same, up.</td></tr>
@@ -263,7 +263,7 @@
 <tr><th>Control</th><th>What it does</th></tr>
 <tr><td><b>FX SEL ENV LFO EDIT GLO</b> (top row)</td><td>choose track <b>1–6</b> (lit: chosen; glowing: sounding). From any page, back to playing. <b>Held</b> (0.8 s): copy the track, or paste the copy onto it (<a href="#copying-a-track">Copying a track</a>).</td></tr>
 <tr><td><b>PRESETS</b> knob</td><td>the chosen track's engine: <b>FM</b>, <b>ANIMA</b>, <b>CALIGULA</b>, <b>RUSSOLO</b>, <b>DRUID</b>, <b>BAYAREA</b>, <b>HIVE</b>, <b>OBRADOR</b>. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA.</td></tr>
-<tr><td><b>SHIFT + PRESETS</b></td><td>a new sound of the previous or next family.</td></tr>
+<tr><td><b>SHIFT + PRESETS</b></td><td>a new sound of the previous or next family, in alphabetical order (A to Z).</td></tr>
 <tr><td><b>HOME</b></td><td>a new sound for the chosen track.</td></tr>
 <tr><td><b>SHIFT + HOME</b></td><td>a new sound of the same family.</td></tr>
 <tr><td><b>OCT− / OCT+</b></td><td>the chosen track's octave, −3 to +3.</td></tr>
@@ -609,129 +609,129 @@
 <p>Six-operator FM after the DX7 (msfa, the core of Dexed). HOME draws a patch from one of these families and levels it to one loudness:</p>
 <table>
 <tr><th>Family</th><th></th></tr>
-<tr><td><b>METAL</b></td><td>bells and gongs, inharmonic</td></tr>
-<tr><td><b>DRONE</b></td><td>spectral drones, slowly beating</td></tr>
+<tr><td><b>ABYSS</b></td><td>sub-bass rumble, breathing slowly</td></tr>
+<tr><td><b>BLOOM</b></td><td>a tone opening over seconds</td></tr>
+<tr><td><b>BOWED</b></td><td>a bowed string</td></tr>
 <tr><td><b>BRUIT</b></td><td>noises</td></tr>
+<tr><td><b>CHOIR</b></td><td>vowels</td></tr>
+<tr><td><b>CLANG</b></td><td>DX7-style bells</td></tr>
+<tr><td><b>CREEP</b></td><td>a held note slowly leaving its pitch</td></tr>
+<tr><td><b>DRONE</b></td><td>spectral drones, slowly beating</td></tr>
+<tr><td><b>FRICTION</b></td><td>creaking</td></tr>
+<tr><td><b>GLITCH</b></td><td>broken, mechanical sounds</td></tr>
+<tr><td><b>HOLLOW</b></td><td>odd harmonics only: a dark pipe</td></tr>
 <tr><td><b>IMPACT</b></td><td>struck bodies: thuds, knocks, metal hits, drum skins, debris</td></tr>
 <tr><td><b>ITERATIF</b></td><td>a sound pulsed by its own LFO</td></tr>
-<tr><td><b>SPECTRE</b></td><td>a spectral arpeggio: harmonics lifted one after another by beating</td></tr>
-<tr><td><b>ABYSS</b></td><td>sub-bass rumble, breathing slowly</td></tr>
-<tr><td><b>FRICTION</b></td><td>creaking</td></tr>
-<tr><td><b>CHOIR</b></td><td>vowels</td></tr>
-<tr><td><b>BOWED</b></td><td>a bowed string</td></tr>
-<tr><td><b>HOLLOW</b></td><td>odd harmonics only: a dark pipe</td></tr>
-<tr><td><b>BLOOM</b></td><td>a tone opening over seconds</td></tr>
-<tr><td><b>TIDE</b></td><td>three stacks crossfading under a slow tide</td></tr>
-<tr><td><b>SHARDS</b></td><td>a tone broken by random pitch steps and chopped</td></tr>
-<tr><td><b>STATIC</b></td><td>ring-modulated bands</td></tr>
-<tr><td><b>WIND</b></td><td>breath and gusts over a soft drone</td></tr>
-<tr><td><b>PLUCK</b></td><td>plucked strings</td></tr>
-<tr><td><b>MALLET</b></td><td>struck bars: marimba, vibraphone, kalimba</td></tr>
-<tr><td><b>WARP</b></td><td>anything: odd ratios, long glides, bouncing pitch</td></tr>
-<tr><td><b>GLITCH</b></td><td>broken, mechanical sounds</td></tr>
-<tr><td><b>SHAPER</b></td><td>a tone rolling between odd and even harmonics a few times a second</td></tr>
 <tr><td><b>LADDER</b></td><td>partials entering or dying one by one</td></tr>
+<tr><td><b>MALLET</b></td><td>struck bars: marimba, vibraphone, kalimba</td></tr>
+<tr><td><b>METAL</b></td><td>bells and gongs, inharmonic</td></tr>
+<tr><td><b>PLUCK</b></td><td>plucked strings</td></tr>
 <tr><td><b>REVERSE</b></td><td>a sound swelling while the key is held: tape run backwards</td></tr>
-<tr><td><b>CREEP</b></td><td>a held note slowly leaving its pitch</td></tr>
-<tr><td><b>CLANG</b></td><td>DX7-style bells</td></tr>
+<tr><td><b>SHAPER</b></td><td>a tone rolling between odd and even harmonics a few times a second</td></tr>
+<tr><td><b>SHARDS</b></td><td>a tone broken by random pitch steps and chopped</td></tr>
+<tr><td><b>SPECTRE</b></td><td>a spectral arpeggio: harmonics lifted one after another by beating</td></tr>
+<tr><td><b>STATIC</b></td><td>ring-modulated bands</td></tr>
+<tr><td><b>TIDE</b></td><td>three stacks crossfading under a slow tide</td></tr>
+<tr><td><b>WARP</b></td><td>anything: odd ratios, long glides, bouncing pitch</td></tr>
+<tr><td><b>WIND</b></td><td>breath and gusts over a soft drone</td></tr>
 </table>
 <p>GLISSE and RUBBER, families of older builds, are now part of WARP; sounds saved with them load as they were.</p>
 <h3 id="anima-a-lo-fi-synthesizer-played-by-a-simulated-hand">ANIMA — a lo-fi synthesizer played by a simulated hand</h3>
-<p>A port of the <i>anima</i> opcode from Vascular, at half the sample rate. While a key is held, a simulated finger drags figures across a virtual surface; where it is, how hard it presses and how fast it moves change the timbre, never the pitch. HOME draws one of twenty-two kinds: <b>HAZE</b>, <b>VOYAGE</b>, <b>GLASS</b>, <b>BELLS</b>, <b>GOLDEN</b>, <b>BREATH</b>, <b>GRIT</b>, <b>SWARM</b>, <b>TIDE</b>, <b>CHOIR</b>, <b>SHARDS</b>, <b>BOWL</b>, <b>DUST</b>, <b>MACHINE</b>, <b>PLUCK</b>, <b>REED</b>, <b>FOG</b>, <b>ORGAN</b>, <b>BITS</b>, <b>DRIFT</b>, <b>MURMUR</b> and <b>HOWL</b>.</p>
+<p>A port of the <i>anima</i> opcode from Vascular, at half the sample rate. While a key is held, a simulated finger drags figures across a virtual surface; where it is, how hard it presses and how fast it moves change the timbre, never the pitch. HOME draws one of twenty-two kinds: <b>BELLS</b>, <b>BITS</b>, <b>BOWL</b>, <b>BREATH</b>, <b>CHOIR</b>, <b>DRIFT</b>, <b>DUST</b>, <b>FOG</b>, <b>GLASS</b>, <b>GOLDEN</b>, <b>GRIT</b>, <b>HAZE</b>, <b>HOWL</b>, <b>MACHINE</b>, <b>MURMUR</b>, <b>ORGAN</b>, <b>PLUCK</b>, <b>REED</b>, <b>SHARDS</b>, <b>SWARM</b>, <b>TIDE</b> and <b>VOYAGE</b>.</p>
 <h3 id="caligula-an-organism">CALIGULA — an organism</h3>
 <p>After SOMA's LYRA-8, as Mike Moreno's LIRA-8 emulates it (BSD licence): eight cross-modulating oscillators in four pairs, a total feedback, gating LFOs and a short modulated delay, played by a simulated hand that touches the plates while a key is held. It is silent until a key is down and is tuned around the note played; a second key moves it to the new note, and letting go of the last key lets it ring out. It is one organism per track, outside the twelve voices. HOME draws one of ten species:</p>
 <table>
 <tr><th>Species</th><th></th></tr>
+<tr><td><b>CARRION</b></td><td>the depths, heavy feedback, a warped delay, surges</td></tr>
+<tr><td><b>HIVE</b></td><td>quick gates: irregular rhythms, bursts</td></tr>
+<tr><td><b>LITANY</b></td><td>a slow choir of unisons and octaves</td></tr>
+<tr><td><b>MOTH</b></td><td>soft triangles fluttering through the gates, on a pulse</td></tr>
+<tr><td><b>RUST</b></td><td>driven, cross-modulated, surging, sometimes rhythmic</td></tr>
 <tr><td><b>SPORE</b></td><td>slow swells, held drones, breathing; low</td></tr>
 <tr><td><b>THORN</b></td><td>sharp, deep FM, driven, bursting often</td></tr>
-<tr><td><b>HIVE</b></td><td>quick gates: irregular rhythms, bursts</td></tr>
-<tr><td><b>CARRION</b></td><td>the depths, heavy feedback, a warped delay, surges</td></tr>
-<tr><td><b>VEIL</b></td><td>mostly triangles, light modulation: the calmest</td></tr>
-<tr><td><b>RUST</b></td><td>driven, cross-modulated, surging, sometimes rhythmic</td></tr>
-<tr><td><b>LITANY</b></td><td>a slow choir of unisons and octaves</td></tr>
 <tr><td><b>UNDERTOW</b></td><td>deep, heavy feedback, slow surges</td></tr>
+<tr><td><b>VEIL</b></td><td>mostly triangles, light modulation: the calmest</td></tr>
 <tr><td><b>WIRE</b></td><td>high and sharp, clusters, a quick hand tapping</td></tr>
-<tr><td><b>MOTH</b></td><td>soft triangles fluttering through the gates, on a pulse</td></tr>
 </table>
 <h3 id="russolo-noise-logic-and-broken-buffers">RUSSOLO — noise, logic and broken buffers</h3>
 <p>The techniques of Robert Heel's Noisferatu (GPL-3.0), at a low sample rate and bit depth. Like CALIGULA it is silent until a key is down, one organism per track, and a key sets its pitch. HOME draws one of seventeen kinds; the first two macros are the kind's own parameters, the others <b>CRUSH</b> and <b>RANDOMNESS</b>.</p>
 <table>
 <tr><th>Kind</th><th></th></tr>
-<tr><td><b>HOLD</b></td><td>sample-and-hold noise</td></tr>
+<tr><td><b>BEND</b></td><td>the buffer's addresses bent on a clock</td></tr>
+<tr><td><b>BLIPS</b></td><td>decaying triangles on the key's harmonics</td></tr>
+<tr><td><b>CASCADE</b></td><td>squares modulating squares</td></tr>
+<tr><td><b>CHORD</b></td><td>triangles on a chord, slowly beating</td></tr>
+<tr><td><b>CHUNKS</b></td><td>a buffer of noise, saw and silence, read at the key's speed</td></tr>
+<tr><td><b>CLANG</b></td><td>two triangles at an inharmonic ratio, XOR'd</td></tr>
+<tr><td><b>CRACKLE</b></td><td>sparse clicks ringing over hiss</td></tr>
 <tr><td><b>DUST</b></td><td>random clicks through a low-pass</td></tr>
 <tr><td><b>GATES</b></td><td>noise opened and closed by two triangles</td></tr>
-<tr><td><b>CRACKLE</b></td><td>sparse clicks ringing over hiss</td></tr>
-<tr><td><b>NOR</b>, <b>XOR</b></td><td>two oscillators combined bit by bit</td></tr>
-<tr><td><b>RING</b></td><td>two oscillators multiplied</td></tr>
-<tr><td><b>CASCADE</b></td><td>squares modulating squares</td></tr>
-<tr><td><b>CLANG</b></td><td>two triangles at an inharmonic ratio, XOR'd</td></tr>
-<tr><td><b>CHUNKS</b></td><td>a buffer of noise, saw and silence, read at the key's speed</td></tr>
+<tr><td><b>HOLD</b></td><td>sample-and-hold noise</td></tr>
 <tr><td><b>JUMP</b></td><td>the buffer read with random jumps</td></tr>
-<tr><td><b>WANDER</b></td><td>a window wandering through the buffer</td></tr>
-<tr><td><b>BEND</b></td><td>the buffer's addresses bent on a clock</td></tr>
+<tr><td><b>NOR</b>, <b>XOR</b></td><td>two oscillators combined bit by bit</td></tr>
 <tr><td><b>QUAD</b></td><td>four such bendings, switched by chance</td></tr>
-<tr><td><b>BLIPS</b></td><td>decaying triangles on the key's harmonics</td></tr>
+<tr><td><b>RING</b></td><td>two oscillators multiplied</td></tr>
 <tr><td><b>WALK</b></td><td>a random walk over a scale from the key</td></tr>
-<tr><td><b>CHORD</b></td><td>triangles on a chord, slowly beating</td></tr>
+<tr><td><b>WANDER</b></td><td>a window wandering through the buffer</td></tr>
 </table>
 <h3 id="druid-strings-and-resonant-bodies">DRUID — strings and resonant bodies</h3>
 <p>A port of the resonators of Mutable Instruments Rings by Émilie Gillet (MIT licence): strings, sympathetic strings and modal bodies, plucked, struck, bowed or rattled. Letting go of a key damps the sound by an amount set per sound.</p>
 <table>
 <tr><th>Kind</th><th>Resonator</th><th>Exciter</th></tr>
-<tr><td><b>PLUCK</b></td><td>string</td><td>pluck</td></tr>
-<tr><td><b>BOWED</b></td><td>string</td><td>bow</td></tr>
-<tr><td><b>STRUCK</b></td><td>string, stretched partials</td><td>strike</td></tr>
-<tr><td><b>SITAR</b></td><td>string, buzzing bridge</td><td>pluck</td></tr>
-<tr><td><b>RATTLE</b></td><td>string</td><td>dust</td></tr>
-<tr><td><b>HARP</b></td><td>sympathetic strings</td><td>pluck</td></tr>
-<tr><td><b>DRONE</b></td><td>sympathetic strings</td><td>bow</td></tr>
 <tr><td><b>BELL</b></td><td>modal</td><td>strike</td></tr>
+<tr><td><b>BOWED</b></td><td>string</td><td>bow</td></tr>
 <tr><td><b>BOWL</b></td><td>modal</td><td>bow</td></tr>
+<tr><td><b>DRONE</b></td><td>sympathetic strings</td><td>bow</td></tr>
+<tr><td><b>HARP</b></td><td>sympathetic strings</td><td>pluck</td></tr>
 <tr><td><b>PLATE</b></td><td>modal</td><td>dust</td></tr>
+<tr><td><b>PLUCK</b></td><td>string</td><td>pluck</td></tr>
+<tr><td><b>RATTLE</b></td><td>string</td><td>dust</td></tr>
+<tr><td><b>SITAR</b></td><td>string, buzzing bridge</td><td>pluck</td></tr>
+<tr><td><b>STRUCK</b></td><td>string, stretched partials</td><td>strike</td></tr>
 </table>
 <h3 id="bayarea-a-west-coast-voice">BAYAREA — a West Coast voice</h3>
 <p>A port of the bayarea opcode of Vascular: an oscillator from sine to saw, frequency-modulated by two sines, a wavefolder, then a low-pass gate (struck) or a sustaining envelope over resonant low-passes, a drive and a bank of resonators, all moved by an LFO.</p>
 <table>
 <tr><th>Kind</th><th>Envelope</th><th></th></tr>
 <tr><td><b>BONGO</b></td><td>gate</td><td>low, short decay</td></tr>
-<tr><td><b>PLUCK</b></td><td>gate</td><td>brighter, short to medium decay</td></tr>
 <tr><td><b>CHIME</b></td><td>gate</td><td>long decay, resonators</td></tr>
-<tr><td><b>FOLDED</b></td><td>gate</td><td>heavy folding</td></tr>
-<tr><td><b>SWELL</b></td><td>sustain</td><td>slow attack, long release</td></tr>
 <tr><td><b>DRONE</b></td><td>sustain</td><td>slower attack, long release</td></tr>
+<tr><td><b>FOLDED</b></td><td>gate</td><td>heavy folding</td></tr>
+<tr><td><b>PLUCK</b></td><td>gate</td><td>brighter, short to medium decay</td></tr>
+<tr><td><b>SWELL</b></td><td>sustain</td><td>slow attack, long release</td></tr>
 </table>
 <h3 id="hive-a-swarm-of-oscillators">HIVE — a swarm of oscillators</h3>
 <p>A port of DigiRust's SWARMER, extended: seven oscillators per voice, each at its own place around the note (an octave, a fifth, a cluster step or an inharmonic partial), each moved by slow LFOs, through a filter with its own envelope.</p>
 <table>
 <tr><th>Kind</th><th></th></tr>
-<tr><td><b>SUB</b></td><td>the main oscillator one or two octaves down</td></tr>
-<tr><td><b>LEAD</b></td><td>bright, short attack, resonant</td></tr>
-<tr><td><b>STAB</b></td><td>short, a strong filter sweep</td></tr>
-<tr><td><b>PAD</b></td><td>slow attack, wide detune, long release</td></tr>
-<tr><td><b>DRONE</b></td><td>slower attack, full sustain, long release</td></tr>
-<tr><td><b>WASH</b></td><td>the slowest attack and release, noise, a moving filter</td></tr>
-<tr><td><b>CLUSTER</b></td><td>quarter-tone and semitone steps, slowly beating</td></tr>
-<tr><td><b>METAL</b></td><td>inharmonic partials, struck</td></tr>
-<tr><td><b>SPECTRA</b></td><td>inharmonic partials turning slowly</td></tr>
-<tr><td><b>GROUND</b></td><td>two octaves down, a dense cluster with noise: rumble</td></tr>
 <tr><td><b>AIR</b></td><td>filtered noise and high whistles: wind</td></tr>
+<tr><td><b>CLUSTER</b></td><td>quarter-tone and semitone steps, slowly beating</td></tr>
+<tr><td><b>DRONE</b></td><td>slower attack, full sustain, long release</td></tr>
+<tr><td><b>GROUND</b></td><td>two octaves down, a dense cluster with noise: rumble</td></tr>
+<tr><td><b>LEAD</b></td><td>bright, short attack, resonant</td></tr>
+<tr><td><b>METAL</b></td><td>inharmonic partials, struck</td></tr>
+<tr><td><b>PAD</b></td><td>slow attack, wide detune, long release</td></tr>
+<tr><td><b>SPECTRA</b></td><td>inharmonic partials turning slowly</td></tr>
+<tr><td><b>STAB</b></td><td>short, a strong filter sweep</td></tr>
+<tr><td><b>SUB</b></td><td>the main oscillator one or two octaves down</td></tr>
 <tr><td><b>TIDES</b></td><td>oscillators gliding apart and back</td></tr>
+<tr><td><b>WASH</b></td><td>the slowest attack and release, noise, a moving filter</td></tr>
 </table>
 <p>CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are for textures rather than melodies.</p>
 <h3 id="obrador-an-analog-polysynth">OBRADOR — an analog polysynth</h3>
 <p>An analog polysynth voice after the Oberheim SEM and the two-voice Oberheims, written for Tonitor with OberVave (an Oberheim-style firmware for the FM-1, by zvenson) as its frame of reference. Per voice: two oscillators (saw, pulse or both, band-limited), the second detuned or an interval away, hard-synced or cross-modulating now and then; in the lush kinds a second voice card, detuned against the first; a drive into the SEM's 12 dB filter, its output morphing from low-pass through notch to high-pass, its resonance soft-limited; a second low-pass stage for 24 dB, or the band-pass; filter and amplifier envelopes on analog curves; an LFO that comes in after a delay; and each card's own small offsets of tune and cutoff with a slow drift.</p>
 <table>
 <tr><th>Kind</th><th></th></tr>
-<tr><td><b>STRINGS</b></td><td>two cards of saws, a slow attack, a delayed vibrato: the string pad</td></tr>
-<tr><td><b>BRASS</b></td><td>the envelope opening the 24 dB low-pass</td></tr>
-<tr><td><b>PWM PAD</b></td><td>two pulses, their widths moving slowly</td></tr>
 <tr><td><b>BASS</b></td><td>the second oscillator an octave down, the 24 dB low-pass, a plucked envelope</td></tr>
-<tr><td><b>SYNC</b></td><td>the second oscillator synced, its pitch swept by the envelope</td></tr>
-<tr><td><b>NOTCH</b></td><td>the filter near its notch, the LFO moving it: a phasing sweep</td></tr>
-<tr><td><b>METAL</b></td><td>cross-modulation at an odd interval through the band-pass: bells, clangs</td></tr>
+<tr><td><b>BRASS</b></td><td>the envelope opening the 24 dB low-pass</td></tr>
 <tr><td><b>DRONE</b></td><td>two cards a fifth or an octave apart, the cutoff and the morph moving slowly</td></tr>
 <tr><td><b>KEYS</b></td><td>a struck filter, no sustain</td></tr>
+<tr><td><b>METAL</b></td><td>cross-modulation at an odd interval through the band-pass: bells, clangs</td></tr>
+<tr><td><b>NOTCH</b></td><td>the filter near its notch, the LFO moving it: a phasing sweep</td></tr>
+<tr><td><b>PWM PAD</b></td><td>two pulses, their widths moving slowly</td></tr>
+<tr><td><b>STRINGS</b></td><td>two cards of saws, a slow attack, a delayed vibrato: the string pad</td></tr>
 <tr><td><b>SWELL</b></td><td>the filter opening slowly under a held chord</td></tr>
+<tr><td><b>SYNC</b></td><td>the second oscillator synced, its pitch swept by the envelope</td></tr>
 </table>
 <h2 id="voices-and-load">Voices and load</h2>
 <p>The six tracks share two limits: twelve voices, and the time the chip has to compute each block of audio. With a few tracks of light sounds neither is reached. With chords on the heavier engines the processing time runs out first, usually well before the twelfth voice.</p>
