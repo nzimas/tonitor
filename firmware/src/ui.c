@@ -795,6 +795,39 @@ static void new_sound_of(int32_t kind, const char *msg)
 /* HOME: a new sound for the layer chosen; same: of the family it plays now (SHIFT + HOME) */
 static void new_sound(int same) { new_sound_of(same ? cur_kind(ui.sel) : -1, same ? "SAME FAMILY" : "NEW"); }
 
+/* engine e's family s steps from k (n of them) in the order of their names, A to Z (the families keep their
+ * numbers: presets and sessions keep them); FM's GLISSE and RUBBER, WARP's now, stepped over. At the first or last:
+ * k again */
+static const char *kind_name(uint32_t e, int32_t k);
+static int32_t kind_step(uint32_t e, int32_t n, int32_t k, int32_t s)
+{
+    int32_t d = s > 0 ? 1 : -1, steps = s > 0 ? s : -s;
+    while (steps-- > 0) {
+        int32_t j, best = -1;
+        const char *at = kind_name(e, k);
+        for (j = 0; j < n; j++) {                /* (the nearest name past k's that way; a name twice: by number) */
+            int c = str_cmp(kind_name(e, j), at);
+            if (j == k || (e == ENG_FM && fm_retired(j)))
+                continue;
+            c = c ? c : j - k;
+            if (c * d <= 0)
+                continue;
+            if (best < 0) {
+                best = j;
+                continue;
+            }
+            c = str_cmp(kind_name(e, j), kind_name(e, best));
+            c = c ? c : j - best;
+            if (c * d < 0)
+                best = j;
+        }
+        if (best < 0)
+            break;
+        k = best;
+    }
+    return k;
+}
+
 /* --------------------------------------------------------------- input --- */
 static int32_t enc_take(uint32_t role) { return fm1_enc_take(PANEL_ENC[role]); }
 /* KNOB 1 .. 4 for their own functions: with SHIFT held, KNOB 3 and 4 are SHIFT's (distortion, delay send) -- a
@@ -1326,10 +1359,7 @@ static void ui_input(void)
             uint32_t e = ui.engine[ui.sel];
             int32_t n = e == ENG_FM ? FF_N : e == ENG_ANIMA ? AK_N : e == ENG_CAL ? CS_N : e == ENG_RUS ? RK_N
                         : e == ENG_DRUID ? DK_N : e == ENG_BAY ? BK_N : e == ENG_OB ? OBK_N : HK_N;
-            int32_t k = clampi(cur_kind(ui.sel) + s, 0, n - 1), d = s > 0 ? 1 : -1;
-            while (e == ENG_FM && fm_retired(k) && k + d >= 0 && k + d < n)
-                k += d;                          /* (FM's GLISSE and RUBBER are WARP's now: stepped over) */
-            new_sound_of(k, 0);                  /* (at the first or last: that one again) */
+            new_sound_of(kind_step(e, n, cur_kind(ui.sel), s), 0);   /* (at the first or last: that one again) */
         }
         s = 0;
     } else if (s && ui.snap_page) {              /* PRESETS: the SNAPSHOTS page's frame */

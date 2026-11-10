@@ -1,5 +1,12 @@
 # Changelog
 
+## Build 75
+
+Changed
+- SHIFT + PRESETS steps through each engine's families (kinds, species) in alphabetical order, A to Z, instead of
+  the order they were added in. The families keep their numbers, so presets and sessions load as before. The
+  manual lists each engine's families in the same order.
+
 ## Build 74
 
 Added

@@ -245,7 +245,7 @@ FM1_COLOURS = {"body": "#1d1d1f", "tray": "#141415", "part": "#2a2a2d", "edge": 
 CONTROLS = [
     ([1], "MASTER", "The output level."),
     ([2], "SELECT", "The chosen track's level. On the SCALE page (ARP): the root."),
-    ([3], "PRESETS", "The chosen track's engine. <b>SHIFT +</b>: a new sound of the family before or after. On the "
+    ([3], "PRESETS", "The chosen track's engine. <b>SHIFT +</b>: a new sound of the family before or after, in alphabetical order. On the "
                      "SESSIONS, PRESETS, MOD and GLOBAL SETUP pages: the slot or entry."),
     ([4], "ALGORITHM", "The chosen track's pan. On the SCALE page: the scale."),
     ([5], "OCT−", "The chosen track's octave down. <b>SHIFT +</b>: every loop one step of the scale down. "

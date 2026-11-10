@@ -37,6 +37,16 @@ static int str_eq(const char *a, const char *b)
     return *a == *b;
 }
 
+/* <0, 0, >0: a before, as, after b (byte order: A .. Z, a space before them) */
+static int str_cmp(const char *a, const char *b)
+{
+    while (*a && *a == *b) {
+        a++;
+        b++;
+    }
+    return (int)(unsigned char)*a - (int)(unsigned char)*b;
+}
+
 static unsigned str_len(const char *s)
 {
     unsigned n = 0;

@@ -27,6 +27,7 @@ static uint32_t fm1_ticks(void) { return host_ticks += 24000u; }
 static void host_pump(void);
 
 static int str_eq(const char *a, const char *b) { return strcmp(a, b) == 0; }
+static int str_cmp(const char *a, const char *b) { return strcmp(a, b); }   /* (libc.c's: byte order) */
 static unsigned str_len(const char *s) { return (unsigned)strlen(s); }
 static void str_cpy(char *d, const char *s, unsigned max)
 {
@@ -6253,9 +6254,41 @@ static int cmd_setup(void)
         press_phys(KEY_SHIFT, 0);
         run_blocks(40, 0);
         k1 = cur_kind(0);
-        if (ui.engine[0] != ENG_FM || k1 != (k0 + 1 < n ? k0 + 1 : n - 1))
+        if (ui.engine[0] != ENG_FM || k1 != kind_step(ENG_FM, n, k0, 1))
             printf("FAIL setup: SHIFT + PRESETS does not go to the next family (%d -> %d)\n", k0, k1), fail++;
         printf("setup: SHIFT + PRESETS: %s -> %s\n", FF_NAME[k0 % FF_N], FF_NAME[k1 % FF_N]);
+    }
+    /* every engine's families in the order of their names, A to Z: from the first, each step the next name, every
+     * family once (FM's GLISSE and RUBBER not), then the last again; back down the same way */
+    {
+        static const int32_t NK[NENG] = {[ENG_FM] = FF_N, [ENG_ANIMA] = AK_N, [ENG_CAL] = CS_N, [ENG_RUS] = RK_N,
+                                         [ENG_DRUID] = DK_N, [ENG_BAY] = BK_N, [ENG_OB] = OBK_N, [ENG_HIVE] = HK_N};
+        uint32_t e;
+        for (e = 0; e < NENG; e++) {
+            int32_t n = NK[e], k = 0, j, first, seen = 1, want = 0, bad = 0;
+            for (j = 0; j < n; j++)
+                want += !(e == ENG_FM && fm_retired(j));
+            first = e == ENG_FM && fm_retired(0) ? 1 : 0;
+            for (j = 0; j < n; j++)
+                if (!(e == ENG_FM && fm_retired(j)) && str_cmp(kind_name(e, j), kind_name(e, first)) < 0)
+                    first = j;
+            if (kind_step(e, n, first, -1) != first)
+                bad = 1;
+            for (k = first;;) {
+                int32_t nx = kind_step(e, n, k, 1);
+                if (nx == k)
+                    break;
+                if (str_cmp(kind_name(e, nx), kind_name(e, k)) < 0 || (e == ENG_FM && fm_retired(nx)))
+                    bad = 1;
+                k = nx;
+                seen++;
+            }
+            if (seen != want || kind_step(e, n, first, want - 1) != k || kind_step(e, n, k, -(want - 1)) != first)
+                bad = 1;
+            if (bad)
+                printf("FAIL setup: %s's families not stepped A to Z (%d of %d)\n", ENG_NAME[e], seen, want), fail++;
+        }
+        printf("setup: SHIFT + PRESETS: every engine's families A to Z\n");
     }
     /* the top right: the battery, the octave */
     batt_raw = 600;

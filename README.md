@@ -103,7 +103,7 @@ FM-1's flash only when you save a session — into a user data area that other f
 | --- | --- |
 | **FX SEL ENV LFO EDIT GLO** (top row) | choose track **1–6** (lit: chosen; glowing: sounding). From any page, back to playing. **Held** (0.8 s): copy the track, or paste the copy onto it ([Copying a track](#copying-a-track)). |
 | **PRESETS** knob | the chosen track's engine: **FM**, **ANIMA**, **CALIGULA**, **RUSSOLO**, **DRUID**, **BAYAREA**, **HIVE**, **OBRADOR**. Each track keeps one sound per engine. At start, and in an empty session, tracks 1–6 are on FM, ANIMA, CALIGULA, HIVE, DRUID and BAYAREA. |
-| **SHIFT + PRESETS** | a new sound of the previous or next family. |
+| **SHIFT + PRESETS** | a new sound of the previous or next family, in alphabetical order (A to Z). |
 | **HOME** | a new sound for the chosen track. |
 | **SHIFT + HOME** | a new sound of the same family. |
 | **OCT− / OCT+** | the chosen track's octave, −3 to +3. |
@@ -677,31 +677,31 @@ levels it to one loudness:
 
 | Family | |
 | --- | --- |
-| **METAL** | bells and gongs, inharmonic |
-| **DRONE** | spectral drones, slowly beating |
+| **ABYSS** | sub-bass rumble, breathing slowly |
+| **BLOOM** | a tone opening over seconds |
+| **BOWED** | a bowed string |
 | **BRUIT** | noises |
+| **CHOIR** | vowels |
+| **CLANG** | DX7-style bells |
+| **CREEP** | a held note slowly leaving its pitch |
+| **DRONE** | spectral drones, slowly beating |
+| **FRICTION** | creaking |
+| **GLITCH** | broken, mechanical sounds |
+| **HOLLOW** | odd harmonics only: a dark pipe |
 | **IMPACT** | struck bodies: thuds, knocks, metal hits, drum skins, debris |
 | **ITERATIF** | a sound pulsed by its own LFO |
-| **SPECTRE** | a spectral arpeggio: harmonics lifted one after another by beating |
-| **ABYSS** | sub-bass rumble, breathing slowly |
-| **FRICTION** | creaking |
-| **CHOIR** | vowels |
-| **BOWED** | a bowed string |
-| **HOLLOW** | odd harmonics only: a dark pipe |
-| **BLOOM** | a tone opening over seconds |
-| **TIDE** | three stacks crossfading under a slow tide |
-| **SHARDS** | a tone broken by random pitch steps and chopped |
-| **STATIC** | ring-modulated bands |
-| **WIND** | breath and gusts over a soft drone |
-| **PLUCK** | plucked strings |
-| **MALLET** | struck bars: marimba, vibraphone, kalimba |
-| **WARP** | anything: odd ratios, long glides, bouncing pitch |
-| **GLITCH** | broken, mechanical sounds |
-| **SHAPER** | a tone rolling between odd and even harmonics a few times a second |
 | **LADDER** | partials entering or dying one by one |
+| **MALLET** | struck bars: marimba, vibraphone, kalimba |
+| **METAL** | bells and gongs, inharmonic |
+| **PLUCK** | plucked strings |
 | **REVERSE** | a sound swelling while the key is held: tape run backwards |
-| **CREEP** | a held note slowly leaving its pitch |
-| **CLANG** | DX7-style bells |
+| **SHAPER** | a tone rolling between odd and even harmonics a few times a second |
+| **SHARDS** | a tone broken by random pitch steps and chopped |
+| **SPECTRE** | a spectral arpeggio: harmonics lifted one after another by beating |
+| **STATIC** | ring-modulated bands |
+| **TIDE** | three stacks crossfading under a slow tide |
+| **WARP** | anything: odd ratios, long glides, bouncing pitch |
+| **WIND** | breath and gusts over a soft drone |
 
 GLISSE and RUBBER, families of older builds, are now part of WARP; sounds saved with them load as they were.
 
@@ -709,9 +709,9 @@ GLISSE and RUBBER, families of older builds, are now part of WARP; sounds saved 
 
 A port of the *anima* opcode from Vascular, at half the sample rate. While a key is held, a simulated finger drags
 figures across a virtual surface; where it is, how hard it presses and how fast it moves change the timbre, never
-the pitch. HOME draws one of twenty-two kinds: **HAZE**, **VOYAGE**, **GLASS**, **BELLS**, **GOLDEN**,
-**BREATH**, **GRIT**, **SWARM**, **TIDE**, **CHOIR**, **SHARDS**, **BOWL**, **DUST**, **MACHINE**, **PLUCK**,
-**REED**, **FOG**, **ORGAN**, **BITS**, **DRIFT**, **MURMUR** and **HOWL**.
+the pitch. HOME draws one of twenty-two kinds: **BELLS**, **BITS**, **BOWL**, **BREATH**, **CHOIR**, **DRIFT**,
+**DUST**, **FOG**, **GLASS**, **GOLDEN**, **GRIT**, **HAZE**, **HOWL**, **MACHINE**, **MURMUR**, **ORGAN**,
+**PLUCK**, **REED**, **SHARDS**, **SWARM**, **TIDE** and **VOYAGE**.
 
 ### CALIGULA — an organism
 
@@ -723,16 +723,16 @@ the twelve voices. HOME draws one of ten species:
 
 | Species | |
 | --- | --- |
+| **CARRION** | the depths, heavy feedback, a warped delay, surges |
+| **HIVE** | quick gates: irregular rhythms, bursts |
+| **LITANY** | a slow choir of unisons and octaves |
+| **MOTH** | soft triangles fluttering through the gates, on a pulse |
+| **RUST** | driven, cross-modulated, surging, sometimes rhythmic |
 | **SPORE** | slow swells, held drones, breathing; low |
 | **THORN** | sharp, deep FM, driven, bursting often |
-| **HIVE** | quick gates: irregular rhythms, bursts |
-| **CARRION** | the depths, heavy feedback, a warped delay, surges |
-| **VEIL** | mostly triangles, light modulation: the calmest |
-| **RUST** | driven, cross-modulated, surging, sometimes rhythmic |
-| **LITANY** | a slow choir of unisons and octaves |
 | **UNDERTOW** | deep, heavy feedback, slow surges |
+| **VEIL** | mostly triangles, light modulation: the calmest |
 | **WIRE** | high and sharp, clusters, a quick hand tapping |
-| **MOTH** | soft triangles fluttering through the gates, on a pulse |
 
 ### RUSSOLO — noise, logic and broken buffers
 
@@ -742,22 +742,22 @@ the first two macros are the kind's own parameters, the others **CRUSH** and **R
 
 | Kind | |
 | --- | --- |
-| **HOLD** | sample-and-hold noise |
+| **BEND** | the buffer's addresses bent on a clock |
+| **BLIPS** | decaying triangles on the key's harmonics |
+| **CASCADE** | squares modulating squares |
+| **CHORD** | triangles on a chord, slowly beating |
+| **CHUNKS** | a buffer of noise, saw and silence, read at the key's speed |
+| **CLANG** | two triangles at an inharmonic ratio, XOR'd |
+| **CRACKLE** | sparse clicks ringing over hiss |
 | **DUST** | random clicks through a low-pass |
 | **GATES** | noise opened and closed by two triangles |
-| **CRACKLE** | sparse clicks ringing over hiss |
-| **NOR**, **XOR** | two oscillators combined bit by bit |
-| **RING** | two oscillators multiplied |
-| **CASCADE** | squares modulating squares |
-| **CLANG** | two triangles at an inharmonic ratio, XOR'd |
-| **CHUNKS** | a buffer of noise, saw and silence, read at the key's speed |
+| **HOLD** | sample-and-hold noise |
 | **JUMP** | the buffer read with random jumps |
-| **WANDER** | a window wandering through the buffer |
-| **BEND** | the buffer's addresses bent on a clock |
+| **NOR**, **XOR** | two oscillators combined bit by bit |
 | **QUAD** | four such bendings, switched by chance |
-| **BLIPS** | decaying triangles on the key's harmonics |
+| **RING** | two oscillators multiplied |
 | **WALK** | a random walk over a scale from the key |
-| **CHORD** | triangles on a chord, slowly beating |
+| **WANDER** | a window wandering through the buffer |
 
 ### DRUID — strings and resonant bodies
 
@@ -767,16 +767,16 @@ per sound.
 
 | Kind | Resonator | Exciter |
 | --- | --- | --- |
-| **PLUCK** | string | pluck |
-| **BOWED** | string | bow |
-| **STRUCK** | string, stretched partials | strike |
-| **SITAR** | string, buzzing bridge | pluck |
-| **RATTLE** | string | dust |
-| **HARP** | sympathetic strings | pluck |
-| **DRONE** | sympathetic strings | bow |
 | **BELL** | modal | strike |
+| **BOWED** | string | bow |
 | **BOWL** | modal | bow |
+| **DRONE** | sympathetic strings | bow |
+| **HARP** | sympathetic strings | pluck |
 | **PLATE** | modal | dust |
+| **PLUCK** | string | pluck |
+| **RATTLE** | string | dust |
+| **SITAR** | string, buzzing bridge | pluck |
+| **STRUCK** | string, stretched partials | strike |
 
 ### BAYAREA — a West Coast voice
 
@@ -787,11 +787,11 @@ resonators, all moved by an LFO.
 | Kind | Envelope | |
 | --- | --- | --- |
 | **BONGO** | gate | low, short decay |
-| **PLUCK** | gate | brighter, short to medium decay |
 | **CHIME** | gate | long decay, resonators |
-| **FOLDED** | gate | heavy folding |
-| **SWELL** | sustain | slow attack, long release |
 | **DRONE** | sustain | slower attack, long release |
+| **FOLDED** | gate | heavy folding |
+| **PLUCK** | gate | brighter, short to medium decay |
+| **SWELL** | sustain | slow attack, long release |
 
 ### HIVE — a swarm of oscillators
 
@@ -801,18 +801,18 @@ envelope.
 
 | Kind | |
 | --- | --- |
-| **SUB** | the main oscillator one or two octaves down |
-| **LEAD** | bright, short attack, resonant |
-| **STAB** | short, a strong filter sweep |
-| **PAD** | slow attack, wide detune, long release |
-| **DRONE** | slower attack, full sustain, long release |
-| **WASH** | the slowest attack and release, noise, a moving filter |
-| **CLUSTER** | quarter-tone and semitone steps, slowly beating |
-| **METAL** | inharmonic partials, struck |
-| **SPECTRA** | inharmonic partials turning slowly |
-| **GROUND** | two octaves down, a dense cluster with noise: rumble |
 | **AIR** | filtered noise and high whistles: wind |
+| **CLUSTER** | quarter-tone and semitone steps, slowly beating |
+| **DRONE** | slower attack, full sustain, long release |
+| **GROUND** | two octaves down, a dense cluster with noise: rumble |
+| **LEAD** | bright, short attack, resonant |
+| **METAL** | inharmonic partials, struck |
+| **PAD** | slow attack, wide detune, long release |
+| **SPECTRA** | inharmonic partials turning slowly |
+| **STAB** | short, a strong filter sweep |
+| **SUB** | the main oscillator one or two octaves down |
 | **TIDES** | oscillators gliding apart and back |
+| **WASH** | the slowest attack and release, noise, a moving filter |
 
 CLUSTER, METAL, SPECTRA, GROUND, AIR and TIDES are for textures rather than melodies.
 
@@ -828,16 +828,16 @@ each card's own small offsets of tune and cutoff with a slow drift.
 
 | Kind | |
 | --- | --- |
-| **STRINGS** | two cards of saws, a slow attack, a delayed vibrato: the string pad |
-| **BRASS** | the envelope opening the 24 dB low-pass |
-| **PWM PAD** | two pulses, their widths moving slowly |
 | **BASS** | the second oscillator an octave down, the 24 dB low-pass, a plucked envelope |
-| **SYNC** | the second oscillator synced, its pitch swept by the envelope |
-| **NOTCH** | the filter near its notch, the LFO moving it: a phasing sweep |
-| **METAL** | cross-modulation at an odd interval through the band-pass: bells, clangs |
+| **BRASS** | the envelope opening the 24 dB low-pass |
 | **DRONE** | two cards a fifth or an octave apart, the cutoff and the morph moving slowly |
 | **KEYS** | a struck filter, no sustain |
+| **METAL** | cross-modulation at an odd interval through the band-pass: bells, clangs |
+| **NOTCH** | the filter near its notch, the LFO moving it: a phasing sweep |
+| **PWM PAD** | two pulses, their widths moving slowly |
+| **STRINGS** | two cards of saws, a slow attack, a delayed vibrato: the string pad |
 | **SWELL** | the filter opening slowly under a held chord |
+| **SYNC** | the second oscillator synced, its pitch swept by the envelope |
 
 ## Voices and load
 
