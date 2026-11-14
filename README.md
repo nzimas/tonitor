@@ -1020,3 +1020,5 @@ event shall the authors or contributors be liable for any claim, damages or othe
 damage to your device, loss of data, or loss of the use of the device — arising from, out of or in
 connection with the software, its installation or its use. You install and use it entirely at your own
 risk. See also sections 15 and 16 of the [GPL](LICENSE).
+
+You can also try Tonitor in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
